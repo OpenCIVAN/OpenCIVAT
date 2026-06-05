@@ -284,18 +284,32 @@ Quick functional test:
 Requires LiveKit installed from [Step 1](#1-install-prerequisites).
 
 ```bash
-# Terminal 1 — LiveKit server
+# Starts LiveKit plus the token server
 ./scripts/start-livekit.sh
-# or: livekit-server --dev
-
-# Terminal 2 — Token server
-node token-server.js
 ```
 
-Or start everything together:
+For HTTPS demos, run the frontend with `npm start`. The HTTPS webpack dev server
+proxies the voice services:
+
+| Browser path | Local service |
+|--------------|---------------|
+| `/voice-token` | `http://localhost:3002` |
+| `/rtc` | `http://localhost:7880` |
+
+These proxy paths avoid mixed-content errors from direct `http://` and `ws://`
+voice URLs on an HTTPS page.
+
+Smoke checks:
+
 ```bash
-npm run dev:full        # frontend + API server + Yjs + token server + LiveKit (HTTPS)
-npm run dev:full:http   # same but using HTTP (no certs needed)
+curl http://localhost:7880
+curl http://localhost:3002/health
+curl -k -X POST https://localhost:8081/voice-token/token \
+  -H "Content-Type: application/json" \
+  -H "x-user-id: 00000000-0000-0000-0000-000000000002" \
+  -H "x-user-email: admin@cia-web.local" \
+  -H "x-user-name: CIA Admin" \
+  --data '{"roomName":"smoke","userName":"CIA Admin"}'
 ```
 
 Test: open the app in two tabs, click **Join Voice Chat** in both, grant microphone access — you should hear a slight echo between tabs.

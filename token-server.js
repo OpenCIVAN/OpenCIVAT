@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const { AccessToken } = require("livekit-server-sdk");
 const cors = require("cors");
@@ -20,9 +22,15 @@ app.use(express.json());
 async function requireAuth(req, res, next) {
   if (DEV_BYPASS_AUTH) {
     req.user = {
-      id: req.body?.userId || "00000000-0000-0000-0000-000000000001",
-      name: req.body?.userName || "Development User",
-      email: req.body?.userEmail || "developer@localhost",
+      id:
+        req.get("x-user-id") ||
+        req.body?.userId ||
+        "00000000-0000-0000-0000-000000000002",
+      name: req.get("x-user-name") || req.body?.userName || "CIA Admin",
+      email:
+        req.get("x-user-email") ||
+        req.body?.userEmail ||
+        "admin@cia-web.local",
     };
     return next();
   }

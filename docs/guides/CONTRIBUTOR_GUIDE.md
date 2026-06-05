@@ -1422,7 +1422,9 @@ CIA.getInstance("id"); // Inspect an instance
 **Issue: "Voice chat not working"**
 
 - Check: Is LiveKit server running? `http://localhost:7880`
-- Check: Is token server running? `http://localhost:3001`
+- Check: Is token server running? `http://localhost:3002/health`
+- Check: For HTTPS demos, are you using the frontend proxy paths? Token requests should go through `/voice-token`, and LiveKit signaling should use `/rtc`.
+- Check: Did you start both services with `./scripts/start-livekit.sh`?
 - Check: Did you allow microphone permissions?
 - Check: Are both users in the same room?
 

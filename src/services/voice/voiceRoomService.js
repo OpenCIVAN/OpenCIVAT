@@ -18,6 +18,11 @@ import { Room, RoomEvent, Track, ConnectionState } from "livekit-client";
 import { ws as log } from "@Utils/logger.js";
 import { config } from "@Core/config/clientConfig.js";
 import { authService } from "@Services/authService.js";
+import {
+  getDefaultMockUser,
+  getMockUser,
+  getStoredMockUserId,
+} from "@Config/mockUsers.js";
 
 /**
  * Connection status enum
@@ -59,21 +64,45 @@ class VoiceRoomService {
       error: new Set(),
     };
 
-    // Configuration - use correct property names from clientConfig
-    // Auto-detect protocol based on page protocol to avoid mixed content issues
-    const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    const defaultLiveKitUrl = isSecure ? "wss://localhost:7880" : "ws://localhost:7880";
-    const defaultTokenUrl = isSecure ? "https://localhost:3002" : "http://localhost:3002";
+    // Auto-detect same-origin proxy URLs on HTTPS to avoid mixed content.
+    const voiceUrls = this._resolveVoiceUrls();
 
     this.config = {
-      tokenServerUrl: config.liveKitTokenUrl || defaultTokenUrl,
-      livekitUrl: config.liveKitUrl || defaultLiveKitUrl,
+      tokenServerUrl: voiceUrls.tokenServerUrl,
+      livekitUrl: voiceUrls.livekitUrl,
       autoMuteOnJoin: true,
       reconnectAttempts: 3,
     };
 
     // Audio elements for remote participants
     this._audioElements = new Map();
+  }
+
+  _resolveVoiceUrls() {
+    const configuredLiveKitUrl = config.liveKitUrl || "ws://localhost:7880";
+    const configuredTokenUrl =
+      config.liveKitTokenUrl || "http://localhost:3002";
+
+    if (typeof window === "undefined" || window.location.protocol !== "https:") {
+      return {
+        livekitUrl: configuredLiveKitUrl,
+        tokenServerUrl: configuredTokenUrl,
+      };
+    }
+
+    const isLocalLiveKit =
+      configuredLiveKitUrl === "ws://localhost:7880" ||
+      configuredLiveKitUrl === "ws://127.0.0.1:7880";
+    const isLocalToken =
+      configuredTokenUrl === "http://localhost:3002" ||
+      configuredTokenUrl === "http://127.0.0.1:3002";
+
+    const wsOrigin = window.location.origin.replace(/^http/, "ws");
+
+    return {
+      livekitUrl: isLocalLiveKit ? wsOrigin : configuredLiveKitUrl,
+      tokenServerUrl: isLocalToken ? "/voice-token" : configuredTokenUrl,
+    };
   }
 
   /**
@@ -118,10 +147,18 @@ class VoiceRoomService {
       headers.Authorization = `Bearer ${authToken}`;
     }
 
+    if (this._isDevBypass()) {
+      Object.assign(headers, this._getDevUserHeaders(userName));
+    }
+
     const response = await fetch(`${this.config.tokenServerUrl}/token`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ roomName, userName }),
+      body: JSON.stringify({
+        roomName,
+        userName,
+        ...this._getDevUserBody(userName),
+      }),
     });
 
     if (!response.ok) {
@@ -134,6 +171,34 @@ class VoiceRoomService {
     }
 
     return data.token;
+  }
+
+  _isDevBypass() {
+    return config.devBypassAuth === true || config.devBypassAuth === "true";
+  }
+
+  _getDevUser() {
+    const storedId = getStoredMockUserId();
+    return storedId ? getMockUser(storedId) || getDefaultMockUser() : getDefaultMockUser();
+  }
+
+  _getDevUserHeaders(fallbackName) {
+    const user = this._getDevUser();
+    return {
+      "x-user-id": user.id,
+      "x-user-email": user.email,
+      "x-user-name": user.name || fallbackName || "CIA Admin",
+    };
+  }
+
+  _getDevUserBody(fallbackName) {
+    if (!this._isDevBypass()) return {};
+    const user = this._getDevUser();
+    return {
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name || fallbackName || "CIA Admin",
+    };
   }
 
   /**

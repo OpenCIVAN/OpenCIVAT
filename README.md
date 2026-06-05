@@ -120,7 +120,40 @@ npm start
 
 The app opens at `https://localhost:8081`
 
-### 7. Accept SSL Warning
+### 7. Optional: Start Voice Chat Services
+
+Voice chat uses LiveKit plus a small token server. For HTTPS demos, start voice
+services before joining voice from the app:
+
+```bash
+./scripts/start-livekit.sh
+```
+
+Keep using the HTTPS frontend (`npm start`). The webpack dev server proxies:
+
+- `/voice-token` → `http://localhost:3002` (LiveKit token server)
+- `/rtc` → `http://localhost:7880` (LiveKit WebSocket signaling)
+
+This avoids browser mixed-content blocking when the app is served over HTTPS.
+The default dev credentials are `LIVEKIT_API_KEY=devkey` and
+`LIVEKIT_API_SECRET=secret`, which match `livekit-server --dev`.
+
+Smoke checks:
+
+```bash
+curl http://localhost:7880
+curl http://localhost:3002/health
+curl -k -X POST https://localhost:8081/voice-token/token \
+  -H "Content-Type: application/json" \
+  -H "x-user-id: 00000000-0000-0000-0000-000000000002" \
+  -H "x-user-email: admin@cia-web.local" \
+  -H "x-user-name: CIA Admin" \
+  --data '{"roomName":"smoke","userName":"CIA Admin"}'
+```
+
+Then open the Voice tab, click **Join Voice**, and grant microphone permission.
+
+### 8. Accept SSL Warning
 
 Your browser will warn about the self-signed certificate:
 1. Click **Advanced**
@@ -136,6 +169,8 @@ This is normal for local development.
 |---------|-----|-------------|
 | **Frontend** | https://localhost:8081 | - |
 | **API** | http://localhost:3001 | - |
+| **LiveKit** | ws://localhost:7880, proxied as wss://localhost:8081/rtc | devkey / secret |
+| **LiveKit Token Server** | http://localhost:3002, proxied as https://localhost:8081/voice-token | dev bypass user headers |
 | **MinIO Console** | http://localhost:9002 | minioadmin / minioadmin |
 | **PostgreSQL** | localhost:5432 | ciauser / ciadevpassword |
 | **Y.js WebSocket** | ws://localhost:9001 | - |
@@ -288,33 +323,30 @@ KEYCLOAK_ADMIN_PASSWORD=change_me_in_production
 
 ## Voice Chat Setup (Optional)
 
-Voice chat requires LiveKit:
-
-### Install LiveKit
-
-```bash
-# macOS
-brew install livekit
-
-# Linux/macOS alternative
-curl -sSL https://get.livekit.io | bash
-```
-
-### Start LiveKit Server
+Voice chat requires LiveKit and the local token server. The supported local
+demo path is:
 
 ```bash
-livekit-server --dev
+DEV_BYPASS_AUTH=true ./scripts/start.sh
+./scripts/start-livekit.sh
+npm start
 ```
 
-### Configure Token Server
+`./scripts/start-livekit.sh` starts both:
 
-The API server handles LiveKit token generation. Set in `.env`:
+- LiveKit SFU on `ws://localhost:7880`
+- Token server on `http://localhost:3002`
+
+For HTTPS demos, do not point browser code directly at those insecure URLs.
+`npm start` serves HTTPS and proxies `/voice-token` and `/rtc` so voice works
+without mixed-content errors. If port `8081` is occupied, start the frontend on
+another HTTPS port, for example:
 
 ```bash
-LIVEKIT_API_KEY=devkey
-LIVEKIT_API_SECRET=secret
-LIVEKIT_URL=ws://localhost:7880
+npm start -- --port 8082
 ```
+
+The same proxy paths will be available on that port.
 
 ---
 

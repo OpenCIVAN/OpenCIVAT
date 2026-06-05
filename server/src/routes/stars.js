@@ -66,7 +66,7 @@ router.get("/", async (req, res, next) => {
           .status(400)
           .json({ error: "roomId required for room scope" });
       }
-      scopeFilter = `AND s.scope = 'room' AND s.room_id = ${paramIndex}`;
+      scopeFilter = `AND s.scope = 'room' AND s.room_id = $${paramIndex}`;
       queryParams.push(roomId);
       paramIndex++;
     } else if (scope === "project") {

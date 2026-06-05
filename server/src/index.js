@@ -2,6 +2,8 @@
 // Main API server for CIA Web v2.0
 // Server-authoritative architecture with WebSocket broadcast
 
+require("dotenv").config();
+
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
@@ -28,13 +30,21 @@ const PORT = process.env.PORT || 3001;
 // DATABASE CONNECTION
 // ============================================================================
 
-const pool = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || "cia_analytics",
-  user: process.env.DB_USER || "cia_admin",
-  password: process.env.DB_PASSWORD || "cia_password",
-});
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? { connectionString: process.env.DATABASE_URL }
+    : {
+        host: process.env.DB_HOST || process.env.POSTGRES_HOST || "localhost",
+        port: process.env.DB_PORT || process.env.POSTGRES_PORT || 5432,
+        database:
+          process.env.DB_NAME || process.env.POSTGRES_DB || "cia_analytics",
+        user: process.env.DB_USER || process.env.POSTGRES_USER || "ciauser",
+        password:
+          process.env.DB_PASSWORD ||
+          process.env.POSTGRES_PASSWORD ||
+          "ciadevpassword",
+      }
+);
 
 pool.on("connect", () => {
   db.info("Connected to PostgreSQL database");
@@ -95,8 +105,12 @@ const minioClient = new Minio.Client({
   endPoint: process.env.MINIO_ENDPOINT || "localhost",
   port: parseInt(process.env.MINIO_PORT || "9000"),
   useSSL: process.env.MINIO_USE_SSL === "true",
-  accessKey: process.env.MINIO_ACCESS_KEY || "minioadmin",
-  secretKey: process.env.MINIO_SECRET_KEY || "minioadmin",
+  accessKey:
+    process.env.MINIO_ACCESS_KEY || process.env.MINIO_ROOT_USER || "minioadmin",
+  secretKey:
+    process.env.MINIO_SECRET_KEY ||
+    process.env.MINIO_ROOT_PASSWORD ||
+    "minioadmin",
 });
 
 const BUCKET_NAME = process.env.MINIO_BUCKET || "cia-files";
@@ -515,36 +529,37 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 
   server.listen(PORT, async () => {
     log.info(`CIA Web API server v2.0 running on port ${PORT}`);
-  log.info(`Architecture: Server-Authority`);
-  log.info(`Environment: ${process.env.NODE_ENV || "development"}`);
-  log.debug(
-    `Database: ${process.env.DB_HOST || "localhost"}:${
-      process.env.DB_PORT || 5432
-    }`
-  );
-  log.debug(
-    `MinIO: ${process.env.MINIO_ENDPOINT || "localhost"}:${
-      process.env.MINIO_PORT || 9000
-    }`
-  );
-  log.debug(`WebSocket: ws://localhost:${PORT}/ws`);
-  log.debug(
-    `Log level: ${
-      process.env.LOG_LEVEL || "debug"
-    }, Categories: LOG_CATEGORIES env to filter`
-  );
+    log.info(`Architecture: Server-Authority`);
+    log.info(`Environment: ${process.env.NODE_ENV || "development"}`);
+    log.debug(
+      `Database: ${
+        process.env.DB_HOST || process.env.POSTGRES_HOST || "localhost"
+      }:${process.env.DB_PORT || process.env.POSTGRES_PORT || 5432}`
+    );
+    log.debug(
+      `MinIO: ${process.env.MINIO_ENDPOINT || "localhost"}:${
+        process.env.MINIO_PORT || 9000
+      }`
+    );
+    log.debug(`WebSocket: ws://localhost:${PORT}/ws`);
+    log.debug(
+      `Log level: ${
+        process.env.LOG_LEVEL || "debug"
+      }, Categories: LOG_CATEGORIES env to filter`
+    );
 
-  // Check for files missing thumbnails on startup (delayed to allow DB to settle)
-  setTimeout(async () => {
-    try {
-      const result = await thumbnailService.queueMissingFileThumbnails(pool);
-      if (result.queued > 0) {
-        log.info(`Startup: queued ${result.queued} missing file thumbnails`);
+    // Check for files missing thumbnails on startup (delayed to allow DB to settle)
+    setTimeout(async () => {
+      try {
+        const result = await thumbnailService.queueMissingFileThumbnails(pool);
+        if (result.queued > 0) {
+          log.info(`Startup: queued ${result.queued} missing file thumbnails`);
+        }
+      } catch (err) {
+        log.warn(`Startup thumbnail check failed: ${err.message}`);
       }
-    } catch (err) {
-      log.warn(`Startup thumbnail check failed: ${err.message}`);
-    }
-  }, 5000); // Wait 5 seconds for everything to initialize
-});
+    }, 5000); // Wait 5 seconds for everything to initialize
+  });
+})();
 
 module.exports = { app, server, pool };

@@ -31,6 +31,9 @@ export function useFilters(options = {}) {
   // Derived values
   const projectId = overrideProjectId || sessionManager.getRoomId?.();
   const apiBase = config.apiBaseUrl || "http://localhost:3001/api";
+  const filtersEndpoint = projectId
+    ? `${apiBase}/projects/${projectId}/filters`
+    : null;
 
   // Helper for auth headers
   const getHeaders = useCallback(
@@ -53,11 +56,10 @@ export function useFilters(options = {}) {
       if (!projectId) return [];
 
       const params = new URLSearchParams();
-      params.append("projectId", projectId);
       if (scope !== "all") params.append("scope", scope);
       if (workspaceId) params.append("workspaceId", workspaceId);
 
-      const response = await fetch(`${apiBase}/filters?${params}`, {
+      const response = await fetch(`${filtersEndpoint}?${params}`, {
         signal,
         headers: getHeaders(),
       });
@@ -69,7 +71,7 @@ export function useFilters(options = {}) {
       const data = await response.json();
       return data.filters || [];
     },
-    [apiBase, projectId, scope, workspaceId, getHeaders]
+    [filtersEndpoint, projectId, scope, workspaceId, getHeaders]
   );
 
   const {
@@ -107,13 +109,18 @@ export function useFilters(options = {}) {
 
   const { mutate: createFilter, isLoading: isCreating } = useAsyncMutation(
     async (filterData) => {
-      const response = await fetch(`${apiBase}/filters`, {
+      if (!filtersEndpoint) {
+        throw new Error("Project ID is required to create a filter");
+      }
+
+      const response = await fetch(filtersEndpoint, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({
           ...filterData,
-          projectId,
-          createdBy: sessionManager.getUserId?.(),
+          filter_config: filterData.filter_config || filterData.filterConfig,
+          workspace_id: filterData.workspace_id || filterData.workspaceId,
+          is_pinned: filterData.is_pinned || filterData.isPinned || false,
         }),
       });
 
@@ -124,17 +131,27 @@ export function useFilters(options = {}) {
         );
       }
 
-      return response.json();
+      const data = await response.json();
+      return data.filter || data;
     },
     { onSuccess: refetch }
   );
 
   const { mutate: updateFilter, isLoading: isUpdating } = useAsyncMutation(
     async ({ id, updates }) => {
-      const response = await fetch(`${apiBase}/filters/${id}`, {
+      if (!filtersEndpoint) {
+        throw new Error("Project ID is required to update a filter");
+      }
+
+      const response = await fetch(`${filtersEndpoint}/${id}`, {
         method: "PATCH",
         headers: getHeaders(),
-        body: JSON.stringify(updates),
+        body: JSON.stringify({
+          ...updates,
+          filter_config: updates.filter_config || updates.filterConfig,
+          workspace_id: updates.workspace_id || updates.workspaceId,
+          is_pinned: updates.is_pinned ?? updates.isPinned,
+        }),
       });
 
       if (!response.ok) {
@@ -144,14 +161,19 @@ export function useFilters(options = {}) {
         );
       }
 
-      return response.json();
+      const data = await response.json();
+      return data.filter || data;
     },
     { onSuccess: refetch }
   );
 
   const { mutate: deleteFilter, isLoading: isDeleting } = useAsyncMutation(
     async (id) => {
-      const response = await fetch(`${apiBase}/filters/${id}`, {
+      if (!filtersEndpoint) {
+        throw new Error("Project ID is required to delete a filter");
+      }
+
+      const response = await fetch(`${filtersEndpoint}/${id}`, {
         method: "DELETE",
         headers: getHeaders(),
       });

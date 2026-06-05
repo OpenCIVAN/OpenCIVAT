@@ -74,6 +74,20 @@ module.exports = {
         changeOrigin: true,
         secure: false,
       },
+      {
+        context: ["/voice-token"],
+        target: "http://localhost:3002",
+        changeOrigin: true,
+        secure: false,
+        pathRewrite: { "^/voice-token": "" },
+      },
+      {
+        context: ["/rtc"],
+        target: "http://localhost:7880",
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
     ],
   },
   module: {

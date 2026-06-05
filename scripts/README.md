@@ -120,10 +120,32 @@ Rebuild only the API container (faster than full rebuild).
 ```
 
 ### `start-livekit.sh` / `stop-livekit.sh`
-Manage LiveKit video/voice services.
+Manage LiveKit voice services.
 ```bash
 ./scripts/start-livekit.sh
 ./scripts/stop-livekit.sh
+```
+
+`start-livekit.sh` starts both pieces required for voice chat:
+
+- LiveKit SFU on `ws://localhost:7880`
+- Token server on `http://localhost:3002`
+
+For HTTPS demos, keep the frontend on `npm start`. The webpack dev server
+proxies `/voice-token` to the token server and `/rtc` to LiveKit, so the browser
+uses same-origin HTTPS/WSS instead of blocked mixed-content URLs.
+
+Quick checks:
+
+```bash
+curl http://localhost:7880
+curl http://localhost:3002/health
+curl -k -X POST https://localhost:8081/voice-token/token \
+  -H "Content-Type: application/json" \
+  -H "x-user-id: 00000000-0000-0000-0000-000000000002" \
+  -H "x-user-email: admin@cia-web.local" \
+  -H "x-user-name: CIA Admin" \
+  --data '{"roomName":"smoke","userName":"CIA Admin"}'
 ```
 
 ---

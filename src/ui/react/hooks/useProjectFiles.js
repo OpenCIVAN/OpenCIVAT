@@ -33,6 +33,17 @@ export function useProjectFiles(options = {}) {
   const projectId = overrideProjectId || sessionManager.getRoomId();
   const apiBase = config.apiBaseUrl || "http://localhost:3001/api";
 
+  const getHeaders = useCallback(
+    () => ({
+      "Content-Type": "application/json",
+      "x-user-id":
+        sessionManager.getUserId?.() || "00000000-0000-0000-0000-000000000002",
+      "x-user-email": sessionManager.getUserEmail?.() || "demo@cia-web.local",
+      "x-user-name": sessionManager.getUserName?.() || "Demo User",
+    }),
+    []
+  );
+
   // ---------------------------------------------------------------------------
   // FETCH ALL DATA
   // ---------------------------------------------------------------------------
@@ -51,11 +62,11 @@ export function useProjectFiles(options = {}) {
       const [filesRes, foldersRes, starsRes] = await Promise.all([
         fetch(`${apiBase}/projects/${projectId}/files`, {
           signal,
-          headers: { "Content-Type": "application/json" },
+          headers: getHeaders(),
         }),
         fetch(`${apiBase}/projects/${projectId}/folders`, {
           signal,
-          headers: { "Content-Type": "application/json" },
+          headers: getHeaders(),
         }),
         fetch(
           `${apiBase}/projects/${projectId}/stars?scope=${scope}${
@@ -63,7 +74,7 @@ export function useProjectFiles(options = {}) {
           }`,
           {
             signal,
-            headers: { "Content-Type": "application/json" },
+            headers: getHeaders(),
           }
         ),
       ]);
@@ -83,7 +94,7 @@ export function useProjectFiles(options = {}) {
         starredIds: starsData.starredIds || { all: { files: [], folders: [] } },
       };
     },
-    [apiBase, projectId, scope, roomId]
+    [apiBase, projectId, scope, roomId, getHeaders]
   );
 
   const { data, isLoading, error, refetch } = useAsyncData(
@@ -125,7 +136,7 @@ export function useProjectFiles(options = {}) {
     async ({ name, parentId = null }) => {
       const response = await fetch(`${apiBase}/projects/${projectId}/folders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ name, parentId }),
       });
 
@@ -144,7 +155,7 @@ export function useProjectFiles(options = {}) {
         `${apiBase}/projects/${projectId}/folders/${folderId}`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: getHeaders(),
           body: JSON.stringify({ name }),
         }
       );
@@ -161,10 +172,10 @@ export function useProjectFiles(options = {}) {
   const { mutate: moveFolder } = useAsyncMutation(
     async ({ folderId, newParentId }) => {
       const response = await fetch(
-        `${apiBase}/projects/${projectId}/folders/${folderId}/move`,
+        `${apiBase}/projects/${projectId}/folders/${folderId}`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+          headers: getHeaders(),
           body: JSON.stringify({ parentId: newParentId }),
         }
       );
@@ -184,6 +195,7 @@ export function useProjectFiles(options = {}) {
         `${apiBase}/projects/${projectId}/folders/${folderId}`,
         {
           method: "DELETE",
+          headers: getHeaders(),
         }
       );
 
@@ -203,10 +215,10 @@ export function useProjectFiles(options = {}) {
   const { mutate: moveFile } = useAsyncMutation(
     async ({ fileId, folderId }) => {
       const response = await fetch(
-        `${apiBase}/projects/${projectId}/files/${fileId}/move`,
+        `${apiBase}/projects/${projectId}/files/${fileId}`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+          headers: getHeaders(),
           body: JSON.stringify({ folderId }),
         }
       );
@@ -228,6 +240,9 @@ export function useProjectFiles(options = {}) {
 
       const response = await fetch(`${apiBase}/projects/${projectId}/files`, {
         method: "POST",
+        headers: Object.fromEntries(
+          Object.entries(getHeaders()).filter(([key]) => key !== "Content-Type")
+        ),
         body: formData,
       });
 
@@ -251,7 +266,7 @@ export function useProjectFiles(options = {}) {
         `${apiBase}/projects/${projectId}/stars/toggle`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getHeaders(),
           body: JSON.stringify({
             targetType: type,
             targetId,
@@ -331,7 +346,7 @@ export function useProjectFiles(options = {}) {
  */
 export function useAllAccessibleFiles() {
   const fetchFiles = useCallback(async (signal) => {
-    const response = await fetch(`${config.apiBaseUrl}/datasets`, {
+    const response = await fetch(`${config.apiBaseUrl}/files`, {
       signal,
       headers: { "Content-Type": "application/json" },
     });
@@ -341,7 +356,7 @@ export function useAllAccessibleFiles() {
     }
 
     const data = await response.json();
-    return data.datasets || data || [];
+    return data.files || data.datasets || data || [];
   }, []);
 
   const {

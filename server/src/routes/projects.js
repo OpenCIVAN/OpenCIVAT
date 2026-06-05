@@ -80,7 +80,7 @@ router.get("/", async (req, res, next) => {
     const { pool } = req.app.locals;
 
     const result = await pool.query(
-      `SELECT p.*, o.name as organization_name
+      `SELECT DISTINCT p.*, o.name as organization_name
              FROM projects p
              JOIN organizations o ON p.organization_id = o.id
              LEFT JOIN project_members pm ON p.id = pm.project_id
