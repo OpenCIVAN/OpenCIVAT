@@ -28,6 +28,12 @@ print_error() {
     echo -e "${RED}✗${NC} $1"
 }
 
+# Preserve externally provided env vars before loading .env
+EXTERNAL_DEV_BYPASS_AUTH="${DEV_BYPASS_AUTH:-}"
+EXTERNAL_NODE_ENV="${NODE_ENV:-}"
+EXTERNAL_KEYCLOAK_URL="${KEYCLOAK_URL:-}"
+EXTERNAL_SKIP_AUTH_SETUP="${SKIP_AUTH_SETUP:-}"
+
 # Load environment variables (if present)
 if [ -f ".env" ]; then
     set -a
@@ -37,9 +43,12 @@ if [ -f ".env" ]; then
 fi
 
 # Auth-related defaults
-DEV_BYPASS_AUTH="${DEV_BYPASS_AUTH:-false}"
-KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8080}"
-SKIP_AUTH_SETUP="${SKIP_AUTH_SETUP:-false}"
+DEV_BYPASS_AUTH="${EXTERNAL_DEV_BYPASS_AUTH:-${DEV_BYPASS_AUTH:-false}}"
+export DEV_BYPASS_AUTH
+NODE_ENV="${EXTERNAL_NODE_ENV:-${NODE_ENV:-development}}"
+export NODE_ENV
+KEYCLOAK_URL="${EXTERNAL_KEYCLOAK_URL:-${KEYCLOAK_URL:-http://localhost:8080}}"
+SKIP_AUTH_SETUP="${EXTERNAL_SKIP_AUTH_SETUP:-${SKIP_AUTH_SETUP:-false}}"
 
 # Check if Docker is running
 echo "📦 Checking Docker..."
@@ -53,14 +62,19 @@ echo ""
 # Start Docker services
 echo "🐳 Starting Docker services (PostgreSQL, MinIO, Redis, API, Y.js, VTK Worker, Thumbnail Worker)..."
 ensure_matrix_network
-docker-compose up -d
+if [ "$DEV_BYPASS_AUTH" = "true" ]; then
+    echo "⚠️  DEV_BYPASS_AUTH=true detected, forcing service recreate to apply dev auth settings"
+    docker compose up -d --force-recreate
+else
+    docker compose up -d
+fi
 
 ensure_matrix_network
 # Start Matrix Federation services
 echo ""
 echo "🔐 Starting Matrix Federation services (Synapse, Matrix DB, Matrix Redis)..."
 cd server
-docker-compose -f docker-compose.matrix.yml up -d
+docker compose -f docker-compose.matrix.yml up -d
 cd ..
 
 # Wait for services to be healthy

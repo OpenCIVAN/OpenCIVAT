@@ -2,6 +2,8 @@
 // Main API server for CIA Web v2.0
 // Server-authoritative architecture with WebSocket broadcast
 
+const fs = require("fs");
+const path = require("path");
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -42,6 +44,48 @@ pool.on("error", (err) => {
   db.error("Unexpected error on PostgreSQL client", err);
   process.exit(-1);
 });
+
+async function ensureDatabaseSchema(pool) {
+  const { rows } = await pool.query(
+    `SELECT
+       to_regclass('public.projects') AS projects,
+       to_regclass('public.viewgroups') AS viewgroups,
+       to_regclass('public.viewgroup_templates') AS viewgroup_templates`
+  );
+
+  const hasProjects = rows[0].projects !== null;
+  const hasViewgroups = rows[0].viewgroups !== null;
+  const hasViewgroupTemplates = rows[0].viewgroup_templates !== null;
+
+  if (hasProjects && hasViewgroups && hasViewgroupTemplates) {
+    log.info("Database schema check passed");
+    return;
+  }
+
+  const countResult = await pool.query(
+    "SELECT COUNT(*) AS table_count FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'"
+  );
+  const tableCount = parseInt(countResult.rows[0].table_count, 10);
+
+  if (tableCount === 0) {
+    log.info("Database appears empty. Initializing schema from server/database/init.sql...");
+    const initSqlPath = path.join(__dirname, "../database/init.sql");
+    const initSql = fs.readFileSync(initSqlPath, "utf8");
+    await pool.query(initSql);
+    log.info("Database schema initialized successfully");
+    return;
+  }
+
+  const missing = [];
+  if (!hasProjects) missing.push("projects");
+  if (!hasViewgroups) missing.push("viewgroups");
+  if (!hasViewgroupTemplates) missing.push("viewgroup_templates");
+
+  throw new Error(
+    `Database schema check failed. Missing tables: ${missing.join(", ")}. ` +
+      `If this is a new database, run server/database/init.sql or reset your local DB.`
+  );
+}
 
 // ============================================================================
 // MINIO CONNECTION
@@ -461,8 +505,16 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 // START SERVER
 // ============================================================================
 
-server.listen(PORT, async () => {
-  log.info(`CIA Web API server v2.0 running on port ${PORT}`);
+(async () => {
+  try {
+    await ensureDatabaseSchema(pool);
+  } catch (error) {
+    log.error("Database initialization error:", error.message || error);
+    process.exit(1);
+  }
+
+  server.listen(PORT, async () => {
+    log.info(`CIA Web API server v2.0 running on port ${PORT}`);
   log.info(`Architecture: Server-Authority`);
   log.info(`Environment: ${process.env.NODE_ENV || "development"}`);
   log.debug(

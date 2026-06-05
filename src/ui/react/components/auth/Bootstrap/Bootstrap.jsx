@@ -220,6 +220,18 @@ export function Bootstrap() {
             setBootstrapState('ready');
         } catch (error) {
             log.error("Bootstrap: Phase 2 initialization failed:", error);
+            initializationStarted.current = false;
+
+            // If auth expired during Phase 2, show login instead of a crash screen.
+            // The authService will have already fired "session_expired" and cleared tokens;
+            // if it also triggered a Keycloak redirect (stale SSO session case) this
+            // state update is harmless — the page will navigate away momentarily.
+            if (!authService.isAuthenticated() && !isDevBypass) {
+                log.warn("Bootstrap: Session expired during Phase 2 — showing login");
+                setBootstrapState('login');
+                return;
+            }
+
             setErrorMessage(`Failed to initialize user services: ${error.message}`);
             setBootstrapState('error');
         }

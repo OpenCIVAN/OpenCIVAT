@@ -4,7 +4,8 @@
 #
 # Usage:
 #   Development mode (no auth required):
-#     ./scripts/load-demo-files.sh
+#     DEV_BYPASS_AUTH=true ./scripts/start.sh
+#     DEV_BYPASS_AUTH=true ./scripts/load-demo-files.sh
 #
 #   Production mode (with Keycloak token):
 #     AUTH_TOKEN="your-jwt-token" ./scripts/load-demo-files.sh
@@ -16,6 +17,7 @@
 #   API_URL     - Server URL (default: http://localhost:3001)
 #   AUTH_TOKEN  - JWT access token for authenticated requests
 #   PROJECT_ID  - Target project ID (default: demo project)
+#   DEV_BYPASS_AUTH - Set to true in development to bypass Keycloak auth and allow demo uploads without a JWT token
 
 set -e
 
@@ -23,15 +25,23 @@ API_URL="${API_URL:-http://localhost:3001}"
 PROJECT_ID="${PROJECT_ID:-00000000-0000-0000-0000-000000000001}"
 VTP_DIR="public/vtp_files"
 FOLDER_NAME="Examples"
+DEV_BYPASS_AUTH="${DEV_BYPASS_AUTH:-false}"
 
-# Build auth header if token provided
-AUTH_HEADER=""
+# Build auth headers if token provided or dev bypass is enabled
+CURL_HEADERS=()
 if [ -n "$AUTH_TOKEN" ]; then
-    AUTH_HEADER="-H \"Authorization: Bearer $AUTH_TOKEN\""
+    CURL_HEADERS+=( -H "Authorization: Bearer $AUTH_TOKEN" )
     echo "🔐 Using authenticated mode"
+elif [ "$DEV_BYPASS_AUTH" = "true" ]; then
+    CURL_HEADERS+=( -H "x-user-id: 00000000-0000-0000-0000-000000000002" )
+    CURL_HEADERS+=( -H "x-user-email: admin@cia-web.local" )
+    CURL_HEADERS+=( -H "x-user-name: CIA Admin" )
+    echo "⚠️  No AUTH_TOKEN set - using dev bypass headers because DEV_BYPASS_AUTH=true"
+    echo "   This requires the server to be started with DEV_BYPASS_AUTH=true"
 else
-    echo "⚠️  No AUTH_TOKEN set - using unauthenticated mode"
-    echo "   Set AUTH_TOKEN for production environments"
+    echo "❌ No AUTH_TOKEN provided and DEV_BYPASS_AUTH is not enabled"
+    echo "   Run with AUTH_TOKEN=\"<token>\" or DEV_BYPASS_AUTH=true ./scripts/load-demo-files.sh"
+    exit 1
 fi
 
 echo ""
@@ -75,18 +85,11 @@ for file in "$VTP_DIR"/*.vtp; do
         echo -n "   $filename... "
 
         # Build curl command with optional auth header
-        if [ -n "$AUTH_TOKEN" ]; then
-            response=$(curl -s -X POST "$API_URL/api/projects/$PROJECT_ID/files" \
-                -H "Authorization: Bearer $AUTH_TOKEN" \
-                -F "file=@$file" \
-                -F "folder=$FOLDER_NAME" \
-                -F "uploadedBy=demo@cia-web.local" 2>&1)
-        else
-            response=$(curl -s -X POST "$API_URL/api/projects/$PROJECT_ID/files" \
-                -F "file=@$file" \
-                -F "folder=$FOLDER_NAME" \
-                -F "uploadedBy=demo@cia-web.local" 2>&1)
-        fi
+        response=$(curl -s -X POST "$API_URL/api/projects/$PROJECT_ID/files" \
+            "${CURL_HEADERS[@]}" \
+            -F "file=@$file" \
+            -F "folder=$FOLDER_NAME" \
+            -F "uploadedBy=demo@cia-web.local" 2>&1)
 
         if echo "$response" | grep -q '"success":true'; then
             if echo "$response" | grep -q '"deduplicated":true'; then

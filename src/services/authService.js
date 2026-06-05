@@ -63,6 +63,27 @@ function generateCodeVerifier() {
   return generateRandomString(64);
 }
 
+function _saveAuthFlowState(codeVerifier, authState) {
+  const authStateString = JSON.stringify(authState);
+  sessionStorage.setItem(PKCE_VERIFIER_KEY, codeVerifier);
+  sessionStorage.setItem(AUTH_STATE_KEY, authStateString);
+  localStorage.setItem(PKCE_VERIFIER_KEY, codeVerifier);
+  localStorage.setItem(AUTH_STATE_KEY, authStateString);
+}
+
+function _getStoredAuthState() {
+  const stored =
+    sessionStorage.getItem(AUTH_STATE_KEY) || localStorage.getItem(AUTH_STATE_KEY);
+  return stored ? JSON.parse(stored) : null;
+}
+
+function _getStoredCodeVerifier() {
+  return (
+    sessionStorage.getItem(PKCE_VERIFIER_KEY) ||
+    localStorage.getItem(PKCE_VERIFIER_KEY)
+  );
+}
+
 /**
  * Generate PKCE code challenge from verifier (SHA-256 + base64url)
  */
@@ -246,15 +267,11 @@ class AuthService {
     const state = generateState();
 
     // Store PKCE verifier and state temporarily (needed for callback)
-    sessionStorage.setItem(PKCE_VERIFIER_KEY, codeVerifier);
-    sessionStorage.setItem(
-      AUTH_STATE_KEY,
-      JSON.stringify({
-        state,
-        redirectUri,
-        timestamp: Date.now(),
-      })
-    );
+    _saveAuthFlowState(codeVerifier, {
+      state,
+      redirectUri,
+      timestamp: Date.now(),
+    });
 
     // Build authorization URL
     const authUrl = new URL(
@@ -284,12 +301,10 @@ class AuthService {
    */
   async handleCallback(code, state) {
     // Validate state
-    const storedAuthState = sessionStorage.getItem(AUTH_STATE_KEY);
-    if (!storedAuthState) {
+    const authState = _getStoredAuthState();
+    if (!authState) {
       throw new Error("No auth state found - possible CSRF attack");
     }
-
-    const authState = JSON.parse(storedAuthState);
     if (authState.state !== state) {
       throw new Error("State mismatch - possible CSRF attack");
     }
@@ -300,7 +315,7 @@ class AuthService {
     }
 
     // Get PKCE verifier
-    const codeVerifier = sessionStorage.getItem(PKCE_VERIFIER_KEY);
+    const codeVerifier = _getStoredCodeVerifier();
     if (!codeVerifier) {
       throw new Error("No PKCE verifier found");
     }
@@ -393,15 +408,22 @@ class AuthService {
         return true;
       } catch (error) {
         log.error("Token refresh failed after 401:", error);
+
+        // Keycloak reused a stale SSO session that predates the cia-web-app client.
+        // Force a fresh login so Keycloak creates a clean client session.
+        if (error.message?.includes("Session doesn't have required client")) {
+          log.warn("Stale SSO session detected — redirecting to fresh Keycloak login");
+          this._clearTokens();
+          this._notifyListeners("session_expired");
+          this.login({ prompt: "login" });
+          return false;
+        }
       }
     }
 
     // Refresh failed or no refresh token - need to re-login
     this._clearTokens();
     this._notifyListeners("session_expired");
-
-    // Optionally trigger login automatically
-    // await this.login();
 
     return false;
   }
@@ -665,6 +687,8 @@ class AuthService {
   _cleanupAuthFlow() {
     sessionStorage.removeItem(PKCE_VERIFIER_KEY);
     sessionStorage.removeItem(AUTH_STATE_KEY);
+    localStorage.removeItem(PKCE_VERIFIER_KEY);
+    localStorage.removeItem(AUTH_STATE_KEY);
   }
 
   /**

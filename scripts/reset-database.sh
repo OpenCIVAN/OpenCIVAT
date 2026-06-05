@@ -108,24 +108,44 @@ if [ "$REBUILD_MODE" = true ]; then
         echo -e "   ${GREEN}Build completed${NC}"
     fi
 
-echo "🚀 Starting containers..."
+    echo "🚀 Starting containers..."
     ensure_matrix_network
-    ./scripts/wait-for-synapse.sh
     if ! run_or_fail docker compose up -d; then
         echo -e "${RED}❌ Failed to start containers${NC}"
         docker compose logs --tail=50
         exit 1
     fi
+
+    echo "🔐 Starting Matrix Federation services..."
+    cd "$SCRIPT_DIR/.."
+    if ! run_or_fail docker compose -f server/docker-compose.matrix.yml up -d; then
+        echo -e "${RED}❌ Failed to start Matrix Federation services${NC}"
+        docker compose -f server/docker-compose.matrix.yml logs --tail=50
+        exit 1
+    fi
+    cd "$SCRIPT_DIR"
+
+    "$SCRIPT_DIR/wait-for-synapse.sh"
 else
-echo "🚀 Starting with fresh database..."
+    echo "🚀 Starting with fresh database..."
     ensure_matrix_network
-    ./scripts/wait-for-synapse.sh
     if ! run_or_fail docker compose up -d; then
         echo -e "${RED}❌ Failed to start containers${NC}"
         echo "Checking logs..."
         docker compose logs --tail=50
         exit 1
     fi
+
+    echo "🔐 Starting Matrix Federation services..."
+    cd "$SCRIPT_DIR/.."
+    if ! run_or_fail docker compose -f server/docker-compose.matrix.yml up -d; then
+        echo -e "${RED}❌ Failed to start Matrix Federation services${NC}"
+        docker compose -f server/docker-compose.matrix.yml logs --tail=50
+        exit 1
+    fi
+    cd "$SCRIPT_DIR"
+
+    "$SCRIPT_DIR/wait-for-synapse.sh"
 fi
 
 # Wait for postgres

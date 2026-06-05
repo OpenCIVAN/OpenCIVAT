@@ -79,9 +79,13 @@ openssl req -x509 -newkey rsa:4096 \
 
 ### 4. Start Backend Services
 
+For a local demo without Keycloak, start the backend in dev bypass mode:
+
 ```bash
-./scripts/start.sh
+DEV_BYPASS_AUTH=true ./scripts/start.sh
 ```
+
+If you instead want to use Keycloak auth, leave `DEV_BYPASS_AUTH=false` and configure Keycloak per the docs.
 
 This starts all Docker services:
 - PostgreSQL (database)
@@ -93,6 +97,14 @@ This starts all Docker services:
 - Thumbnail worker
 
 Wait for all health checks to pass (~30 seconds).
+
+### Optional: One-step demo setup
+
+If you want the fastest local demo path, use the helper script to reset the database, start services, and upload demo files with the dev bypass auth flow:
+
+```bash
+./scripts/demo-setup.sh
+```
 
 ### 5. Install Frontend Dependencies
 

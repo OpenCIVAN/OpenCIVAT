@@ -12,11 +12,12 @@ Step-by-step instructions for getting CIA_Web running from a blank machine. Foll
 4. [Generate SSL Certificates](#4-generate-ssl-certificates)
 5. [Install Node Dependencies](#5-install-node-dependencies)
 6. [Start Backend Services (Docker)](#6-start-backend-services-docker)
-7. [Start the Frontend](#7-start-the-frontend)
-8. [Verify Everything Works](#8-verify-everything-works)
-9. [Optional: Voice Chat (LiveKit)](#9-optional-voice-chat-livekit)
-10. [Stopping the Project](#10-stopping-the-project)
-11. [Troubleshooting First-Run Issues](#11-troubleshooting-first-run-issues)
+7. [Configure Authentication (Keycloak)](#7-configure-authentication-keycloak)
+8. [Start the Frontend](#8-start-the-frontend)
+9. [Verify Everything Works](#9-verify-everything-works)
+10. [Optional: Voice Chat (LiveKit)](#10-optional-voice-chat-livekit)
+11. [Stopping the Project](#11-stopping-the-project)
+12. [Troubleshooting First-Run Issues](#12-troubleshooting-first-run-issues)
 
 ---
 
@@ -201,7 +202,34 @@ curl http://localhost:3001/api/health
 
 ---
 
-## 7. Start the Frontend
+## 7. Configure Authentication (Keycloak)
+
+This is a **one-time setup** that creates the `cia-web` realm, the `cia-web-app` client, and the dev test accounts in Keycloak. **The app will fail to load without this step.**
+
+First, wait for Keycloak to be fully healthy — it takes 60–90 seconds on first run:
+
+```bash
+docker-compose ps   # keycloak should show "healthy"
+# or watch it:
+docker-compose logs keycloak --tail=5
+```
+
+Once healthy, run:
+
+```bash
+./scripts/setup-local-auth.sh
+```
+
+This script:
+- Creates the `cia-web` realm
+- Creates the `cia-web-app` OAuth client with the correct redirect URIs
+- Creates the four dev test accounts in Keycloak and links them to the database
+
+You only need to run this once. If you reset the database (e.g. `./scripts/reset-database.sh`), run it again.
+
+---
+
+## 8. Start the Frontend
 
 In a **new terminal** (leave Docker running in the background):
 
@@ -217,7 +245,7 @@ Once compilation finishes, open **`https://localhost:8081`** in your browser (or
 
 ---
 
-## 8. Verify Everything Works
+## 9. Verify Everything Works
 
 | Service | URL | Check |
 |---------|-----|-------|
@@ -227,6 +255,23 @@ Once compilation finishes, open **`https://localhost:8081`** in your browser (or
 | Keycloak Admin | `http://localhost:8080` | Login: `admin` / `admin123` |
 | Yjs WebSocket | `ws://localhost:9001` | Check: `docker-compose logs yjs` |
 
+### Dev Test Accounts
+
+These Keycloak accounts are seeded automatically for local development:
+
+| Display Name | Username | Email | Password | Role |
+|---|---|---|---|---|
+| CIA Admin | `cia-admin` | admin@cia-web.local | `Admin123!` | admin |
+| Alice Analyst | `alice` | alice@cia-web.local | `Password123!` | member |
+| Bob Builder | `bob` | bob@cia-web.local | `Password123!` | member |
+| View Only | `viewer` | viewer@cia-web.local | `Password123!` | viewer |
+
+Use these to log in at `https://localhost:8081`. To test collaboration, open the app in two different browsers (or one normal + one incognito) and log in as different users.
+
+If `DEV_BYPASS_AUTH=true` is set in `.env`, auth is skipped entirely and you can switch users via the `x-user-id` request header instead (see `scripts/seed-mock-users.sh` for the UUIDs).
+
+---
+
 Quick functional test:
 1. Upload a `.vtp` file — it should appear in the file panel
 2. Open a second browser tab at `https://localhost:8081` — cursors should sync between tabs
@@ -234,7 +279,7 @@ Quick functional test:
 
 ---
 
-## 9. Optional: Voice Chat (LiveKit)
+## 10. Optional: Voice Chat (LiveKit)
 
 Requires LiveKit installed from [Step 1](#1-install-prerequisites).
 
@@ -257,7 +302,7 @@ Test: open the app in two tabs, click **Join Voice Chat** in both, grant microph
 
 ---
 
-## 10. Stopping the Project
+## 11. Stopping the Project
 
 **Stop the frontend:** `Ctrl+C` in the terminal running `npm start`
 
@@ -280,7 +325,7 @@ npm run stop:all  # also kills LiveKit ports 7880, 7881
 
 ---
 
-## 11. Troubleshooting First-Run Issues
+## 12. Troubleshooting First-Run Issues
 
 ### Docker Desktop isn't running
 ```

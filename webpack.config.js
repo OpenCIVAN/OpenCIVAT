@@ -41,6 +41,7 @@ module.exports = {
   output: {
     filename: "[name].bundle.js",
     path: path.resolve(__dirname, "dist"),
+    publicPath: "/",
     clean: true,
   },
   mode: "development",
@@ -64,6 +65,7 @@ module.exports = {
     // Server config (HTTPS or HTTP based on USE_HTTP env var)
     server: getServerConfig(),
     allowedHosts: "all",
+    historyApiFallback: true,
     // Proxy API requests to the backend - eliminates CORS issues
     proxy: [
       {

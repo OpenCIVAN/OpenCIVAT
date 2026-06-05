@@ -36,6 +36,14 @@ Wipe database and restart fresh using `init.sql`.
 indexedDB.deleteDatabase('cia-datasets'); location.reload();
 ```
 
+### `demo-setup.sh`
+Start the project in demo mode, reset the database, and upload sample files with dev bypass auth.
+```bash
+./scripts/demo-setup.sh
+```
+
+This script is the fastest path to a working local demo without requiring Keycloak configuration.
+
 ---
 
 ## Authentication Scripts
@@ -60,13 +68,23 @@ Creates these Keycloak users (passwords shown):
 
 ### `load-demo-files.sh`
 Upload demo VTP files to the Sample Files project.
+
+> Important: if you are not using Keycloak auth, the API must be started with `DEV_BYPASS_AUTH=true` before running this script.
+> In that case, run both commands with the same prefix so the backend uses dev bypass mode.
+
+Development bypass mode (no Keycloak required):
 ```bash
-./scripts/load-demo-files.sh
+DEV_BYPASS_AUTH=true ./scripts/start.sh
+DEV_BYPASS_AUTH=true ./scripts/load-demo-files.sh
+```
 
-# With authentication (production):
+Production mode with authentication:
+```bash
 AUTH_TOKEN="your-jwt" ./scripts/load-demo-files.sh
+```
 
-# Custom API URL:
+Custom API URL:
+```bash
 API_URL="https://your-server.com" ./scripts/load-demo-files.sh
 ```
 
