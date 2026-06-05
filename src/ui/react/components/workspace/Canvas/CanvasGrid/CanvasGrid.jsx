@@ -49,6 +49,7 @@ const LAYOUT_SPANS = {
     'single': { rows: 1, cols: 1 }, 'side-by-side': { rows: 1, cols: 2 },
     'stacked': { rows: 2, cols: 1 }, '2x2': { rows: 2, cols: 2 },
     '1+2': { rows: 2, cols: 2 }, '2+1': { rows: 2, cols: 2 },
+    '2x2-top': { rows: 2, cols: 2 }, '2x2-bottom': { rows: 2, cols: 2 },
     '3-up': { rows: 1, cols: 3 }, '3x3': { rows: 3, cols: 3 },
 };
 

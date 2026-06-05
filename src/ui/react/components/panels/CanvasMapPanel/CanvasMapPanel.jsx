@@ -11,13 +11,14 @@
  * - Understand linking relationships between VGs and Views
  */
 
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useState, useRef } from 'react';
 import { PanelShell, CHROME_LEVELS, usePanelShell } from '@UI/react/components/panels/PanelShell';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { Tooltip } from '@UI/react/components/atoms/Tooltip';
+import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
+import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { COMPANION_PANEL_ID } from '@UI/react/components/panels/CompanionPanel';
 import { useCanvasMap } from '@UI/react/context/CanvasMapContext';
-import { WorkspaceSelector } from '@UI/react/components/molecules/WorkspaceSelector/WorkspaceSelector';
 import { CanvasMapContent } from './CanvasMapContent';
 
 // Panel ID constant for external access
@@ -57,6 +58,51 @@ export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorks
     if (!workspaceId || !workspaces?.length) return null;
     return workspaces.find(ws => ws.id === workspaceId) || { id: workspaceId, name: workspaceId.slice(0, 8) };
   }, [workspaceId, workspaces]);
+
+  // Workspace selector dropdown state
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [workspaceQuery, setWorkspaceQuery] = useState('');
+  const [workspaceFilter, setWorkspaceFilter] = useState('all');
+  const [workspaceSort, setWorkspaceSort] = useState('name-asc');
+  const [workspaceTag, setWorkspaceTag] = useState(null);
+  const workspaceTriggerRef = useRef(null);
+
+  const workspaceItems = useMemo(() => {
+    return (workspaces || []).map(ws => typeof ws === 'string' ? { id: ws, name: ws } : ws);
+  }, [workspaces]);
+
+  const workspaceTags = useMemo(() => {
+    const tags = new Set();
+    workspaceItems.forEach(ws => {
+      if (Array.isArray(ws.tags)) ws.tags.forEach(t => tags.add(t));
+    });
+    return Array.from(tags);
+  }, [workspaceItems]);
+
+  const filteredWorkspaces = useMemo(() => {
+    const query = workspaceQuery.trim().toLowerCase();
+    const hasQuery = Boolean(query);
+
+    let items = workspaceItems.filter(ws => {
+      if (hasQuery && !(ws.name || '').toLowerCase().includes(query)) return false;
+      if (workspaceFilter !== 'all' && ws.type !== workspaceFilter) return false;
+      if (workspaceTag && (!Array.isArray(ws.tags) || !ws.tags.includes(workspaceTag))) return false;
+      return true;
+    });
+
+    const sorters = {
+      'name-asc': (a, b) => (a.name || '').localeCompare(b.name || ''),
+      'name-desc': (a, b) => (b.name || '').localeCompare(a.name || ''),
+      'recent': (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0),
+    };
+    return items.slice().sort(sorters[workspaceSort] || sorters['name-asc']);
+  }, [workspaceItems, workspaceQuery, workspaceFilter, workspaceSort, workspaceTag]);
+
+  const handleWorkspaceClose = useCallback(() => {
+    setWorkspaceOpen(false);
+    setWorkspaceQuery('');
+    setWorkspaceTag(null);
+  }, []);
 
   // Listen for toggle event (keyboard shortcut 'm')
   useEffect(() => {
@@ -101,25 +147,127 @@ export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorks
       chrome={CHROME_LEVELS.FULL}
       color="#3b82f6"
       renderHeaderContent={() => (
-        <div
-          className="canvas-map-header"
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span className="canvas-map-header__title">{headerTitle}</span>
-          <span className="canvas-map-header__separator">·</span>
-          {currentWorkspace && (
-            <WorkspaceSelector
-              workspace={currentWorkspace}
-              workspaces={workspaces || []}
-              onSelect={(ws) => onOpenWorkspace?.(ws.id)}
-              hideLabel
-            />
-          )}
-          {!currentWorkspace && (
-            <span className="canvas-map-header__workspace-empty">No workspace</span>
-          )}
-        </div>
+        <>
+          <div
+            className="canvas-map-header"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="canvas-map-header__title">{headerTitle}</span>
+            <span className="canvas-map-header__separator">·</span>
+            {currentWorkspace ? (
+              <button
+                ref={workspaceTriggerRef}
+                type="button"
+                className="canvas-map-header__ws-selector"
+                onClick={() => setWorkspaceOpen(prev => !prev)}
+                aria-expanded={workspaceOpen}
+                aria-haspopup="listbox"
+              >
+                <Icon name="grid" size={12} />
+                <span className="canvas-map-header__ws-name">
+                  {currentWorkspace.name || 'Workspace'}
+                </span>
+                <Icon name="chevronDown" size={10} />
+              </button>
+            ) : (
+              <span className="canvas-map-header__workspace-empty">No workspace</span>
+            )}
+          </div>
+
+          <DropdownPortal
+            open={workspaceOpen}
+            onClose={handleWorkspaceClose}
+            triggerRef={workspaceTriggerRef}
+            align="start"
+            position="bottom"
+            className="canvas-map-header__dropdown"
+          >
+            <div className="canvas-map-header__dropdown-inner">
+              <SearchInput
+                className="canvas-map-header__dropdown-search"
+                value={workspaceQuery}
+                onChange={setWorkspaceQuery}
+                placeholder="Search workspaces..."
+                size="sm"
+                autoFocus
+              />
+              <div className="canvas-map-header__dropdown-controls">
+                <div className="canvas-map-header__filter-row">
+                  {['all', 'project', 'breakout', 'personal'].map(filter => (
+                    <button
+                      key={filter}
+                      type="button"
+                      className={`canvas-map-header__filter-chip ${workspaceFilter === filter ? 'is-active' : ''}`}
+                      onClick={() => setWorkspaceFilter(filter)}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+                {workspaceTags.length > 0 && (
+                  <div className="canvas-map-header__tag-row">
+                    {workspaceTags.map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`canvas-map-header__tag-chip ${workspaceTag === tag ? 'is-active' : ''}`}
+                        onClick={() => setWorkspaceTag(workspaceTag === tag ? null : tag)}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <label className="canvas-map-header__sort">
+                  <span>Sort</span>
+                  <select value={workspaceSort} onChange={e => setWorkspaceSort(e.target.value)}>
+                    <option value="name-asc">Name A–Z</option>
+                    <option value="name-desc">Name Z–A</option>
+                    <option value="recent">Recently updated</option>
+                  </select>
+                </label>
+              </div>
+              <div className="canvas-map-header__dropdown-divider" />
+              {filteredWorkspaces.map(ws => {
+                const isActive = currentWorkspace?.id === ws.id;
+                return (
+                  <button
+                    key={ws.id}
+                    type="button"
+                    className={`canvas-map-header__dropdown-item ${isActive ? 'is-active' : ''}`}
+                    onClick={() => {
+                      onOpenWorkspace?.(ws.id);
+                      handleWorkspaceClose();
+                    }}
+                  >
+                    <Icon name="grid" size={12} />
+                    <span className="canvas-map-header__dropdown-text">{ws.name}</span>
+                    {isActive && <Icon name="check" size={12} className="canvas-map-header__dropdown-check" />}
+                  </button>
+                );
+              })}
+              {filteredWorkspaces.length === 0 && (
+                <div className="canvas-map-header__dropdown-empty">No workspaces found</div>
+              )}
+              {onCreateWorkspace && (
+                <div className="canvas-map-header__dropdown-footer">
+                  <button
+                    type="button"
+                    className="canvas-map-header__dropdown-item canvas-map-header__dropdown-item--create"
+                    onClick={() => {
+                      onCreateWorkspace?.();
+                      handleWorkspaceClose();
+                    }}
+                  >
+                    <Icon name="plus" size={12} />
+                    <span className="canvas-map-header__dropdown-text">Create Workspace</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </DropdownPortal>
+        </>
       )}
       headerActions={(
         <Tooltip

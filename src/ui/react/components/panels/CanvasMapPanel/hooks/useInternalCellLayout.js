@@ -16,7 +16,7 @@
  * @param {number} layout.rows - Number of rows in grid
  * @param {number} layout.cols - Number of columns in grid
  * @param {number} layout.cells - Total cell count
- * @param {string} [layout.merged] - Merge pattern: 'top' | 'right' | 'left'
+ * @param {string} [layout.merged] - Merge pattern: 'top' | 'right' | 'left' | 'bottom'
  * @param {number} containerWidth - Available width in pixels (after padding subtracted by caller)
  * @param {number} containerHeight - Available height in pixels (after padding subtracted by caller)
  * @param {number} filledCount - Number of cells that contain a view
@@ -126,6 +126,38 @@ export function getInternalCells(layout, containerWidth, containerHeight, filled
       filled: filledCount > 2,
       isMerged: false,
       mergeSpan: { rows: 1, cols: 1 },
+    });
+  } else if (merged === 'bottom') {
+    // Bottom row merged: two cells on top, one wide cell spanning both columns below
+    cells.push({
+      row: 0, col: 0,
+      x: padding,
+      y: padding,
+      width: cellWidth,
+      height: cellHeight,
+      filled: filledCount > 0,
+      isMerged: false,
+      mergeSpan: { rows: 1, cols: 1 },
+    });
+    cells.push({
+      row: 0, col: 1,
+      x: padding + cellWidth + gap,
+      y: padding,
+      width: cellWidth,
+      height: cellHeight,
+      filled: filledCount > 1,
+      isMerged: false,
+      mergeSpan: { rows: 1, cols: 1 },
+    });
+    cells.push({
+      row: 1, col: 0,
+      x: padding,
+      y: padding + cellHeight + gap,
+      width: containerWidth,
+      height: cellHeight,
+      filled: filledCount > 2,
+      isMerged: true,
+      mergeSpan: { rows: 1, cols: 2 },
     });
   } else {
     // Standard grid

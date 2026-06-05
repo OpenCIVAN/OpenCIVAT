@@ -51,10 +51,18 @@ export function useVGQuickOps({ focusedVG, cells = [], onExitFocus }) {
   }, []);
 
   const selectCell = useCallback((cellIndex, { shift = false } = {}) => {
+    // Any selection action should exit assignment mode to avoid mixed intent.
+    if (assigningCellIndex !== null) {
+      viewAssignment.cancel();
+      setAssigningCellIndex(null);
+    }
+
     setSelectedCells((prev) => {
       if (!shift) {
+        // Keep a single selected cell selected on repeated clicks to reduce
+        // accidental deselection while building merge selections.
         if (prev.has(cellIndex) && prev.size === 1) {
-          return new Set();
+          return prev;
         }
         return new Set([cellIndex]);
       }
@@ -66,7 +74,7 @@ export function useVGQuickOps({ focusedVG, cells = [], onExitFocus }) {
       }
       return next;
     });
-  }, []);
+  }, [assigningCellIndex]);
 
   // ── Derived: is the selection a rectangular region? ─────────────────────
   const isRectangularSelection = useMemo(() => {

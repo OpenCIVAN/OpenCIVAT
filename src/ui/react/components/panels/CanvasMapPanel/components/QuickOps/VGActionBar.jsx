@@ -85,16 +85,17 @@ export const VGActionBar = memo(function VGActionBar({
   const pos = focusedVG?.position;
 
   // Merge button gating
-  const canMerge = quickOps.isRectangularSelection && quickOps.selectedCells.size > 1;
+  const isMergeCapableLayout = (focusedLayout?.rows === 2 && focusedLayout?.cols === 2);
+  const canMerge = isMergeCapableLayout && quickOps.isRectangularSelection && quickOps.selectedCells.size === 2;
   const mergeTooltip = canMerge
     ? 'Merge selected cells'
-    : 'Select a rectangular area to merge';
+    : (isMergeCapableLayout ? 'Select exactly two adjacent cells to merge' : 'Merge is only available for 2x2 layouts');
 
   // Split button gating
-  const canSplit = quickOps.hasMergedCellSelected && quickOps.selectedCells.size === 1;
+  const canSplit = !!focusedLayout?.merged && quickOps.selectedCells.size === 1;
   const splitTooltip = canSplit
     ? 'Split merged cell'
-    : 'Select a merged cell to split';
+    : 'Select any cell in a merged layout to split';
 
   const handleMerge = useCallback(() => {
     if (!canMerge) return;

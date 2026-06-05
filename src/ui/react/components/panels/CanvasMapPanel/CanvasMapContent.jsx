@@ -50,6 +50,7 @@ function saveSelectedViewportId(id) {
 }
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { Tooltip } from '@UI/react/components/atoms/Tooltip';
+import { Spinner } from '@UI/react/components/atoms/Spinner';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
 import { useCanvasMap } from '@UI/react/context/CanvasMapContext';
 import { useViewGroups } from '@UI/react/hooks/useViewGroups';
@@ -952,6 +953,17 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     }) || null;
   }, []);
 
+  const findAllActivePlacementsForView = useCallback((viewId) => {
+    if (!viewId) return [];
+    const viewKey = String(viewId);
+    const activeCanvas = canvasManager.getActiveCanvas();
+    if (!activeCanvas?.placements?.length) return [];
+    return activeCanvas.placements.filter((placement) => {
+      const placementViewId = placement?.content?.viewConfigurationId || placement?.content?.viewId;
+      return placementViewId != null && String(placementViewId) === viewKey;
+    });
+  }, []);
+
   const handleResizeCanvas = useCallback(async (directionOrPayload, actionArg = 'add') => {
     if (!setCanvasSize || !canvasData) return;
     const payload = typeof directionOrPayload === 'string'
@@ -1442,7 +1454,20 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       const rs = cell.mergeSpan?.rows || 1;
       const cs = cell.mergeSpan?.cols || 1;
 
-      const existingPlacement = findActivePlacementForView(viewId);
+      const allPlacementsForView = findAllActivePlacementsForView(viewId);
+      const exactPlacement = allPlacementsForView.find((placement) => (
+        placement.row === r
+        && placement.col === c
+        && (placement.rowSpan || 1) === rs
+        && (placement.colSpan || 1) === cs
+      ));
+      const existingPlacement = exactPlacement || allPlacementsForView[0] || null;
+      if (existingPlacement && allPlacementsForView.length > 1) {
+        for (const duplicate of allPlacementsForView) {
+          if (duplicate.id === existingPlacement.id) continue;
+          try { await removePlacement?.(duplicate.id); } catch { /* ignore */ }
+        }
+      }
       if (existingPlacement) {
         await clearEmptyPlacementsInRect(r, c, rs, cs, existingPlacement.id);
         try {
@@ -1474,8 +1499,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       if (layoutChangeInProgress.current) return;
       const currentGroup = viewGroupManager.findGroupContainingView(viewId);
       if (currentGroup) return;
-      const placement = findActivePlacementForView(viewId);
-      if (placement) {
+      const placements = findAllActivePlacementsForView(viewId);
+      for (const placement of placements) {
         try { await removePlacement(placement.id); } catch { /* ignore */ }
       }
     };
@@ -1487,7 +1512,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       viewGroupManager.off('viewAdded', handleViewAdded);
       viewGroupManager.off('viewRemoved', handleViewRemoved);
     };
-  }, [addPlacement, findActivePlacementForView, removePlacement]);
+  }, [addPlacement, findAllActivePlacementsForView, removePlacement]);
 
   // Clean up implicit VGs when canvas placements are removed (e.g., close button)
   useEffect(() => {
@@ -1495,6 +1520,14 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       if (!placement) return;
       const viewId = placement.content?.viewConfigurationId || placement.content?.viewId;
       if (!viewId) return;
+      // If the canvas still has other placements for this view (e.g. a duplicate was
+      // pruned by reconciliation), leave the VG slot intact to avoid cascading removals.
+      const activeCanvas = canvasManager.getActiveCanvas();
+      const remaining = (activeCanvas?.placements || []).filter((p) => {
+        const pViewId = p?.content?.viewConfigurationId || p?.content?.viewId;
+        return pViewId != null && String(pViewId) === String(viewId);
+      });
+      if (remaining.length > 0) return;
       const group = viewGroupManager.findGroupContainingView(viewId);
       if (!group) return;
       // Remove the view from the VG's slots
@@ -1594,7 +1627,20 @@ export const CanvasMapContent = memo(function CanvasMapContent({
 
       if (viewId) {
         // View slot — find or create view placement
-        const placement = findActivePlacementForView(viewId);
+        const allPlacementsForView = findAllActivePlacementsForView(viewId);
+        const exactPlacement = allPlacementsForView.find((candidate) => (
+          candidate.row === targetRow
+          && candidate.col === targetCol
+          && (candidate.rowSpan || 1) === rs
+          && (candidate.colSpan || 1) === cs
+        ));
+        const placement = exactPlacement || allPlacementsForView[0] || null;
+        if (placement && allPlacementsForView.length > 1) {
+          for (const duplicate of allPlacementsForView) {
+            if (duplicate.id === placement.id) continue;
+            try { await canvasManager.removePlacement(duplicate.id); } catch { /* ignore */ }
+          }
+        }
         if (placement) {
           accountedIds.add(placement.id);
           const placementMatchesTarget = (candidate) => (
@@ -1634,13 +1680,16 @@ export const CanvasMapContent = memo(function CanvasMapContent({
                 try { await canvasManager.removePlacement(placement.id); } catch { /* ignore */ }
                 await removeOverlappingEmptyPlacements(targetRow, targetCol, rs, cs);
                 try {
-                  await addPlacement({
+                  const createdPlacement = await addPlacement({
                     row: targetRow,
                     col: targetCol,
                     rowSpan: rs,
                     colSpan: cs,
                     content: { type: 'view', viewConfigurationId: viewId },
                   });
+                  if (createdPlacement?.id) {
+                    accountedIds.add(createdPlacement.id);
+                  }
                 } catch { /* ignore */ }
               }
             }
@@ -1648,8 +1697,11 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         } else if (addPlacement) {
           await removeOverlappingEmptyPlacements(targetRow, targetCol, rs, cs);
           try {
-            await addPlacement({ row: targetRow, col: targetCol, rowSpan: rs, colSpan: cs,
+            const createdPlacement = await addPlacement({ row: targetRow, col: targetCol, rowSpan: rs, colSpan: cs,
               content: { type: 'view', viewConfigurationId: viewId } });
+            if (createdPlacement?.id) {
+              accountedIds.add(createdPlacement.id);
+            }
           } catch { /* ignore */ }
         }
       } else {
@@ -1668,8 +1720,11 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         } else if (addPlacement) {
           await removeOverlappingEmptyPlacements(targetRow, targetCol, rs, cs);
           try {
-            await addPlacement({ row: targetRow, col: targetCol, rowSpan: rs, colSpan: cs,
+            const createdPlacement = await addPlacement({ row: targetRow, col: targetCol, rowSpan: rs, colSpan: cs,
               content: { type: 'empty' } });
+            if (createdPlacement?.id) {
+              accountedIds.add(createdPlacement.id);
+            }
           } catch { /* ignore */ }
         }
       }
@@ -1687,12 +1742,13 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       return rectsOverlap(footprintRect, placementRect);
     });
     for (const p of latestFootprintPlacements) {
-      if (!accountedIds.has(p.id) &&
-          (p.content?.type === 'empty' || !p.content?.viewConfigurationId)) {
-        try { await canvasManager.removePlacement(p.id); } catch { /* ignore */ }
-      }
+      if (accountedIds.has(p.id)) continue;
+      // Only remove empty/orphan placements — removing view placements here triggers
+      // handlePlacementRemoved → removeViewFromGroup, creating a cascading update loop.
+      if (p.content?.viewConfigurationId || p.content?.viewId) continue;
+      try { await canvasManager.removePlacement(p.id); } catch { /* ignore */ }
     }
-  }, [addPlacement, findActivePlacementForView]);
+  }, [addPlacement, findAllActivePlacementsForView]);
 
   // Sync canvas placement spans when a VG is updated (position moves, etc.)
   // Layout changes are reconciled with full placement rebuild.
@@ -2438,93 +2494,121 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     }
   }, [state.focusedVGId, rawViewGroups, updateViewGroup, syncViewGroupNow, setCanvasSize, canvasData, reconcileVGPlacements]);
 
-  /** Merge selected cells — changes layout from 2x2 to a merged variant (1+2 or 2+1) */
+  const mapSlotsTo2x2Grid = useCallback((layoutId, viewsBySlot = []) => {
+    const v = (idx) => viewsBySlot[idx] || null;
+    switch (layoutId) {
+      case '2x2':
+        return { tl: v(0), tr: v(1), bl: v(2), br: v(3) };
+      case '1+2':
+        return { tl: v(0), tr: v(1), bl: null, br: v(2) };
+      case '2+1':
+        return { tl: v(0), tr: v(2), bl: v(1), br: null };
+      case '2x2-top':
+        return { tl: v(0), tr: null, bl: v(1), br: v(2) };
+      case '2x2-bottom':
+        return { tl: v(0), tr: v(1), bl: v(2), br: null };
+      default:
+        return { tl: v(0), tr: v(1), bl: v(2), br: v(3) };
+    }
+  }, []);
+
+  const map2x2GridToSlots = useCallback((layoutId, grid) => {
+    const pick = (...values) => values.find(Boolean) || null;
+    switch (layoutId) {
+      case '2x2':
+        return [grid.tl || null, grid.tr || null, grid.bl || null, grid.br || null];
+      case '1+2':
+        return [pick(grid.tl, grid.bl), grid.tr || null, grid.br || null];
+      case '2+1':
+        return [grid.tl || null, grid.bl || null, pick(grid.tr, grid.br)];
+      case '2x2-top':
+        return [pick(grid.tl, grid.tr), grid.bl || null, grid.br || null];
+      case '2x2-bottom':
+        return [grid.tl || null, grid.tr || null, pick(grid.bl, grid.br)];
+      default:
+        return [grid.tl || null];
+    }
+  }, []);
+
+  const resolveMergeTargetLayout = useCallback((cellIndices) => {
+    if (!focusedLayout || focusedLayout.rows !== 2 || focusedLayout.cols !== 2) {
+      return { layoutId: null, reason: 'Merge is only available for 2×2 layouts' };
+    }
+    if (!Array.isArray(cellIndices) || cellIndices.length !== 2) {
+      return { layoutId: null, reason: 'Select exactly two adjacent cells to merge' };
+    }
+
+    const positions = cellIndices.map((i) => {
+      const cell = focusedCellDescriptors?.[i];
+      if (cell && Number.isFinite(cell.row) && Number.isFinite(cell.col)) {
+        return { row: cell.row, col: cell.col };
+      }
+      return {
+        row: Math.floor(i / (focusedLayout.cols || 1)),
+        col: i % (focusedLayout.cols || 1),
+      };
+    });
+
+    const [a, b] = positions;
+    const manhattanDistance = Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
+    if (manhattanDistance !== 1) {
+      return { layoutId: null, reason: 'Select exactly two adjacent cells to merge' };
+    }
+
+    if (a.col === b.col) return { layoutId: a.col === 0 ? '1+2' : '2+1', reason: null };
+    if (a.row === b.row) return { layoutId: a.row === 0 ? '2x2-top' : '2x2-bottom', reason: null };
+    return { layoutId: null, reason: 'Invalid merge selection' };
+  }, [focusedLayout, focusedCellDescriptors]);
+
+  const applyViewsToFocusedSlots = useCallback(async (viewsBySlot) => {
+    const liveGroup = viewGroupManager.getViewGroup(state.focusedVGId);
+    if (!liveGroup) return;
+
+    const existingViewIds = (liveGroup.slots || [])
+      .map((slot) => slot?.viewId)
+      .filter(Boolean);
+    for (const existingViewId of existingViewIds) {
+      await viewGroupManager.removeViewFromGroup(state.focusedVGId, existingViewId);
+    }
+
+    for (let i = 0; i < viewsBySlot.length; i += 1) {
+      const view = viewsBySlot[i];
+      if (!view) continue;
+      await viewGroupManager.setViewAtSlot(
+        state.focusedVGId,
+        i,
+        view.id,
+        view.name,
+        view.type,
+        view.datasetId
+      );
+    }
+  }, [state.focusedVGId]);
+
+  /** Merge selected cells in 2x2-family layouts (left/right/top/bottom). */
   const handleMergeCells = useCallback(async (cellIndices) => {
     if (!state.focusedVGId || !updateViewGroup || !focusedLayout) return;
 
-    // Only merge from 2x2 (the only layout with merged variants)
-    if (focusedLayout.merged || focusedLayout.rows !== 2 || focusedLayout.cols !== 2) {
-      toast.warning('Merge is only available for 2\u00d72 layouts');
+    const { layoutId: targetLayoutId, reason } = resolveMergeTargetLayout(cellIndices);
+    if (!targetLayoutId) {
+      toast.warning(reason || 'Invalid merge selection');
       return;
     }
 
-    // Determine merge direction from cell positions
-    // 2x2 cells: idx 0=(0,0), 1=(0,1), 2=(1,0), 3=(1,1)
-    const positions = cellIndices.map(i => ({
-      row: Math.floor(i / focusedLayout.cols),
-      col: i % focusedLayout.cols,
-    }));
-    const allSameCol = positions.every(p => p.col === positions[0].col);
-    const allSameRow = positions.every(p => p.row === positions[0].row);
-
-    let targetLayoutId;
-    if (allSameCol && positions[0].col === 0) {
-      targetLayoutId = '1+2'; // merge left column
-    } else if (allSameCol && positions[0].col === 1) {
-      targetLayoutId = '2+1'; // merge right column
-    } else if (allSameRow) {
-      toast.warning('Row merge is not yet supported');
-      return;
-    } else {
-      toast.warning('Invalid merge selection');
-      return;
-    }
-
-    // Capture current views before layout change
     const oldLayoutId = state.focusedVG.layoutId || 'single';
-    const oldViews = focusedSlots ? [...focusedSlots] : [];
-
-    // Remap 2x2 -> merged layout using the canonical slot order:
-    // 2x2 slots: 0=TL, 1=TR, 2=BL, 3=BR
-    // 1+2 (merged left): 0=merged-left, 1=TR, 2=BR
-    // 2+1 (merged right): 0=TL, 1=BL, 2=merged-right
-    const sortedSelected = [...cellIndices].sort((a, b) => a - b);
-    const mergedView = sortedSelected.map((idx) => oldViews[idx]).find(Boolean) || null;
-    let newViews;
-    if (targetLayoutId === '1+2') {
-      newViews = [
-        mergedView,
-        oldViews[1] || null,
-        oldViews[3] || null,
-      ];
-    } else { // '2+1'
-      newViews = [
-        oldViews[0] || null,
-        oldViews[2] || null,
-        mergedView,
-      ];
+    if (targetLayoutId === oldLayoutId) {
+      toast.info('Already merged in that direction');
+      return;
     }
 
-    const applyViewsToSlots = async (viewsBySlot) => {
-      const liveGroup = viewGroupManager.getViewGroup(state.focusedVGId);
-      if (!liveGroup) return;
-
-      const existingViewIds = (liveGroup.slots || [])
-        .map((slot) => slot?.viewId)
-        .filter(Boolean);
-      for (const existingViewId of existingViewIds) {
-        await viewGroupManager.removeViewFromGroup(state.focusedVGId, existingViewId);
-      }
-
-      for (let i = 0; i < viewsBySlot.length; i += 1) {
-        const view = viewsBySlot[i];
-        if (!view) continue;
-        await viewGroupManager.setViewAtSlot(
-          state.focusedVGId,
-          i,
-          view.id,
-          view.name,
-          view.type,
-          view.datasetId
-        );
-      }
-    };
+    const oldViews = focusedSlots ? [...focusedSlots] : [];
+    const grid = mapSlotsTo2x2Grid(oldLayoutId, oldViews);
+    const newViews = map2x2GridToSlots(targetLayoutId, grid);
 
     layoutChangeInProgress.current = true;
     try {
       await updateViewGroup(state.focusedVGId, { layoutId: targetLayoutId });
-
-      await applyViewsToSlots(newViews);
+      await applyViewsToFocusedSlots(newViews);
 
       if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
       await reconcileVGPlacements(state.focusedVGId);
@@ -2537,7 +2621,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           layoutChangeInProgress.current = true;
           try {
             await updateViewGroup(state.focusedVGId, { layoutId: oldLayoutId });
-            await applyViewsToSlots(oldViews);
+            await applyViewsToFocusedSlots(oldViews);
             if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
             await reconcileVGPlacements(state.focusedVGId);
           } finally { layoutChangeInProgress.current = false; }
@@ -2546,7 +2630,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           layoutChangeInProgress.current = true;
           try {
             await updateViewGroup(state.focusedVGId, { layoutId: targetLayoutId });
-            await applyViewsToSlots(newViews);
+            await applyViewsToFocusedSlots(newViews);
             if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
             await reconcileVGPlacements(state.focusedVGId);
           } finally { layoutChangeInProgress.current = false; }
@@ -2558,10 +2642,23 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     } finally {
       layoutChangeInProgress.current = false;
     }
-  }, [state.focusedVGId, state.focusedVG, focusedLayout, focusedSlots, updateViewGroup, syncViewGroupNow, quickOps, reconcileVGPlacements]);
+  }, [
+    state.focusedVGId,
+    state.focusedVG,
+    focusedLayout,
+    focusedSlots,
+    updateViewGroup,
+    syncViewGroupNow,
+    quickOps,
+    reconcileVGPlacements,
+    resolveMergeTargetLayout,
+    mapSlotsTo2x2Grid,
+    map2x2GridToSlots,
+    applyViewsToFocusedSlots,
+  ]);
 
-  /** Split a merged cell — changes layout from a merged variant back to 2x2 */
-  const handleSplitCell = useCallback(async (cellIndex) => {
+  /** Split a merged 2x2-family layout back into 2x2. */
+  const handleSplitCell = useCallback(async (_cellIndex) => {
     if (!state.focusedVGId || !updateViewGroup || !focusedLayout) return;
 
     if (!focusedLayout.merged) {
@@ -2571,65 +2668,14 @@ export const CanvasMapContent = memo(function CanvasMapContent({
 
     const oldLayoutId = state.focusedVG.layoutId || 'single';
     const targetLayoutId = '2x2';
-
-    // Capture current views (3 slots for merged layout)
     const oldViews = focusedSlots ? [...focusedSlots] : [];
-
-    // Map merged layout -> 2x2 using canonical slot order:
-    // 2x2 slots: 0=TL, 1=TR, 2=BL, 3=BR
-    // 1+2 (merged left): 0=merged-left, 1=TR, 2=BR
-    // 2+1 (merged right): 0=TL, 1=BL, 2=merged-right
-    // Merged-cell view collapses back to one cell when split.
-    let newViews;
-    if (oldLayoutId === '1+2') {
-      newViews = [
-        oldViews[0] || null,
-        oldViews[1] || null,
-        null,
-        oldViews[2] || null,
-      ];
-    } else if (oldLayoutId === '2+1') {
-      newViews = [
-        oldViews[0] || null,
-        oldViews[2] || null,
-        oldViews[1] || null,
-        null,
-      ];
-    } else {
-      toast.warning('Unknown merged layout');
-      return;
-    }
-
-    const applyViewsToSlots = async (viewsBySlot) => {
-      const liveGroup = viewGroupManager.getViewGroup(state.focusedVGId);
-      if (!liveGroup) return;
-
-      const existingViewIds = (liveGroup.slots || [])
-        .map((slot) => slot?.viewId)
-        .filter(Boolean);
-      for (const existingViewId of existingViewIds) {
-        await viewGroupManager.removeViewFromGroup(state.focusedVGId, existingViewId);
-      }
-
-      for (let i = 0; i < viewsBySlot.length; i += 1) {
-        const view = viewsBySlot[i];
-        if (!view) continue;
-        await viewGroupManager.setViewAtSlot(
-          state.focusedVGId,
-          i,
-          view.id,
-          view.name,
-          view.type,
-          view.datasetId
-        );
-      }
-    };
+    const grid = mapSlotsTo2x2Grid(oldLayoutId, oldViews);
+    const newViews = map2x2GridToSlots(targetLayoutId, grid);
 
     layoutChangeInProgress.current = true;
     try {
       await updateViewGroup(state.focusedVGId, { layoutId: targetLayoutId });
-
-      await applyViewsToSlots(newViews);
+      await applyViewsToFocusedSlots(newViews);
 
       if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
       await reconcileVGPlacements(state.focusedVGId);
@@ -2642,7 +2688,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           layoutChangeInProgress.current = true;
           try {
             await updateViewGroup(state.focusedVGId, { layoutId: oldLayoutId });
-            await applyViewsToSlots(oldViews);
+            await applyViewsToFocusedSlots(oldViews);
             if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
             await reconcileVGPlacements(state.focusedVGId);
           } finally { layoutChangeInProgress.current = false; }
@@ -2651,7 +2697,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           layoutChangeInProgress.current = true;
           try {
             await updateViewGroup(state.focusedVGId, { layoutId: targetLayoutId });
-            await applyViewsToSlots(newViews);
+            await applyViewsToFocusedSlots(newViews);
             if (syncViewGroupNow) await syncViewGroupNow(state.focusedVGId);
             await reconcileVGPlacements(state.focusedVGId);
           } finally { layoutChangeInProgress.current = false; }
@@ -2663,7 +2709,19 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     } finally {
       layoutChangeInProgress.current = false;
     }
-  }, [state.focusedVGId, state.focusedVG, focusedLayout, focusedSlots, updateViewGroup, syncViewGroupNow, quickOps, reconcileVGPlacements]);
+  }, [
+    state.focusedVGId,
+    state.focusedVG,
+    focusedLayout,
+    focusedSlots,
+    updateViewGroup,
+    syncViewGroupNow,
+    quickOps,
+    reconcileVGPlacements,
+    mapSlotsTo2x2Grid,
+    map2x2GridToSlots,
+    applyViewsToFocusedSlots,
+  ]);
 
   // ── Phase 4: Cell interaction handlers ────────────────────────────────
 
@@ -2992,7 +3050,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     return (
       <div className="canvas-map-v2" data-vr={isVR} data-size-mode={effectiveSizeMode}>
         <div className="canvas-map-v2__loading">
-          Loading canvas data...
+          <Spinner size="md" />
+          <span className="canvas-map-v2__loading-text">Loading canvas data...</span>
         </div>
         <div className="canvas-map-v2__loading-footer">
           <Icon name="layers" size={12} />

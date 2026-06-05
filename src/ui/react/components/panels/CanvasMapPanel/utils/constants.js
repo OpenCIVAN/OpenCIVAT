@@ -57,6 +57,8 @@ export const LAYOUTS = {
   '2x2': { rows: 2, cols: 2, cells: 4 },
   '1+2': { rows: 2, cols: 2, cells: 3, merged: 'left' },
   '2+1': { rows: 2, cols: 2, cells: 3, merged: 'right' },
+  '2x2-top': { rows: 2, cols: 2, cells: 3, merged: 'top' },
+  '2x2-bottom': { rows: 2, cols: 2, cells: 3, merged: 'bottom' },
   '3-up': { rows: 1, cols: 3, cells: 3 },
   '3x3': { rows: 3, cols: 3, cells: 9 },
 };

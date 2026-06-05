@@ -1,0 +1,1 @@
+export { CompanionPanel } from './CompanionPanel';

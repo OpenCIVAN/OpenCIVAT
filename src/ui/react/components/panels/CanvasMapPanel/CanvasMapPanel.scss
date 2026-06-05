@@ -70,16 +70,7 @@
     --mode-color-rgb: var(--color-accent-amber-rgb);
   }
 
-  // Compact WorkspaceSelector in header
-  .panel-header__actions .workspace-selector {
-    max-width: 120px;
-    font-size: $font-size-xs;
-
-    .workspace-selector__trigger {
-      padding: 2px 6px;
-      font-size: $font-size-xs;
-    }
-  }
+  // Workspace selector is now inline (no WorkspaceSelector molecule)
 
 
   // -------------------------------------------------------------------------
@@ -204,12 +195,20 @@
   // -------------------------------------------------------------------------
   &__loading {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     flex: 1;
+    gap: $spacing-md;
     padding: $spacing-xl;
     color: $color-text-muted;
     font-size: $font-size-sm;
+  }
+
+  &__loading-text {
+    font-size: $font-size-xs;
+    font-weight: 500;
+    letter-spacing: 0.3px;
   }
 
   &__loading-footer {
@@ -360,28 +359,193 @@
   white-space: nowrap;
 }
 
-.canvas-map-header .workspace-selector {
+// Workspace selector button — matches CanvasChromeHeader style
+.canvas-map-header__ws-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 3px 8px;
+  border-radius: $radius-md;
+  border: 1px solid color-mix(in srgb, $color-accent-teal 35%, transparent);
+  background: color-mix(in srgb, $color-accent-teal 12%, transparent);
+  color: $color-accent-teal;
+  cursor: pointer;
   min-width: 0;
-  max-width: 100%;
   flex: 1 1 auto;
-  flex-shrink: 1;
-  overflow: hidden;
-}
-
-.canvas-map-header .workspace-selector__trigger {
-  min-width: 0;
-  width: 100%;
   max-width: 100%;
-  padding: 2px 6px;
-  gap: 4px;
-  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: color-mix(in srgb, $color-accent-teal 18%, transparent);
+  }
+
+  .icon {
+    flex-shrink: 0;
+  }
 }
 
-.canvas-map-header .workspace-selector__name {
+.canvas-map-header__ws-name {
   font-size: 11px;
-  max-width: 100%;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
-.canvas-map-header .workspace-selector__info {
+// Workspace dropdown — matches CanvasChromeHeader dropdown
+.canvas-map-header__dropdown-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: $color-glass-panel;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  min-width: 220px;
+  max-width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.canvas-map-header__dropdown-search {
+  width: 100%;
+  margin: 4px 2px 6px;
+  --search-input-bg: rgba(255, 255, 255, 0.04);
+  --search-input-border: #{$color-border-subtle};
+  --search-input-focus-border: #{$color-accent-blue};
+  --search-input-color: #{$color-text-primary};
+  --search-input-placeholder: #{$color-text-muted};
+  --search-input-icon: #{$color-text-muted};
+  --search-input-gap: 6px;
+
+  .search-input__field {
+    font-size: $font-size-xs;
+  }
+}
+
+.canvas-map-header__dropdown-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 2px;
+}
+
+.canvas-map-header__filter-row,
+.canvas-map-header__tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.canvas-map-header__filter-chip,
+.canvas-map-header__tag-chip {
+  border: 1px solid $color-border-subtle;
+  background: rgba(255, 255, 255, 0.04);
+  color: $color-text-muted;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+
+  &.is-active {
+    color: $color-accent-cyan;
+    border-color: color-mix(in srgb, $color-accent-cyan 50%, transparent);
+    background: color-mix(in srgb, $color-accent-cyan 12%, transparent);
+  }
+}
+
+.canvas-map-header__sort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-xs;
+  font-size: 9px;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+
+  select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+}
+
+.canvas-map-header__dropdown-divider {
+  height: 1px;
+  background: $color-border-subtle;
+  margin: 4px 0;
+}
+
+.canvas-map-header__dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 6px 8px;
+  border-radius: $radius-sm;
+  border: none;
+  background: transparent;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-primary;
+  }
+
+  &.is-active {
+    background: color-mix(in srgb, $color-accent-cyan 12%, transparent);
+    color: $color-accent-cyan;
+  }
+}
+
+.canvas-map-header__dropdown-item--create {
+  color: $color-accent-teal;
+
+  &:hover {
+    background: color-mix(in srgb, $color-accent-teal 12%, transparent);
+  }
+}
+
+.canvas-map-header__dropdown-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  border-top: 1px solid $color-border-subtle;
+  padding-top: 8px;
+}
+
+.canvas-map-header__dropdown-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
   min-width: 0;
+}
+
+.canvas-map-header__dropdown-check {
+  flex-shrink: 0;
+  color: $color-accent-cyan;
+}
+
+.canvas-map-header__dropdown-empty {
+  padding: 12px 8px;
+  text-align: center;
+  font-size: $font-size-xs;
+  color: $color-text-muted;
 }

@@ -27,6 +27,8 @@ export const DEFAULT_LAYOUTS = {
   '2x2': { rows: 2, cols: 2, cells: 4 },
   '1+2': { rows: 2, cols: 2, cells: 3, merged: 'left' },
   '2+1': { rows: 2, cols: 2, cells: 3, merged: 'right' },
+  '2x2-top': { rows: 2, cols: 2, cells: 3, merged: 'top' },
+  '2x2-bottom': { rows: 2, cols: 2, cells: 3, merged: 'bottom' },
   '3x3': { rows: 3, cols: 3, cells: 9 },
   '1x3': { rows: 1, cols: 3, cells: 3 },
   '3x1': { rows: 3, cols: 1, cells: 3 },
@@ -164,6 +166,29 @@ export const LayoutMiniPreview = memo(function LayoutMiniPreview({
         x: cellWidth + gap,
         y: cellHeight + gap,
         width: cellWidth,
+        height: cellHeight,
+        filled: effectiveFilledCount > 2,
+      });
+    } else if (merged === 'bottom') {
+      // Bottom row merged: two cells on top, one wide cell on bottom
+      result.push({
+        x: 0,
+        y: 0,
+        width: cellWidth,
+        height: cellHeight,
+        filled: effectiveFilledCount > 0,
+      });
+      result.push({
+        x: cellWidth + gap,
+        y: 0,
+        width: cellWidth,
+        height: cellHeight,
+        filled: effectiveFilledCount > 1,
+      });
+      result.push({
+        x: 0,
+        y: cellHeight + gap,
+        width: size,
         height: cellHeight,
         filled: effectiveFilledCount > 2,
       });

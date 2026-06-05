@@ -1360,21 +1360,12 @@ function CanvasWorkspaceInner({
         onUpdateLink: contextUpdateLink,
     } = useViewContextLogic();
 
-    const {
-        past: historyPast,
-        future: historyFuture,
-        isUndoing,
-        isRedoing,
-        undo,
-        redo,
-    } = useCanvasHistory((state) => ({
-        past: state.past,
-        future: state.future,
-        isUndoing: state.isUndoing,
-        isRedoing: state.isRedoing,
-        undo: state.undo,
-        redo: state.redo,
-    }));
+    const historyPast = useCanvasHistory((s) => s.past);
+    const historyFuture = useCanvasHistory((s) => s.future);
+    const isUndoing = useCanvasHistory((s) => s.isUndoing);
+    const isRedoing = useCanvasHistory((s) => s.isRedoing);
+    const undo = useCanvasHistory((s) => s.undo);
+    const redo = useCanvasHistory((s) => s.redo);
     const canUndo = historyPast.length > 0 && !isUndoing && !isRedoing;
     const canRedo = historyFuture.length > 0 && !isUndoing && !isRedoing;
 

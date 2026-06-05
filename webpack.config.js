@@ -46,20 +46,15 @@ module.exports = {
   mode: "development",
   // eval-cheap-module-source-map is much faster than source-map for dev
   devtool: "eval-cheap-module-source-map",
-  // Filesystem cache dramatically speeds up cold starts after first build
-  cache: {
-    type: "filesystem",
-    buildDependencies: {
-      config: [__filename],
-    },
-  },
   devServer: {
     static: [
       {
         directory: path.join(__dirname, "dist"),
+        watch: false,
       },
       {
         directory: path.join(__dirname, "public"),
+        watch: false,
       },
     ],
     compress: true,
@@ -179,6 +174,9 @@ module.exports = {
       ),
     }),
   ],
+  watchOptions: {
+    ignored: /node_modules/,
+  },
   // Ignore controller.html
   externals: {
     "./controller.html": "controller.html",

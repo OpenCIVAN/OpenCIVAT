@@ -69,6 +69,8 @@ export const BUILTIN_LAYOUTS = Object.freeze([
     { id: '2x2', name: '2x2 Grid', rows: 2, cols: 2 },
     { id: '1+2', name: '1 + 2', rows: 2, cols: 2, merged: 'left' },
     { id: '2+1', name: '2 + 1', rows: 2, cols: 2, merged: 'right' },
+    { id: '2x2-top', name: '2x2 Top Merge', rows: 2, cols: 2, merged: 'top' },
+    { id: '2x2-bottom', name: '2x2 Bottom Merge', rows: 2, cols: 2, merged: 'bottom' },
     { id: '3-up', name: '3-up', rows: 1, cols: 3 },
     { id: '3x3', name: '3x3 Grid', rows: 3, cols: 3 },
 ]);

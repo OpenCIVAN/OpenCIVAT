@@ -50,6 +50,14 @@ function buildCells(layout) {
         cells.push({ key: `${r}-${c}` });
       }
     }
+  } else if (merged === 'bottom') {
+    // Bottom row merged across all columns
+    for (let r = 0; r < rows - 1; r++) {
+      for (let c = 0; c < cols; c++) {
+        cells.push({ key: `${r}-${c}` });
+      }
+    }
+    cells.push({ key: 'merged-bottom', gridColumn: 'span 2' });
   } else {
     // Standard grid: rows × cols
     for (let r = 0; r < rows; r++) {

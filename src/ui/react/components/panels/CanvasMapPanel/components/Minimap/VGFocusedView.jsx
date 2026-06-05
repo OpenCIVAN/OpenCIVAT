@@ -65,6 +65,7 @@ export const VGFocusedView = memo(function VGFocusedView({
   const [focusedDropIndex, setFocusedDropIndex] = useState(null);
   const dragStartRef = useRef(null);
   const cellRectsRef = useRef([]);
+  const suppressNativeClickCellRef = useRef(null);
 
   const layout = focusedLayout || (focusedVG ? (LAYOUTS[focusedVG.layoutId] || LAYOUTS.single) : LAYOUTS.single);
 
@@ -128,12 +129,20 @@ export const VGFocusedView = memo(function VGFocusedView({
 
   // ── Cell click (with targeting override) ────────────────────────────────
   const handleCellClick = useCallback((cellIndex, e) => {
+    if (suppressNativeClickCellRef.current === cellIndex) {
+      suppressNativeClickCellRef.current = null;
+      return;
+    }
     // If targeting is active, resolve it
     if (quickOps?.targeting) {
       onTargetingResolve?.(cellIndex);
       return;
     }
-    quickOps?.selectCell(cellIndex, { shift: e?.shiftKey || false });
+    const selected = quickOps?.selectedCells;
+    const selectedSize = selected?.size || 0;
+    const isModifier = !!(e?.shiftKey || e?.metaKey || e?.ctrlKey);
+    const shouldExtendSelection = isModifier || (selectedSize > 0 && !selected?.has(cellIndex));
+    quickOps?.selectCell(cellIndex, { shift: shouldExtendSelection });
   }, [quickOps, onTargetingResolve]);
 
   // ── Pointer-based drag (follows edit-mode VG move pattern) ──────────────
@@ -141,6 +150,26 @@ export const VGFocusedView = memo(function VGFocusedView({
     if (!view || !quickOps || e.button !== 0) return;
     // Don't start drag if targeting is active
     if (quickOps.targeting) return;
+
+    // Shift-click on filled cells should behave like selection-only multi-select
+    // so merge gestures remain possible when cells already contain views.
+    if (e.shiftKey) {
+      e.preventDefault();
+      suppressNativeClickCellRef.current = cellIndex;
+      quickOps.selectCell(cellIndex, { shift: true });
+      return;
+    }
+
+    const selected = quickOps.selectedCells;
+    const selectedSize = selected?.size || 0;
+    const isAlreadySingleSelected = selectedSize === 1 && selected?.has(cellIndex);
+    const shouldExtendSelection = selectedSize > 0 && !selected?.has(cellIndex);
+    let selectionChangedOnPointerDown = false;
+    if (!isAlreadySingleSelected) {
+      quickOps.selectCell(cellIndex, { shift: shouldExtendSelection });
+      selectionChangedOnPointerDown = true;
+      suppressNativeClickCellRef.current = cellIndex;
+    }
 
     e.preventDefault();
     const startX = e.clientX;
@@ -168,9 +197,16 @@ export const VGFocusedView = memo(function VGFocusedView({
       dragStartRef.current = null;
 
       if (!isDragging) {
-        // Threshold not crossed: explicit click fallback because pointerdown
-        // prevents default and some browsers won't emit click on filled cells.
-        handleCellClick(cellIndex, upEvt);
+        // If pointerdown already changed selection, skip click fallback to avoid
+        // immediately toggling the same cell back off.
+        if (!selectionChangedOnPointerDown) {
+          const upSelected = quickOps.selectedCells;
+          const upSelectedSize = upSelected?.size || 0;
+          const isModifier = !!(upEvt?.shiftKey || upEvt?.metaKey || upEvt?.ctrlKey);
+          const shouldExtendSelection = isModifier || (upSelectedSize > 0 && !upSelected?.has(cellIndex));
+          quickOps.selectCell(cellIndex, { shift: shouldExtendSelection });
+          suppressNativeClickCellRef.current = cellIndex;
+        }
         return;
       }
 
@@ -259,16 +295,31 @@ export const VGFocusedView = memo(function VGFocusedView({
   }, [quickOps, onSplitCell]);
 
   // ── Empty cell "+" click ────────────────────────────────────────────────
-  const handleAssignEmpty = useCallback((cellIndex) => {
+  const handleAssignEmpty = useCallback((cellIndex, e) => {
     if (quickOps?.targeting) {
       onTargetingResolve?.(cellIndex);
       return;
     }
-    onCellAssign?.(cellIndex);
-  }, [quickOps, onTargetingResolve, onCellAssign]);
+    const selected = quickOps?.selectedCells;
+    const selectedSize = selected?.size || 0;
+    const isModifierSelect = !!(e?.shiftKey || e?.metaKey || e?.ctrlKey);
+    const isAlreadySingleSelected = selectedSize === 1 && selected?.has(cellIndex);
+    if (isAlreadySingleSelected && !isModifierSelect) {
+      // Explicit assign intent: second click on same selected empty cell.
+      onCellAssign?.(cellIndex);
+      return;
+    }
+    // Default empty-cell click should select so merge/split selection is stable.
+    handleCellClick(cellIndex, e);
+  }, [quickOps, onTargetingResolve, onCellAssign, handleCellClick]);
 
-  const canMerge = quickOps?.isRectangularSelection && (quickOps?.selectedCells?.size || 0) > 1;
-  const canSplit = quickOps?.hasMergedCellSelected && (quickOps?.selectedCells?.size || 0) === 1;
+  const isMergeCapableLayout = (focusedLayout?.rows === 2 && focusedLayout?.cols === 2);
+  const selectedCount = quickOps?.selectedCells?.size || 0;
+  const canMerge = isMergeCapableLayout && quickOps?.isRectangularSelection && selectedCount === 2;
+  const canSplit = !!focusedLayout?.merged && (quickOps?.selectedCells?.size || 0) === 1;
+  const mergeTooltip = canMerge
+    ? 'Merge cells'
+    : (isMergeCapableLayout ? 'Select exactly two adjacent cells to merge' : 'Merge is only available for 2x2 layouts');
   const handleMerge = useCallback(() => {
     if (!canMerge) return;
     const indices = Array.from(quickOps.selectedCells);
@@ -383,7 +434,7 @@ export const VGFocusedView = memo(function VGFocusedView({
                 onClearView={() => onSlotClear?.(i)}
                 onContextMenu={(e) => handleContextMenu(i, view, cell.isMerged || false, e)}
                 onPointerDown={view ? (e) => handleCellPointerDown(i, view, e) : undefined}
-                onAssign={() => handleAssignEmpty(i)}
+                onAssign={(e) => handleAssignEmpty(i, e)}
                 targeting={!!targeting}
                 animationDelay={i * 30}
               />
@@ -417,24 +468,24 @@ export const VGFocusedView = memo(function VGFocusedView({
           <Icon name="chevronDown" size={10} />
         </button>
         <div className="minimap__focused-toolbar-sep" />
-        <Tooltip content={canMerge ? 'Merge cells' : 'Select a rectangle to merge'} placement="top" delay={300}>
+        <Tooltip content={mergeTooltip} placement="top" delay={300}>
           <button
             type="button"
             className={`minimap__focused-toolbar-icon ${canMerge ? '' : 'minimap__focused-toolbar-icon--disabled'}`}
             onClick={handleMerge}
             disabled={!canMerge}
-            aria-label={canMerge ? 'Merge cells' : 'Select a rectangle to merge'}
+            aria-label={mergeTooltip}
           >
             <Icon name="combine" size={12} />
           </button>
         </Tooltip>
-        <Tooltip content={canSplit ? 'Split cell' : 'Select a merged cell to split'} placement="top" delay={300}>
+        <Tooltip content={canSplit ? 'Split cell' : 'Select any cell in a merged layout to split'} placement="top" delay={300}>
           <button
             type="button"
             className={`minimap__focused-toolbar-icon ${canSplit ? '' : 'minimap__focused-toolbar-icon--disabled'}`}
             onClick={handleSplit}
             disabled={!canSplit}
-            aria-label={canSplit ? 'Split cell' : 'Select a merged cell to split'}
+            aria-label={canSplit ? 'Split cell' : 'Select any cell in a merged layout to split'}
           >
             <Icon name="layers" size={12} />
           </button>

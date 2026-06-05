@@ -141,7 +141,12 @@ export const FocusedCell = memo(forwardRef(function FocusedCell({
           className="minimap__focused-cell-empty"
           onClick={(e) => {
             e.stopPropagation();
-            onAssign?.();
+            // Let modifier clicks behave like cell selection for merge/split flows.
+            if (e.shiftKey || e.metaKey || e.ctrlKey) {
+              onClick?.(e);
+              return;
+            }
+            onAssign?.(e);
           }}
         >
           <Icon name="plus" size={12} />

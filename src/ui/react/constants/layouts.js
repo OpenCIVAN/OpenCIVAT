@@ -22,6 +22,8 @@ export const BUILTIN_LAYOUTS = [
     { id: '2x2', name: '2\u00d72 Grid', rows: 2, cols: 2 },
     { id: '1+2', name: '1 + 2', rows: 2, cols: 2, merged: 'left' },
     { id: '2+1', name: '2 + 1', rows: 2, cols: 2, merged: 'right' },
+    { id: '2x2-top', name: '2x2 Top Merge', rows: 2, cols: 2, merged: 'top' },
+    { id: '2x2-bottom', name: '2x2 Bottom Merge', rows: 2, cols: 2, merged: 'bottom' },
     { id: '3-up', name: '3-up', rows: 1, cols: 3 },
     { id: '3x3', name: '3\u00d73 Grid', rows: 3, cols: 3 },
 ];
@@ -103,8 +105,7 @@ export const VIEW_TYPES = {
  */
 export function getLayoutCapacity(layout) {
     if (!layout) return 1;
-    // Merged layouts (1+2, 2+1) have 3 cells
-    if (layout.merged === 'top' || layout.merged === 'right' || layout.merged === 'left') return 3;
+    if (layout.merged) return layout.cells || 3;
     return layout.rows * layout.cols;
 }
 
