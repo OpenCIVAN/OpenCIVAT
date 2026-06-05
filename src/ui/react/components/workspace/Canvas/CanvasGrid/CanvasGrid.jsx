@@ -875,35 +875,18 @@ export function CanvasGrid({
     // ==========================================================================
 
     useEffect(() => {
-        const handleDragStart = () => {
-            setIsDragActive(true);
-        };
-
         const handleDragEnd = () => {
             setIsDragActive(false);
             setDragModifiers({ shift: false, ctrl: false, alt: false });
             setTemplateDropPreview(null);
         };
 
-        const handleDragOver = (e) => {
-            // Update modifier state during drag
-            setDragModifiers({
-                shift: e.shiftKey,
-                ctrl: e.ctrlKey || e.metaKey,
-                alt: e.altKey,
-            });
-        };
-
-        window.addEventListener('dragstart', handleDragStart);
         window.addEventListener('dragend', handleDragEnd);
         window.addEventListener('drop', handleDragEnd);
-        window.addEventListener('dragover', handleDragOver);
 
         return () => {
-            window.removeEventListener('dragstart', handleDragStart);
             window.removeEventListener('dragend', handleDragEnd);
             window.removeEventListener('drop', handleDragEnd);
-            window.removeEventListener('dragover', handleDragOver);
         };
     }, []);
 
@@ -912,6 +895,14 @@ export function CanvasGrid({
     // ==========================================================================
 
     const handleGridDragOver = useCallback((e) => {
+        e.preventDefault();
+        setIsDragActive(true);
+        setDragModifiers({
+            shift: e.shiftKey,
+            ctrl: e.ctrlKey || e.metaKey,
+            alt: e.altKey,
+        });
+
         const payload = window.__ciaDragPayload;
         if (!payload || payload.type !== 'template-create') {
             // React skips re-render if value is already null (Object.is comparison)
@@ -934,10 +925,22 @@ export function CanvasGrid({
         });
     }, [measurementsReady, cellSize, viewport.row, viewport.col]);
 
+    const handleGridDragEnter = useCallback((e) => {
+        e.preventDefault();
+        setIsDragActive(true);
+        setDragModifiers({
+            shift: e.shiftKey,
+            ctrl: e.ctrlKey || e.metaKey,
+            alt: e.altKey,
+        });
+    }, []);
+
     const handleGridDragLeave = useCallback((e) => {
         // Only clear if leaving the grid entirely (not entering a child)
         if (gridRef.current && !gridRef.current.contains(e.relatedTarget)) {
             setTemplateDropPreview(null);
+            setIsDragActive(false);
+            setDragModifiers({ shift: false, ctrl: false, alt: false });
         }
     }, []);
 
@@ -2074,6 +2077,7 @@ export function CanvasGrid({
                         onClick={handleGridClick}
                         onContextMenu={handleContextMenu}
                         onMouseDown={handlePanStart}
+                        onDragEnter={handleGridDragEnter}
                         onDragOver={handleGridDragOver}
                         onDragLeave={handleGridDragLeave}
                     >

@@ -1615,6 +1615,7 @@ export function CIAWebApp({ username, userId, projectId }) {
         projectId={projectId}
         layoutMode={layoutMode}
         onCloseWorkspace={handleCloseWorkspace}
+        onArchiveWorkspace={handleDeleteWorkspace}
         onRenameWorkspace={handleRenameWorkspace}
         onDeactivateWorkspace={handleDeactivateWorkspace}
         workspaceViewMode={canvasMode}

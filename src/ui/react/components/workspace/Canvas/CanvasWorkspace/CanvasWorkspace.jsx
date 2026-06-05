@@ -245,6 +245,7 @@ const WorkspaceFloatingWindow = React.memo(function WorkspaceFloatingWindow({
     onSizeChange,
     onFocus,
     onClose,
+    onArchiveWorkspace,
     showCoordinates,
     showViewGroupBorders,
     viewGroups = [],
@@ -438,6 +439,7 @@ const WorkspaceFloatingWindow = React.memo(function WorkspaceFloatingWindow({
                     onOpenNavigator,
                     windowMode: 'floating',
                     showWindowControls: false,
+                    onArchiveWorkspace: onArchiveWorkspace ? () => onArchiveWorkspace(workspace?.id) : undefined,
                     onCloseWorkspace: onClose,
                 }}
                 editBarProps={isFocused ? {
@@ -481,6 +483,7 @@ function CanvasWorkspaceInner({
     leftPanelContent,
     rightPanelContent,
     onCloseWorkspace,
+    onArchiveWorkspace,
     onRenameWorkspace,
     onDeactivateWorkspace,
     workspaceViewMode = 'tabs',
@@ -884,6 +887,11 @@ function CanvasWorkspaceInner({
             }
         }
     }, [activeWorkspaceKey, freeLayoutWorkspaces, handleWorkspaceSelect, onCloseWorkspace, onDeactivateWorkspace]);
+
+    const handleArchiveWorkspace = useCallback((workspaceId) => {
+        if (!workspaceId) return;
+        onArchiveWorkspace?.(workspaceId);
+    }, [onArchiveWorkspace]);
 
     const handleCloseAllTileWorkspaces = useCallback(() => {
         const openIds = tileWorkspaces
@@ -2318,6 +2326,11 @@ function CanvasWorkspaceInner({
                         },
                         windowMode: canvasMode === CANVAS_MODES.FULLSCREEN ? 'full' : canvasMode,
                         showWindowControls: false,
+                        onArchiveWorkspace: () => {
+                            if (currentWorkspace?.id) {
+                                handleArchiveWorkspace(currentWorkspace.id);
+                            }
+                        },
                         onCloseWorkspace: () => {
                             if (workspaceViewMode === 'tile' && effectiveTileMaximizedId) {
                                 setTileMaximizedWorkspaceId(null);
@@ -2625,6 +2638,7 @@ export function CanvasWorkspace({
     leftPanelContent,
     rightPanelContent,
     onCloseWorkspace,
+    onArchiveWorkspace,
     onRenameWorkspace,
     onDeactivateWorkspace,
     workspaceViewMode,
@@ -2651,6 +2665,7 @@ export function CanvasWorkspace({
                 leftPanelContent={leftPanelContent}
                 rightPanelContent={rightPanelContent}
                 onCloseWorkspace={onCloseWorkspace}
+                onArchiveWorkspace={onArchiveWorkspace}
                 onRenameWorkspace={onRenameWorkspace}
                 onDeactivateWorkspace={onDeactivateWorkspace}
                 workspaceViewMode={workspaceViewMode}

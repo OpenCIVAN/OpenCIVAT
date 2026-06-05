@@ -108,6 +108,7 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     windowMode = 'docked',
     onWindowModeChange,
     onCloseWorkspace,
+    onArchiveWorkspace,
     showWindowControls = true,
 
     className = '',
@@ -130,6 +131,14 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     const displayTriggerRef = useRef(null);
     const headerRef = useRef(null);
     const [headerWidth, setHeaderWidth] = useState(0);
+
+    const handleArchiveWorkspace = useCallback(() => {
+        if (!workspace?.id || !onArchiveWorkspace) return;
+        const title = workspace?.name ? `Archive workspace "${workspace.name}"?` : 'Archive workspace?';
+        if (window.confirm(title)) {
+            onArchiveWorkspace();
+        }
+    }, [workspace?.id, workspace?.name, onArchiveWorkspace]);
 
     useEffect(() => {
         if (!headerRef.current) return;
@@ -605,6 +614,15 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                                 </button>
                             </div>
                         ) : null}
+                        <button
+                            type="button"
+                            className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--secondary"
+                            onClick={handleArchiveWorkspace}
+                            title="Archive workspace"
+                            disabled={!onArchiveWorkspace}
+                        >
+                            <Icon name="archive" size={14} />
+                        </button>
                         <button
                             type="button"
                             className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--danger"
