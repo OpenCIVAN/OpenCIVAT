@@ -21,6 +21,8 @@ import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry
 import { getViewConfigurationManager } from "@Init/appInitializer.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { useWorkspaceFiles } from "./useWorkspaceFiles.js";
+import { apiClient } from "@Services/apiClient.js";
+import { toast } from "@UI/react/store/toastStore.js";
 
 /**
  * Check if a file type can be visualized
@@ -433,8 +435,14 @@ export function useFilesTab({
           break;
 
         case "delete":
-          log.info(`Delete file: ${file.name}`);
-          // TODO: Implement file deletion with confirmation dialog
+          try {
+            await apiClient.delete(`/files/${file.id}`);
+            refetch();
+            toast.success(`Deleted ${file.name}`);
+          } catch (err) {
+            log.error("Failed to delete file:", err);
+            toast.error(`Delete failed: ${err.message}`);
+          }
           break;
 
         case "process":

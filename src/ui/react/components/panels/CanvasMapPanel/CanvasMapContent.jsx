@@ -179,6 +179,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const {
     bookmarks: rawBookmarks,
     isLoading: bookmarksLoading,
+    createBookmark,
+    deleteBookmark,
   } = useBookmarks({ workspaceId, scope: 'all' });
 
   // Transaction store (edit mode)
@@ -748,29 +750,46 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   }, [selectedViewportId, navigateCanvas]);
 
   const handleSetHome = useCallback(() => {
-    console.log('Set home position');
-    // TODO: Implement setting home position
-  }, []);
+    try {
+      localStorage.setItem('cia:canvas-map:homePosition', JSON.stringify(currentPosition));
+      toast.success(`Home set to ${currentPositionLabel}`);
+    } catch {
+      toast.error('Failed to save home position');
+    }
+  }, [currentPosition, currentPositionLabel]);
 
   const handleFitAll = useCallback(() => {
-    console.log('Fit all content');
-    // TODO: Implement fit all
-  }, []);
+    navigateCanvas(0, 0);
+  }, [navigateCanvas]);
 
-  const handleAddBookmark = useCallback(() => {
-    console.log('Add bookmark');
-    // TODO: Implement add bookmark
-  }, []);
+  const handleAddBookmark = useCallback(async () => {
+    const name = window.prompt('Bookmark name:', `Position ${currentPositionLabel}`);
+    if (!name) return;
+    try {
+      await createBookmark({
+        name,
+        scope: 'personal',
+        workspace_id: workspaceId,
+        camera_state: { position: currentPosition },
+      });
+      toast.success(`Bookmark "${name}" saved`);
+    } catch (err) {
+      toast.error(`Failed to save bookmark: ${err.message}`);
+    }
+  }, [createBookmark, currentPosition, currentPositionLabel, workspaceId]);
 
   const handleBookmarkClick = useCallback((bookmark) => {
-    console.log('Navigate to bookmark:', bookmark);
-    // TODO: Implement bookmark navigation
-  }, []);
+    navigateCanvas(bookmark.position.row, bookmark.position.col);
+  }, [navigateCanvas]);
 
-  const handleBookmarkDelete = useCallback((bookmarkId) => {
-    console.log('Delete bookmark:', bookmarkId);
-    // TODO: Implement bookmark deletion
-  }, []);
+  const handleBookmarkDelete = useCallback(async (bookmarkId) => {
+    try {
+      await deleteBookmark(bookmarkId);
+      toast.success('Bookmark deleted');
+    } catch (err) {
+      toast.error(`Failed to delete bookmark: ${err.message}`);
+    }
+  }, [deleteBookmark]);
 
   const rectsOverlap = useCallback((a, b) => (
     a.row < b.row + b.rowSpan

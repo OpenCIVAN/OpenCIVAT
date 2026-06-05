@@ -1,194 +1,307 @@
 /**
  * @file FilesTab.stories.jsx
- * @description Storybook stories for FilesTab component.
+ * @description Storybook stories for the FilesTab component.
+ *
+ * FilesTab features:
+ * - Global search and type filters
+ * - Resizable Starred section
+ * - Tabbed browser (Workspace/Available tabs)
+ * - Folder navigation with breadcrumbs
+ * - Compact mode for small containers
+ * - File load states (stored, loading, loaded, processing)
  */
 
 import React from 'react';
-import { FilesPanelContent } from './FilesTab';
-
-// Mock files data
-const mockFiles = [
-    {
-        id: 'file-1',
-        name: 'brain_scan.nii',
-        fileType: 'nii',
-        size: '24.5 MB',
-        starred: true,
-        loaded: true,
-        thumbnail: true,
-        uploadedAt: '2024-01-15T10:00:00Z',
-    },
-    {
-        id: 'file-2',
-        name: 'heart_model.vtk',
-        fileType: 'vtk',
-        size: '12.3 MB',
-        starred: false,
-        loaded: false,
-        thumbnail: true,
-        uploadedAt: '2024-01-14T14:30:00Z',
-    },
-    {
-        id: 'file-3',
-        name: 'ct_scan.dcm',
-        fileType: 'dcm',
-        size: '156.8 MB',
-        starred: true,
-        loaded: false,
-        thumbnail: true,
-        uploadedAt: '2024-01-13T09:15:00Z',
-    },
-    {
-        id: 'file-4',
-        name: 'fiber_tracts.vtp',
-        fileType: 'vtp',
-        size: '8.7 MB',
-        starred: false,
-        loaded: true,
-        thumbnail: true,
-        uploadedAt: '2024-01-12T16:45:00Z',
-    },
-    {
-        id: 'file-5',
-        name: 'analysis_report.csv',
-        fileType: 'csv',
-        size: '1.2 MB',
-        starred: false,
-        loaded: false,
-        thumbnail: false,
-        uploadedAt: '2024-01-11T11:20:00Z',
-    },
-];
+import { FilesTab } from './FilesTab';
 
 export default {
-    title: 'Panels/LeftPanel/FilesTab',
-    component: FilesPanelContent,
+    title: 'FilesTab/FilesTab',
+    component: FilesTab,
     parameters: {
-        layout: 'padded',
-        backgrounds: { default: 'dark' },
+        layout: 'fullscreen',
     },
-    decorators: [
-        (Story) => (
-            <div
-                style={{
-                    width: 280,
-                    height: 600,
-                    background: 'var(--color-bg-secondary, #1e1e1e)',
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                }}
-            >
-                <Story />
-            </div>
-        ),
+};
+
+// Mock files with load states and folder assignments
+const mockFiles = [
+    // Workspace files (already added to workspace)
+    { id: 'f1', name: 'brain_scan.nii.gz', fileType: 'nifti', size: '256 MB', starred: true, folderId: null, loaded: true, loadState: 'loaded' },
+    { id: 'f2', name: 'ct_chest.dcm', fileType: 'dicom', size: '512 MB', starred: true, folderId: null, loaded: false, loadState: 'stored' },
+    { id: 'f3', name: 'analysis_data.csv', fileType: 'csv', size: '1.2 MB', starred: false, folderId: null, loaded: false, loadState: 'stored' },
+    // Available files (not in workspace)
+    { id: 'f4', name: 'report.pdf', fileType: 'pdf', size: '2.4 MB', starred: false, folderId: 'folder1' },
+    { id: 'f5', name: 'screenshot.png', fileType: 'png', size: '340 KB', starred: false, folderId: 'folder1' },
+    { id: 'f6', name: 'spine_model.vtp', fileType: 'vtp', size: '64 MB', starred: false, folderId: 'folder2' },
+    { id: 'f7', name: 'heart_scan.nii.gz', fileType: 'nifti', size: '384 MB', starred: true, folderId: null },
+    { id: 'f8', name: 'results.csv', fileType: 'csv', size: '856 KB', starred: false, folderId: null },
+];
+
+const mockStarredIds = new Set(['f1', 'f2', 'f7']);
+
+const Template = (args) => (
+    <div style={{
+        width: args.width || '320px',
+        height: args.height || '600px',
+        background: 'var(--color-bg-primary, #0a0a0f)',
+        padding: '8px',
+    }}>
+        <FilesTab {...args} />
+    </div>
+);
+
+export const Default = Template.bind({});
+Default.args = {
+    workspaceId: 'ws-1',
+    mockFiles: mockFiles,
+    mockStarredIds: mockStarredIds,
+    mockIsLoading: false,
+    mockError: null,
+    width: '320px',
+    height: '600px',
+};
+
+export const Loading = Template.bind({});
+Loading.args = {
+    workspaceId: 'ws-1',
+    mockFiles: [],
+    mockStarredIds: new Set(),
+    mockIsLoading: true,
+    mockError: null,
+    width: '320px',
+    height: '600px',
+};
+
+export const Error = Template.bind({});
+Error.args = {
+    workspaceId: 'ws-1',
+    mockFiles: [],
+    mockStarredIds: new Set(),
+    mockIsLoading: false,
+    mockError: 'Network error: Unable to fetch files',
+    width: '320px',
+    height: '600px',
+};
+
+export const EmptyState = Template.bind({});
+EmptyState.args = {
+    workspaceId: 'ws-1',
+    mockFiles: [],
+    mockStarredIds: new Set(),
+    mockIsLoading: false,
+    mockError: null,
+    width: '320px',
+    height: '600px',
+};
+
+export const NoStarredFiles = Template.bind({});
+NoStarredFiles.args = {
+    workspaceId: 'ws-1',
+    mockFiles: mockFiles.map(f => ({ ...f, starred: false })),
+    mockStarredIds: new Set(),
+    mockIsLoading: false,
+    mockError: null,
+    width: '320px',
+    height: '600px',
+};
+
+export const WithLoadingFiles = Template.bind({});
+WithLoadingFiles.args = {
+    workspaceId: 'ws-1',
+    mockFiles: [
+        { id: 'f1', name: 'brain_scan.nii.gz', fileType: 'nifti', size: '256 MB', starred: true, loaded: false, loadState: 'loading' },
+        { id: 'f2', name: 'ct_chest.dcm', fileType: 'dicom', size: '512 MB', starred: false, loaded: true, loadState: 'loaded' },
+        { id: 'f3', name: 'analysis_data.csv', fileType: 'csv', size: '1.2 MB', starred: false, loaded: false, loadState: 'stored' },
     ],
+    mockStarredIds: new Set(['f1']),
+    mockIsLoading: false,
+    mockError: null,
+    width: '320px',
+    height: '600px',
 };
 
-export const Default = {
-    args: {
-        workspaceId: 'ws-1',
-        mockFiles: mockFiles,
-        mockStarredIds: new Set(['file-1', 'file-3']),
-        mockIsLoading: false,
-        mockError: null,
-    },
-    parameters: {
-        docs: {
-            description: {
-                story: 'Files tab with sample files in list view.',
-            },
-        },
-    },
+export const WithProcessingFiles = Template.bind({});
+WithProcessingFiles.args = {
+    workspaceId: 'ws-1',
+    mockFiles: [
+        { id: 'f1', name: 'brain_scan.nii.gz', fileType: 'nifti', size: '256 MB', starred: true, loaded: true, loadState: 'processing' },
+        { id: 'f2', name: 'ct_chest.dcm', fileType: 'dicom', size: '512 MB', starred: false, loaded: true, loadState: 'loaded' },
+        { id: 'f3', name: 'spine_model.vtp', fileType: 'vtp', size: '64 MB', starred: false, loaded: false, loadState: 'stored' },
+    ],
+    mockStarredIds: new Set(['f1']),
+    mockIsLoading: false,
+    mockError: null,
+    width: '320px',
+    height: '600px',
 };
 
-export const Empty = {
-    args: {
-        workspaceId: 'ws-1',
-        mockFiles: [],
-        mockStarredIds: new Set(),
-        mockIsLoading: false,
-        mockError: null,
-    },
-    parameters: {
-        docs: {
-            description: {
-                story: 'Files tab with no files uploaded.',
-            },
-        },
-    },
+export const CompactMode = Template.bind({});
+CompactMode.args = {
+    workspaceId: 'ws-1',
+    mockFiles: mockFiles,
+    mockStarredIds: mockStarredIds,
+    mockIsLoading: false,
+    mockError: null,
+    width: '320px',
+    height: '280px',
 };
 
-export const Loading = {
-    args: {
-        workspaceId: 'ws-1',
-        mockFiles: [],
-        mockStarredIds: new Set(),
-        mockIsLoading: true,
-        mockError: null,
-    },
-    parameters: {
-        docs: {
-            description: {
-                story: 'Files tab in loading state.',
-            },
-        },
-    },
+export const NarrowWidth = Template.bind({});
+NarrowWidth.args = {
+    workspaceId: 'ws-1',
+    mockFiles: mockFiles,
+    mockStarredIds: mockStarredIds,
+    mockIsLoading: false,
+    mockError: null,
+    width: '240px',
+    height: '500px',
 };
 
-export const WithError = {
-    args: {
-        workspaceId: 'ws-1',
-        mockFiles: [],
-        mockStarredIds: new Set(),
-        mockIsLoading: false,
-        mockError: 'Network error: Unable to fetch files',
-    },
-    parameters: {
-        docs: {
-            description: {
-                story: 'Files tab showing error state.',
-            },
-        },
-    },
+export const WideLayout = Template.bind({});
+WideLayout.args = {
+    workspaceId: 'ws-1',
+    mockFiles: mockFiles,
+    mockStarredIds: mockStarredIds,
+    mockIsLoading: false,
+    mockError: null,
+    width: '400px',
+    height: '700px',
 };
 
-export const ManyFiles = {
-    args: {
-        workspaceId: 'ws-1',
-        mockFiles: [
-            ...mockFiles,
-            { id: 'file-6', name: 'model_v2.vtk', fileType: 'vtk', size: '45.2 MB', starred: false, loaded: false },
-            { id: 'file-7', name: 'scan_001.nii', fileType: 'nii', size: '128 MB', starred: false, loaded: true },
-            { id: 'file-8', name: 'segmentation.vtp', fileType: 'vtp', size: '22.1 MB', starred: true, loaded: false },
-            { id: 'file-9', name: 'atlas.nii.gz', fileType: 'nii', size: '256 MB', starred: false, loaded: false },
-            { id: 'file-10', name: 'mesh_final.vtk', fileType: 'vtk', size: '18.5 MB', starred: false, loaded: true },
-        ],
-        mockStarredIds: new Set(['file-1', 'file-3', 'file-8']),
-        mockIsLoading: false,
-        mockError: null,
-    },
-    parameters: {
-        docs: {
-            description: {
-                story: 'Files tab with many files showing scroll behavior.',
-            },
-        },
-    },
+export const ManyFiles = Template.bind({});
+ManyFiles.args = {
+    workspaceId: 'ws-1',
+    mockFiles: [
+        ...mockFiles,
+        { id: 'f9', name: 'volume_data.vti', fileType: 'vti', size: '128 MB', starred: false, folderId: null, loadState: 'stored' },
+        { id: 'f10', name: 'documentation.pdf', fileType: 'pdf', size: '4.2 MB', starred: true, folderId: null, loadState: 'stored' },
+        { id: 'f11', name: 'patient_notes.md', fileType: 'md', size: '12 KB', starred: false, folderId: null, loadState: 'stored' },
+        { id: 'f12', name: 'scan_2023.nii.gz', fileType: 'nifti', size: '384 MB', starred: false, folderId: 'folder1', loaded: true, loadState: 'loaded' },
+        { id: 'f13', name: 'measurements.csv', fileType: 'csv', size: '2.1 MB', starred: false, folderId: null, loadState: 'stored' },
+        { id: 'f14', name: 'diagram.png', fileType: 'png', size: '1.8 MB', starred: false, folderId: 'folder2', loadState: 'stored' },
+        { id: 'f15', name: 'model_final.vtp', fileType: 'vtp', size: '96 MB', starred: true, folderId: null, loaded: true, loadState: 'loaded' },
+    ],
+    mockStarredIds: new Set(['f1', 'f2', 'f7', 'f10', 'f15']),
+    mockIsLoading: false,
+    mockError: null,
+    width: '320px',
+    height: '600px',
 };
 
-export const AllStarred = {
-    args: {
-        workspaceId: 'ws-1',
-        mockFiles: mockFiles,
-        mockStarredIds: new Set(mockFiles.map(f => f.id)),
-        mockIsLoading: false,
-        mockError: null,
-    },
-    parameters: {
-        docs: {
-            description: {
-                story: 'Files tab with all files starred.',
-            },
-        },
-    },
+export const MixedLoadStates = Template.bind({});
+MixedLoadStates.args = {
+    workspaceId: 'ws-1',
+    mockFiles: [
+        { id: 'f1', name: 'stored_file.nii.gz', fileType: 'nifti', size: '256 MB', starred: false, loaded: false, loadState: 'stored' },
+        { id: 'f2', name: 'loading_file.dcm', fileType: 'dicom', size: '512 MB', starred: false, loaded: false, loadState: 'loading' },
+        { id: 'f3', name: 'loaded_file.csv', fileType: 'csv', size: '1.2 MB', starred: true, loaded: true, loadState: 'loaded' },
+        { id: 'f4', name: 'processing_file.vtp', fileType: 'vtp', size: '64 MB', starred: false, loaded: true, loadState: 'processing' },
+    ],
+    mockStarredIds: new Set(['f3']),
+    mockIsLoading: false,
+    mockError: null,
+    width: '320px',
+    height: '600px',
+};
+
+export const InPanel = () => (
+    <div style={{
+        display: 'flex',
+        height: '100vh',
+        background: 'var(--color-bg-primary, #0a0a0f)',
+    }}>
+        {/* Simulated left panel */}
+        <div style={{
+            width: '320px',
+            height: '100%',
+            borderRight: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex',
+            flexDirection: 'column',
+        }}>
+            <FilesTab
+                workspaceId="ws-1"
+                mockFiles={mockFiles}
+                mockStarredIds={mockStarredIds}
+            />
+        </div>
+
+        {/* Simulated main content */}
+        <div style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--color-text-muted, #666)',
+            fontSize: '14px',
+        }}>
+            Main viewport area
+        </div>
+    </div>
+);
+InPanel.parameters = {
+    layout: 'fullscreen',
+};
+
+export const SideBySideComparison = () => (
+    <div style={{
+        display: 'flex',
+        gap: '24px',
+        padding: '24px',
+        background: 'var(--color-bg-primary, #0a0a0f)',
+        minHeight: '100vh',
+    }}>
+        <div>
+            <h3 style={{ color: '#888', fontSize: '12px', marginBottom: '8px' }}>Full Mode (600px height)</h3>
+            <div style={{ width: '320px', height: '600px', background: '#12121a', borderRadius: '8px' }}>
+                <FilesTab
+                    workspaceId="ws-1"
+                    mockFiles={mockFiles}
+                    mockStarredIds={mockStarredIds}
+                />
+            </div>
+        </div>
+        <div>
+            <h3 style={{ color: '#888', fontSize: '12px', marginBottom: '8px' }}>Compact Mode (280px height)</h3>
+            <div style={{ width: '320px', height: '280px', background: '#12121a', borderRadius: '8px' }}>
+                <FilesTab
+                    workspaceId="ws-1"
+                    mockFiles={mockFiles}
+                    mockStarredIds={mockStarredIds}
+                />
+            </div>
+        </div>
+    </div>
+);
+SideBySideComparison.parameters = {
+    layout: 'fullscreen',
+};
+
+export const LoadStateComparison = () => (
+    <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+        padding: '24px',
+        background: 'var(--color-bg-primary, #0a0a0f)',
+        minHeight: '100vh',
+    }}>
+        <h2 style={{ color: '#fff', fontSize: '16px', margin: 0 }}>File Load States</h2>
+        <p style={{ color: '#888', fontSize: '12px', margin: 0 }}>
+            Files show different indicators based on their load state: stored (on server), loading, loaded (in memory), or processing.
+        </p>
+        <div style={{ width: '320px', height: '500px', background: '#12121a', borderRadius: '8px' }}>
+            <FilesTab
+                workspaceId="ws-1"
+                mockFiles={[
+                    { id: 'f1', name: 'stored_file.nii.gz', fileType: 'nifti', size: '256 MB', starred: true, loaded: false, loadState: 'stored' },
+                    { id: 'f2', name: 'loading_file.dcm', fileType: 'dicom', size: '512 MB', starred: false, loaded: false, loadState: 'loading' },
+                    { id: 'f3', name: 'loaded_file.csv', fileType: 'csv', size: '1.2 MB', starred: true, loaded: true, loadState: 'loaded' },
+                    { id: 'f4', name: 'processing_file.vtp', fileType: 'vtp', size: '64 MB', starred: false, loaded: true, loadState: 'processing' },
+                ]}
+                mockStarredIds={new Set(['f1', 'f3'])}
+            />
+        </div>
+    </div>
+);
+LoadStateComparison.parameters = {
+    layout: 'fullscreen',
 };

@@ -1,47 +1,72 @@
 /**
  * @file FilesTab.jsx
- * @description Project file storage and organization tab.
- * Upload, browse, organize, version, and prepare files for use.
+ * @description Files Tab with improved layout and features.
  *
  * Features:
- * - Grid and list view modes with thumbnails
- * - Starred, Workspace Files, and Available Files sections (resizable)
- * - Nested folder support with drag-and-drop
- * - Context menu for file actions
- * - Upload dropzone with progress
- * - File state indicators (stored, loading, loaded, processing, error)
+ * - Global search and type filters (applies to all sections)
+ * - Resizable Starred section with filter bypass
+ * - Tabbed browser (Loaded/All Files)
+ * - Folder navigation with breadcrumbs
+ * - Compact mode for small containers
+ * - VR-friendly with adaptive sizing
  *
- * Three-layer model:
- * - Files = Supply closet (all files in storage)
- * - Datasets = Palette (files loaded into memory)
- * - Views = Easel (what's on canvas)
- *
- * @see Left_Panel_Design_Specification.docx - Section 4 Files Tab
+ * Layout (Full Mode):
+ * ┌─────────────────────────────────────┐
+ * │ 📁 Files                    8 total │
+ * ├─────────────────────────────────────┤
+ * │ 🔍 [Search all files...]            │  ← Global search
+ * │ [NIfTI][DICOM][CSV][Docs] Sort▼     │  ← Global type filters
+ * │ [Filters active]                    │  ← Active indicator
+ * ├─────────────────────────────────────┤
+ * │ ▼ ⭐ Starred               2 of 3   │
+ * │   [All] [Datasets] [Files]          │
+ * │   file list...                      │
+ * │   [Show all ↗] / [Restore filters]  │
+ * │ ═══════════════════════════════════ │  ← Resize handle
+ * ├─────────────────────────────────────┤
+ * │ [📦 Loaded (2)] [📁 All Files (5)] │
+ * │ 🏠 Root / Raw Scans        [≡][⊞]  │  ← Breadcrumb + view toggle
+ * │   📁 folders + 📄 files             │
+ * ├─────────────────────────────────────┤
+ * │ [?]  [    ⬆ Upload Files    ]  [⟳] │
+ * └─────────────────────────────────────┘
  *
  * @example
  * <FilesTab workspaceId="ws-1" />
  */
 
-import React, { useCallback } from 'react';
-import { Icon, IconButton, Tooltip } from '@UI/react/components/atoms';
-import { LabeledButton, ToggleGroup } from '@UI/react/components/molecules';
-import {
-    ResizableSectionsContainer,
-    ResizableSection,
-} from '@UI/react/components/organisms/ResizableSections';
-import { FilterToolbar } from '@UI/react/components/organisms';
-import { useFilesTab } from './hooks/useFilesTab';
-import { FileItemList, FileItemGrid } from './components/FileItem';
+import React, { useCallback, useRef, useState, useMemo, useEffect } from 'react';
+import { Icon } from '@UI/react/components/atoms';
+import { PanelFooter } from '@UI/react/components/molecules/PanelFooter';
+import { StarredSection, TabbedFilesBrowser, CompactFilesPanel } from './sections';
 import { FileContextMenu } from './components/FileContextMenu';
 import { UploadDropzone } from './components/UploadDropzone';
+import { GlobalFiltersBar } from './components/GlobalFiltersBar';
+import { HelpPanel } from './components/HelpPanel';
+import { NewFolderDialog } from './components/NewFolderDialog';
+import { FileDetailsModal } from '@UI/react/components/modals/FileDetailsModal';
+import { useFilesTab } from './hooks/useFilesTab';
+import { useResponsiveMode } from '@UI/react/hooks/useResponsiveMode';
+import { useGlobalFilters } from '@UI/react/hooks/useGlobalFilters';
+import { useTagAnalysis, DEFAULT_TAG_CATEGORIES } from '@UI/react/hooks/useTagAnalysis';
+import { useAdaptive } from '@UI/react/context';
+import { apiClient } from '@Services/apiClient.js';
+import { toast } from '@UI/react/store/toastStore.js';
 import './FilesTab.scss';
 
-// =============================================================================
-// MAIN COMPONENT
-// =============================================================================
+// Sample tags for development (would come from API in production)
+const SAMPLE_TAGS = [
+    { id: 'pre-op', name: 'Pre-op', categoryId: 'phase' },
+    { id: 'post-op', name: 'Post-op', categoryId: 'phase' },
+    { id: 'baseline', name: 'Baseline', categoryId: 'phase' },
+    { id: 'pending', name: 'Pending Review', categoryId: 'status' },
+    { id: 'approved', name: 'Approved', categoryId: 'status' },
+    { id: 'control', name: 'Control', categoryId: 'cohort' },
+    { id: 'treatment', name: 'Treatment', categoryId: 'cohort' },
+];
 
 /**
- * @typedef {Object} FilesPanelContentProps
+ * @typedef {Object} FilesTabProps
  * @property {string} workspaceId - Current workspace ID
  * @property {Array} [mockFiles] - Mock files for testing
  * @property {Set} [mockStarredIds] - Mock starred IDs for testing
@@ -50,38 +75,67 @@ import './FilesTab.scss';
  */
 
 /**
- * Files tab panel content component.
+ * FilesTab - Redesigned Files Tab component
  *
- * @param {FilesPanelContentProps} props - Component props
- * @returns {React.ReactElement} The rendered panel content
+ * @param {FilesTabProps} props - Component props
+ * @returns {React.ReactElement} The rendered component
  */
-export function FilesPanelContent({
+export function FilesTab({
     workspaceId,
     mockFiles = null,
     mockStarredIds = null,
     mockIsLoading = null,
     mockError = null,
 }) {
+    const { isVR } = useAdaptive();
+    const containerRef = useRef(null);
+
+    // Responsive mode detection
+    const { dimensions, isCompact, showLabels } = useResponsiveMode(containerRef);
+
+    // Tag state - would come from API in production
+    const [projectTags, setProjectTags] = useState(SAMPLE_TAGS);
+    const allowTagCreation = true; // From project settings
+
+    // Global filters state (with tag support)
     const {
-        // View state
-        viewMode,
-        setViewMode,
+        filters,
+        setFilters,
+        applyFilters,
+        hasActiveFilters,
+        activeFilterCount,
+        clearFilters,
+    } = useGlobalFilters({ tags: projectTags });
 
-        // Filter system
-        filter,
-        filterConfig,
-        activeFilters,
+    // Core files tab logic
+    const {
+        // Files data
+        files,
+        allFiles,
+        starredFiles,
+        loadedDatasetsFormatted,
+        loadedCount,
+        isLoading,
+        error,
 
-        // Selection
-        selectedFileId,
-        setSelectedFileId,
-        expandedFolders,
-        toggleFolder,
+        // Workspace files
+        workspaceFiles,
+        availableFiles,
+        workspaceFileCount,
+        isInWorkspace,
 
-        // Section states (persisted)
-        sectionStates,
-        toggleSection,
-        resizeSection,
+        // Folders
+        folders,
+        createFolder,
+
+        // Actions
+        handleStar,
+        handleDragStart,
+        handleDoubleClick,
+        handleUpload,
+        refetch,
+        addToWorkspace,
+        removeFromWorkspace,
 
         // Context menu
         contextMenu,
@@ -93,25 +147,6 @@ export function FilesPanelContent({
         // Upload
         isDragOver,
         setIsDragOver,
-        handleUpload,
-
-        // Files data
-        starredFiles,
-        workspaceFiles,
-        availableFiles,
-        workspaceFileCount,
-        loadedCount,
-        supportedFileTypes,
-        isLoading,
-        error,
-
-        // Actions
-        handleStar,
-        handleDragStart,
-        handleDoubleClick,
-        refetch,
-        addToWorkspace,
-        isInWorkspace,
     } = useFilesTab({
         workspaceId,
         mockFiles,
@@ -120,206 +155,365 @@ export function FilesPanelContent({
         mockError,
     });
 
-    // Render file items based on view mode
-    const renderFileItems = useCallback(
-        (items, options = {}) => {
-            const { showAddToWorkspace = false } = options;
+    // Tag analysis for the dropdown and file display (after allFiles is available)
+    const {
+        tagsByCategory,
+        getCategoryForTag,
+    } = useTagAnalysis(allFiles, projectTags, DEFAULT_TAG_CATEGORIES);
 
-            if (viewMode === 'grid') {
-                return (
-                    <div className="files-grid">
-                        {items.map((file) => (
-                            <FileItemGrid
-                                key={file.id}
-                                file={file}
-                                isSelected={selectedFileId === file.id}
-                                onSelect={setSelectedFileId}
-                                onStar={handleStar}
-                                onDragStart={handleDragStart}
-                                onContextMenu={handleContextMenu}
-                                onMenuClick={handleMenuClick}
-                                onDoubleClick={showAddToWorkspace
-                                    ? () => addToWorkspace(file.id)
-                                    : handleDoubleClick
-                                }
-                            />
-                        ))}
-                    </div>
-                );
+    // Handle tag creation
+    const handleCreateTag = useCallback(({ name, categoryId }) => {
+        const newTag = {
+            id: `tag-${Date.now()}`,
+            name,
+            categoryId,
+        };
+        setProjectTags(prev => [...prev, newTag]);
+        // In production, this would call the API
+    }, []);
+
+    // Section states
+    const [starredExpanded, setStarredExpanded] = useState(true);
+    const [starredHeight, setStarredHeight] = useState(140);
+    const [activeTab, setActiveTab] = useState('workspace');
+    const [isResizing, setIsResizing] = useState(false);
+    const [selectedFileId, setSelectedFileId] = useState(null);
+    const [showHelpPanel, setShowHelpPanel] = useState(false);
+    const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+    const [showFileDetails, setShowFileDetails] = useState(false);
+    const [fileDetailsTarget, setFileDetailsTarget] = useState(null);
+
+    // Starred section resize handler
+    const handleResizeStart = useCallback((e) => {
+        e.preventDefault();
+        setIsResizing(true);
+        const startY = e.clientY;
+        const startHeight = starredHeight;
+
+        const handleMouseMove = (moveEvent) => {
+            const delta = moveEvent.clientY - startY;
+            setStarredHeight(Math.max(80, Math.min(250, startHeight + delta)));
+        };
+
+        const handleMouseUp = () => {
+            setIsResizing(false);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    }, [starredHeight]);
+
+    // File click handler
+    const handleFileClick = useCallback((file) => {
+        // Select file
+    }, []);
+
+    // View click handler
+    const handleViewClick = useCallback((viewId) => {
+        // Navigate to view
+    }, []);
+
+    // Help click handler
+    const handleHelp = useCallback(() => {
+        setShowHelpPanel(prev => !prev);
+    }, []);
+
+    // New folder handler
+    const handleNewFolder = useCallback(() => {
+        setShowNewFolderDialog(true);
+    }, []);
+
+    // Create folder handler
+    const handleCreateFolder = useCallback(async ({ name, parentId, color }) => {
+        try {
+            await createFolder({ name, parentId, color });
+        } catch (err) {
+            console.error('Failed to create folder:', err);
+        }
+    }, [createFolder]);
+
+    // Wrap context action to intercept "info" for file details
+    const wrappedContextAction = useCallback((action, file, operation) => {
+        if (action === 'info') {
+            setFileDetailsTarget(file);
+            setShowFileDetails(true);
+            return;
+        }
+        handleContextAction(action, file, operation);
+    }, [handleContextAction]);
+
+    // Format loaded datasets with views for display
+    const loadedDatasetsWithViews = useMemo(() => {
+        return loadedDatasetsFormatted.map(ds => ({
+            ...ds,
+            views: ds.views || [], // Add views array if not present
+        }));
+    }, [loadedDatasetsFormatted]);
+
+    const classList = [
+        'files-tab',
+        'files-tab-v2',
+        isCompact && 'files-tab--compact',
+        isVR && 'files-tab--vr',
+    ].filter(Boolean).join(' ');
+
+    // Handle drag events on the container
+    const handleDragEnter = useCallback((e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.types.includes('Files')) {
+            setIsDragOver(true);
+        }
+    }, [setIsDragOver]);
+
+    const handleDragOver = useCallback((e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
+
+    const handleDragLeave = useCallback((e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Only hide if leaving the container entirely
+        if (e.currentTarget === e.target) {
+            setIsDragOver(false);
+        }
+    }, [setIsDragOver]);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Don't trigger shortcuts when typing in inputs
+            const target = e.target;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                // Allow Escape to blur and clear filters
+                if (e.key === 'Escape') {
+                    target.blur();
+                    clearFilters();
+                }
+                return;
             }
-            return items.map((file) => (
-                <FileItemList
-                    key={file.id}
-                    file={file}
-                    isSelected={selectedFileId === file.id}
-                    onSelect={setSelectedFileId}
-                    onStar={handleStar}
-                    onDragStart={handleDragStart}
-                    onContextMenu={handleContextMenu}
-                    onMenuClick={handleMenuClick}
-                    onDoubleClick={showAddToWorkspace
-                        ? () => addToWorkspace(file.id)
-                        : handleDoubleClick
+
+            // Don't trigger if any modal is open
+            if (showHelpPanel || showNewFolderDialog) {
+                if (e.key === 'Escape') {
+                    setShowHelpPanel(false);
+                    setShowNewFolderDialog(false);
+                }
+                return;
+            }
+
+            switch (e.key) {
+                case '/':
+                    // Focus search input
+                    e.preventDefault();
+                    const searchInput = containerRef.current?.querySelector('.global-filters-bar__search .search-input__field');
+                    searchInput?.focus();
+                    break;
+                case 'Escape':
+                    // Clear filters
+                    clearFilters();
+                    break;
+                case 's':
+                case 'S':
+                    // Toggle starred section
+                    if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        setStarredExpanded(prev => !prev);
                     }
-                    expandedFolders={expandedFolders}
-                    onToggleFolder={toggleFolder}
-                />
-            ));
-        },
-        [
-            viewMode,
-            selectedFileId,
-            expandedFolders,
-            handleStar,
-            handleDragStart,
-            handleContextMenu,
-            handleMenuClick,
-            handleDoubleClick,
-            setSelectedFileId,
-            toggleFolder,
-            addToWorkspace,
-        ]
-    );
+                    break;
+                case 'n':
+                case 'N':
+                    // New folder
+                    if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        setShowNewFolderDialog(true);
+                    }
+                    break;
+                case 'u':
+                case 'U':
+                    // Upload files
+                    if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        document.getElementById('file-upload-input')?.click();
+                    }
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        // Only add listener if container is present
+        const container = containerRef.current;
+        if (container) {
+            container.addEventListener('keydown', handleKeyDown);
+            // Make container focusable
+            if (!container.hasAttribute('tabindex')) {
+                container.setAttribute('tabindex', '-1');
+            }
+        }
+
+        return () => {
+            if (container) {
+                container.removeEventListener('keydown', handleKeyDown);
+            }
+        };
+    }, [clearFilters, showHelpPanel, showNewFolderDialog]);
 
     return (
-        <div className="files-tab">
+        <div
+            className={classList}
+            ref={containerRef}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+        >
             {/* Header */}
             <div className="panel-header panel-header--blue">
                 <Icon name="folderOpen" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Files</span>
                 <div className="panel-header__spacer" />
-                <div className="panel-header__actions">
-                    <Tooltip content="New Folder" placement="bottom">
-                        <IconButton
-                            icon="folderPlus"
-                            label="New Folder"
-                            size="xs"
-                            variant="ghost"
-                        />
-                    </Tooltip>
-                </div>
+                <span className="panel-header__count">{allFiles.length} files</span>
             </div>
-
-            {/* Toolbar with view toggle and info */}
-            <div className="panel-toolbar">
-                <ToggleGroup
-                    options={[
-                        { value: 'list', icon: 'list' },
-                        { value: 'grid', icon: 'grid3x3' },
-                    ]}
-                    value={viewMode}
-                    onChange={setViewMode}
-                    size="xs"
-                />
-                <div className="panel-toolbar__spacer" />
-                <span className="panel-toolbar__info">
-                    <strong>{workspaceFileCount}</strong> in workspace
-                    {loadedCount > 0 && <> · <strong>{loadedCount}</strong> loaded</>}
-                </span>
-            </div>
-
-            {/* Filter System */}
-            <FilterToolbar
-                filter={filter}
-                config={filterConfig}
-                showQuickFilters={true}
-                searchPlaceholder="Search files..."
-            />
-
-            {/* Loading indicator */}
-            {isLoading && (
-                <div className="panel-loading">
-                    <Icon name="loader" size={16} className="spin" />
-                    <span>Loading files...</span>
-                </div>
-            )}
 
             {/* Error message */}
             {error && (
                 <div className="panel-error">
                     <span>Failed to load files: {error}</span>
-                    <LabeledButton
-                        label="Retry"
-                        onClick={refetch}
-                        size="xs"
-                        variant="ghost"
-                    />
+                    <button onClick={refetch} className="panel-error__retry">
+                        Retry
+                    </button>
                 </div>
             )}
 
-            {/* Resizable Sections */}
-            <div className="files-tab__sections">
-                <ResizableSectionsContainer
-                    sectionStates={sectionStates}
-                    onSectionToggle={toggleSection}
-                    onSectionResize={resizeSection}
-                >
-                    {/* Starred Files Section */}
-                    <ResizableSection
-                        id="starred"
-                        icon="star"
-                        iconColorClass="icon--amber"
-                        label="Starred"
-                        count={starredFiles.length}
-                        color="amber"
-                        minHeight={60}
-                    >
-                        {starredFiles.length > 0 ? (
-                            renderFileItems(starredFiles)
-                        ) : (
-                            <div className="section-empty">No starred files</div>
-                        )}
-                    </ResizableSection>
+            {/* Global Filters Bar - applies to all sections */}
+            {!isCompact && (
+                <GlobalFiltersBar
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    hasActiveFilters={hasActiveFilters}
+                    activeFilterCount={activeFilterCount}
+                    onClearFilters={clearFilters}
+                    tags={projectTags}
+                    tagsByCategory={tagsByCategory}
+                    allowTagCreation={allowTagCreation}
+                    onCreateTag={handleCreateTag}
+                />
+            )}
 
-                    {/* Workspace Files Section */}
-                    <ResizableSection
-                        id="workspace"
-                        icon="folder"
-                        iconColorClass="icon--blue"
-                        label="Workspace Files"
-                        count={workspaceFileCount}
-                        color="blue"
-                        minHeight={80}
-                    >
-                        {workspaceFiles.length > 0 ? (
-                            renderFileItems(workspaceFiles)
-                        ) : (
-                            <div className="section-empty">
-                                <p>No files added to workspace</p>
-                                <p className="section-empty__hint">
-                                    Expand "Available Files" below to add files
-                                </p>
-                            </div>
-                        )}
-                    </ResizableSection>
+            {/* Main content */}
+            <div className="files-tab__content">
+                {isCompact ? (
+                    /* Compact Mode: 3-tab layout */
+                    <CompactFilesPanel
+                        starredFiles={starredFiles}
+                        workspaceFiles={workspaceFiles}
+                        availableFiles={availableFiles}
+                        containerWidth={dimensions.width}
+                        onToggleStar={handleStar}
+                        onFileClick={handleFileClick}
+                        onFileDoubleClick={handleDoubleClick}
+                        onAddToWorkspace={addToWorkspace}
+                        onRemoveFromWorkspace={removeFromWorkspace}
+                    />
+                ) : (
+                    /* Full Mode: Starred + Tabbed Browser */
+                    <>
+                        <StarredSection
+                            items={starredFiles}
+                            filters={filters}
+                            applyFilters={applyFilters}
+                            expanded={starredExpanded}
+                            onToggle={() => setStarredExpanded(!starredExpanded)}
+                            height={starredHeight}
+                            onResizeStart={handleResizeStart}
+                            selectedFileId={selectedFileId}
+                            onSelect={setSelectedFileId}
+                            onToggleStar={handleStar}
+                            onDoubleClick={handleDoubleClick}
+                            onDragStart={handleDragStart}
+                            onContextMenu={handleContextMenu}
+                            onMenuClick={handleMenuClick}
+                            tags={projectTags}
+                            getCategoryForTag={getCategoryForTag}
+                        />
 
-                    {/* Available Files Section */}
-                    <ResizableSection
-                        id="available"
-                        icon="folderOpen"
-                        iconColorClass="icon--gray"
-                        label="Available Files"
-                        count={availableFiles.length}
-                        color="default"
-                        minHeight={60}
-                    >
-                        {availableFiles.length > 0 ? (
-                            renderFileItems(availableFiles, { showAddToWorkspace: true })
-                        ) : (
-                            <div className="section-empty">
-                                All files are in workspace
-                            </div>
-                        )}
-                    </ResizableSection>
-                </ResizableSectionsContainer>
+                        <TabbedFilesBrowser
+                            workspaceFiles={workspaceFiles}
+                            availableFiles={availableFiles}
+                            allFiles={allFiles}
+                            folders={folders}
+                            filters={filters}
+                            applyFilters={applyFilters}
+                            activeTab={activeTab}
+                            onTabChange={setActiveTab}
+                            selectedFileId={selectedFileId}
+                            onSelect={setSelectedFileId}
+                            onToggleStar={handleStar}
+                            onDoubleClick={handleDoubleClick}
+                            onDragStart={handleDragStart}
+                            onContextMenu={handleContextMenu}
+                            onMenuClick={handleMenuClick}
+                            onAddToWorkspace={addToWorkspace}
+                            tags={projectTags}
+                            getCategoryForTag={getCategoryForTag}
+                        />
+                    </>
+                )}
             </div>
 
-            {/* Footer with upload */}
+            {/* Footer - sticks to bottom */}
+            <PanelFooter
+                onHelp={handleHelp}
+                onNewFolder={handleNewFolder}
+                onUpload={() => document.getElementById('file-upload-input')?.click()}
+                onRefresh={refetch}
+            />
+
+            {/* Hidden upload input */}
+            <input
+                id="file-upload-input"
+                type="file"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUpload(file);
+                    e.target.value = '';
+                }}
+                multiple
+            />
+
+            {/* Upload dropzone overlay (for drag-and-drop) */}
             <UploadDropzone
                 onUpload={handleUpload}
-                onRefresh={refetch}
                 isDragOver={isDragOver}
                 setIsDragOver={setIsDragOver}
+            />
+
+            {/* Loading overlay */}
+            {isLoading && (
+                <div className="panel-loading-overlay">
+                    <div className="panel-loading-overlay__content">
+                        <Icon name="loader" size={24} className="spin" />
+                        <span>Loading files...</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Help panel */}
+            <HelpPanel
+                isOpen={showHelpPanel}
+                onClose={() => setShowHelpPanel(false)}
+            />
+
+            {/* New folder dialog */}
+            <NewFolderDialog
+                isOpen={showNewFolderDialog}
+                onClose={() => setShowNewFolderDialog(false)}
+                onSubmit={handleCreateFolder}
+                folders={folders}
             />
 
             {/* Context menu */}
@@ -329,12 +523,48 @@ export function FilesPanelContent({
                     y={contextMenu.y}
                     file={contextMenu.file}
                     onClose={closeContextMenu}
-                    onAction={handleContextAction}
+                    onAction={wrappedContextAction}
                     isInWorkspace={isInWorkspace(contextMenu.file?.id)}
                 />
             )}
+
+            {/* File details modal */}
+            <FileDetailsModal
+                isOpen={showFileDetails}
+                file={fileDetailsTarget}
+                onClose={() => {
+                    setShowFileDetails(false);
+                    setFileDetailsTarget(null);
+                }}
+                onOpen={(file) => handleDoubleClick(file)}
+                onDownload={async (file) => {
+                    try {
+                        const blob = await apiClient.download(`/files/${file.id}/download`);
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = file.name;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        toast.success(`Downloaded ${file.name}`);
+                    } catch (err) {
+                        toast.error(`Download failed: ${err.message}`);
+                    }
+                }}
+                onDelete={async (file) => {
+                    try {
+                        await apiClient.delete(`/files/${file.id}`);
+                        setShowFileDetails(false);
+                        setFileDetailsTarget(null);
+                        refetch();
+                        toast.success(`Deleted ${file.name}`);
+                    } catch (err) {
+                        toast.error(`Delete failed: ${err.message}`);
+                    }
+                }}
+            />
         </div>
     );
 }
 
-export default FilesPanelContent;
+export default FilesTab;

@@ -281,8 +281,6 @@ export function CursorsPanelContent({ workspaceId }) {
 
     // Go to user's current view position
     const handleGoToUser = useCallback((userId) => {
-        console.log('Go to user:', userId);
-        // TODO: Emit event to navigate to user's camera position
         window.dispatchEvent(new CustomEvent('cia:go-to-user', {
             detail: { userId }
         }));
@@ -293,7 +291,6 @@ export function CursorsPanelContent({ workspaceId }) {
         setFollowingUserId(userId);
         if (userId) {
             setCameraSyncMode('follow');
-            // TODO: Start following user's camera
             window.dispatchEvent(new CustomEvent('cia:follow-user', {
                 detail: { userId, action: 'start' }
             }));

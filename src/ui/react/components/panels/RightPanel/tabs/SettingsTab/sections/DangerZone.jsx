@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { Button } from '@UI/react/components/atoms/Button';
+import { toast } from '@UI/react/store/toastStore.js';
 import '../SettingsTab.scss';
 
 /**
@@ -99,13 +100,11 @@ export function DangerZone({ project }) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const handleArchive = () => {
-        // TODO: Implement archive
-        console.log('Archiving project:', project?.id);
+        toast.info('Project archiving is not yet available.');
     };
 
     const handleTransfer = () => {
-        // TODO: Implement transfer ownership modal
-        console.log('Transferring project:', project?.id);
+        toast.info('Ownership transfer is not yet available.');
     };
 
     const handleDelete = () => {
@@ -113,8 +112,7 @@ export function DangerZone({ project }) {
     };
 
     const confirmDelete = () => {
-        // TODO: Implement delete
-        console.log('Deleting project:', project?.id);
+        toast.info('Project deletion is not yet available.');
         setShowDeleteConfirm(false);
     };
 
