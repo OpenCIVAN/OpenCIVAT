@@ -83,6 +83,7 @@ export function PanelShell({
 
   const {
     getPanelState,
+    initPanel,
     openPanel,
     closePanel,
     updatePosition,
@@ -94,14 +95,15 @@ export function PanelShell({
   // Get or initialize panel state
   const panelState = getPanelState(panelId);
 
-  // Initialize panel if not exists
+  // Register panel state on first mount without auto-opening it.
+  // Panels should only open when explicitly triggered (button/keyboard shortcut).
   useEffect(() => {
     if (!panelState) {
-      openPanel(panelId, {
+      initPanel(panelId, {
         size: { width: defaultWidth, height: defaultHeight },
       });
     }
-  }, [panelId, panelState, openPanel, defaultWidth, defaultHeight]);
+  }, [panelId, panelState, initPanel, defaultWidth, defaultHeight]);
 
   // Current dimensions
   const width = panelState?.size?.width || defaultWidth;

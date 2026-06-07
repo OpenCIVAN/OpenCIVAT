@@ -110,6 +110,8 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     onCloseWorkspace,
     onArchiveWorkspace,
     showWindowControls = true,
+    isWorkspaceMaximized = false,
+    hasActiveWorkspace = false,
 
     className = '',
 }) {
@@ -625,12 +627,12 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                         </button>
                         <button
                             type="button"
-                            className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--danger"
+                            className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--secondary"
                             onClick={() => onCloseWorkspace?.()}
-                            title="Close canvas"
-                            disabled={!onCloseWorkspace}
+                            title={isWorkspaceMaximized ? 'Minimize workspace' : 'Maximize workspace'}
+                            disabled={!onCloseWorkspace || (!isWorkspaceMaximized && !hasActiveWorkspace)}
                         >
-                            <Icon name="x" size={14} />
+                            <Icon name={isWorkspaceMaximized ? 'minimize' : 'maximize'} size={14} />
                         </button>
                     </div>
                 </HeaderSection>

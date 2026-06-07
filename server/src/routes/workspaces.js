@@ -66,6 +66,61 @@ router.get("/", async (req, res, next) => {
 });
 
 /**
+ * GET /api/workspaces/archived
+ * List archived workspaces owned by the user
+ */
+router.get("/archived", async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const { project_id } = req.query;
+    const { pool } = req.app.locals;
+
+    let query = `
+      SELECT w.id, w.name, w.type, w.project_id, w.archived_at
+      FROM workspaces w
+      WHERE w.is_archived = true AND w.owner_id = $1
+    `;
+    const params = [userId];
+
+    if (project_id) {
+      query += ` AND w.project_id = $2`;
+      params.push(project_id);
+    }
+
+    query += " ORDER BY w.archived_at DESC";
+
+    const result = await pool.query(query, params);
+    res.json({ workspaces: result.rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PATCH /api/workspaces/:id/restore
+ * Restore an archived workspace
+ */
+router.patch("/:id/restore", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { pool } = req.app.locals;
+
+    const result = await pool.query(
+      `UPDATE workspaces SET is_archived = false, archived_at = NULL, updated_at = NOW() WHERE id = $1 RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Workspace not found" });
+    }
+
+    res.json({ success: true, workspace: result.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * GET /api/workspaces/personal
  * Get or create personal workspace for user
  */

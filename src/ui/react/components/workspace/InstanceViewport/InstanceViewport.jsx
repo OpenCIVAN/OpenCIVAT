@@ -16,7 +16,7 @@ import {
 import { instance as log } from "@Utils/logger.js";
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { setActiveInstance } from '@Collaboration/presence/cursors.js';
+import { setActiveInstance, setActiveContainerElement } from '@Collaboration/presence/cursors.js';
 import { vrManager } from '@Core/vr/VRManager.js';
 import { useFloatingPanels } from '@UI/react/components/panels/FloatingPanel/FloatingPanelContext';
 import { useCanvasFocus } from '@UI/react/context/CanvasFocusContext';
@@ -611,6 +611,7 @@ export function InstanceViewport({
                 setActualInstanceId(instanceId);
                 setInitialized(true);
                 setActiveInstance(instanceId, viewConfigId);
+                setActiveContainerElement(containerRef.current);
 
                 // Get the assigned color
                 const color = workspaceManager.getInstanceColor(instanceId);
@@ -874,6 +875,7 @@ export function InstanceViewport({
         if (actualInstanceId) {
             // Always set for presence/cursor tracking
             setActiveInstance(actualInstanceId, viewConfigId);
+            setActiveContainerElement(containerRef.current);
 
             // Use pane-scoped methods when in tile mode (context available)
             // This ensures clicking one pane doesn't affect other panes

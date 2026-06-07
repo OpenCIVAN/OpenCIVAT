@@ -121,6 +121,12 @@ export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorks
   }, [panelState?.size?.width]);
 
   useEffect(() => {
+    window.dispatchEvent(new CustomEvent('cia:canvas-map-visibility', {
+      detail: { isOpen: !!panelState?.isOpen }
+    }));
+  }, [panelState?.isOpen]);
+
+  useEffect(() => {
     if (!canvasMapContext) return;
     if (panelState?.isOpen) {
       canvasMapContext.activateCanvasMap();

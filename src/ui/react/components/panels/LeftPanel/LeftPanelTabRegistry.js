@@ -17,7 +17,7 @@ import { registerLeftPanelTab } from "./LeftPanelContext";
 
 // Import all tab content components
 import { FilesTab } from "./tabs/FilesTab";
-import { DatasetsTabV2 } from "./tabs/DatasetsTab";
+import { DatasetsTab } from "./tabs/DatasetsTab";
 import { InstanceToolsPanel } from "@UI/react/components/panels/InstanceToolsPanel";
 import { AnnotationsPanelContent } from "./tabs/AnnotationsTab";
 import { BookmarksFiltersPanelContent } from "./tabs/BookmarksFiltersTab";
@@ -30,7 +30,7 @@ import { ViewsPanelContent } from "./tabs/ViewsTab";
 
 // DATA SOURCES
 registerLeftPanelTab("files", FilesTab);
-registerLeftPanelTab("datasets", DatasetsTabV2);
+registerLeftPanelTab("datasets", DatasetsTab);
 
 // VISUALIZATION
 registerLeftPanelTab("views", ViewsPanelContent);

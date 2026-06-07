@@ -424,11 +424,22 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       }
 
       if (openGLRenderWindow) {
-        openGLRenderWindow.delete();
+        try {
+          openGLRenderWindow.setContainer(null);
+        } catch (_) { /* ignore — container may already be gone */ }
+        try {
+          openGLRenderWindow.delete();
+        } catch (e) {
+          log.warn(`openGLRenderWindow.delete() failed for ${instanceId}:`, e.message);
+        }
       }
 
       if (renderWindow) {
-        renderWindow.delete();
+        try {
+          renderWindow.delete();
+        } catch (e) {
+          log.warn(`renderWindow.delete() failed for ${instanceId}:`, e.message);
+        }
       }
     }
 
@@ -4431,17 +4442,13 @@ console.log('Tools:', tools);
       viewAngle: camera.getViewAngle(),
     };
 
-    // Get WebGL context
-    const canvas = openGLRenderWindow.getCanvas();
-    const gl =
-      canvas.getContext("webgl2", { xrCompatible: true }) ||
-      canvas.getContext("webgl", { xrCompatible: true });
-
+    // Get the existing VTK.js WebGL context and make it XR-compatible.
+    // getCanvas().getContext() would return the existing context ignoring new
+    // attributes, so we use VTK's own accessor then call makeXRCompatible().
+    const gl = openGLRenderWindow.get3DContext();
     if (!gl) {
       throw new Error("Could not get WebGL context for VR exploration");
     }
-
-    // Make context XR compatible
     await gl.makeXRCompatible();
 
     // Create XR WebGL layer
@@ -4452,6 +4459,18 @@ console.log('Tools:', tools);
       baseLayer: xrLayer,
     });
 
+    // Request reference space once here — must NOT be called inside frame callbacks.
+    let referenceSpace;
+    try {
+      referenceSpace = await xrSession.requestReferenceSpace("bounded-floor");
+    } catch {
+      try {
+        referenceSpace = await xrSession.requestReferenceSpace("local-floor");
+      } catch {
+        referenceSpace = await xrSession.requestReferenceSpace("local");
+      }
+    }
+
     // Create VR exploration context
     const vrContext = {
       instanceId,
@@ -4459,6 +4478,7 @@ console.log('Tools:', tools);
       xrSession,
       xrLayer,
       gl,
+      referenceSpace,
       sceneObjects,
       dataBounds,
       originalCameraState,
@@ -4491,39 +4511,40 @@ console.log('Tools:', tools);
   /**
    * Update VR exploration frame
    */
-  async updateVRExploration(vrContext, frame, inputState) {
-    const { sceneObjects, xrSession, xrLayer, gl, vrScale, vrOrigin } =
-      vrContext;
+  updateVRExploration(vrContext, frame, inputState) {
+    const { sceneObjects, xrLayer, gl, vrScale, vrOrigin, referenceSpace } = vrContext;
     const { renderer, renderWindow, camera } = sceneObjects;
 
-    if (!frame) return;
+    if (!frame || !referenceSpace) return;
 
-    // Get reference space
-    let refSpace;
-    try {
-      refSpace = await xrSession.requestReferenceSpace("local-floor");
-    } catch (e) {
-      refSpace = await xrSession.requestReferenceSpace("local");
-    }
-
-    const viewerPose = frame.getViewerPose(refSpace);
+    const viewerPose = frame.getViewerPose(referenceSpace);
     if (!viewerPose) return;
 
-    // Bind XR framebuffer
+    // Bind the XR framebuffer for the whole stereo pair
     gl.bindFramebuffer(gl.FRAMEBUFFER, xrLayer.framebuffer);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Render for each eye
+    // Render once per eye using the correct viewport and camera
     for (const view of viewerPose.views) {
       const viewport = xrLayer.getViewport(view);
+
+      // Set raw GL viewport (required by WebXR spec)
       gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
 
-      // Update camera from VR view
-      this._updateCameraFromVRPose(camera, view, vrScale, vrOrigin);
+      // Tell VTK.js which normalized sub-region of its framebuffer to use
+      renderer.setViewport(
+        viewport.x / xrLayer.framebufferWidth,
+        viewport.y / xrLayer.framebufferHeight,
+        viewport.width / xrLayer.framebufferWidth,
+        viewport.height / xrLayer.framebufferHeight
+      );
 
-      // Render the scene
-      renderer.render();
+      this._updateCameraFromVRPose(camera, view, vrScale, vrOrigin);
+      renderWindow.render();
     }
+
+    // Reset VTK viewport to full framebuffer
+    renderer.setViewport(0, 0, 1, 1);
 
     // Update controller visuals
     this._updateVRExplorationControllers(vrContext, inputState);

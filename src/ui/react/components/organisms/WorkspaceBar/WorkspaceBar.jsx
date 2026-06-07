@@ -25,6 +25,8 @@ import './WorkspaceBar.scss';
 
 const WorkspaceBar = memo(function WorkspaceBar({
     workspaces = [],
+    archivedWorkspaces = [],
+    onRestoreWorkspace,
     activeWorkspaceId,
     onSelectWorkspace,
     onCreateWorkspace,
@@ -178,6 +180,24 @@ const WorkspaceBar = memo(function WorkspaceBar({
                         />
                     </div>
                 </div>
+
+                {/* Archived workspaces restore chips */}
+                {archivedWorkspaces.length > 0 && (
+                    <div className="workspace-bar__archived">
+                        {archivedWorkspaces.map((ws) => (
+                            <button
+                                key={ws.id}
+                                className="workspace-bar__archived-item"
+                                onClick={() => onRestoreWorkspace?.(ws.id)}
+                                title={`Restore "${ws.name}"`}
+                            >
+                                <Icon name="archive" size={10} />
+                                <span>{ws.name}</span>
+                                <Icon name="undo" size={10} />
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <div className="workspace-bar__spacer" />
                 <div className="workspace-bar__divider" />

@@ -54,6 +54,7 @@ function transformWorkspace(workspace) {
 export function useWorkspaces({ userId, projectId, roomId } = {}) {
   // State
   const [workspaces, setWorkspaces] = useState([]);
+  const [archivedWorkspaces, setArchivedWorkspaces] = useState([]);
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -278,6 +279,19 @@ export function useWorkspaces({ userId, projectId, roomId } = {}) {
 
   const deleteWorkspace = useCallback(async (workspaceId) => {
     await workspaceManager.deleteWorkspace(workspaceId);
+    // Add to archived list immediately for restore affordance
+    const ws = workspaces.find((w) => w.id === workspaceId);
+    if (ws) {
+      setArchivedWorkspaces((prev) => [
+        { id: ws.id, name: ws.name, type: ws.type },
+        ...prev.filter((a) => a.id !== workspaceId),
+      ]);
+    }
+  }, [workspaces]);
+
+  const restoreWorkspace = useCallback(async (workspaceId) => {
+    await workspaceManager.restoreWorkspace(workspaceId);
+    setArchivedWorkspaces((prev) => prev.filter((ws) => ws.id !== workspaceId));
   }, []);
 
   const mergeBreakout = useCallback(async (breakoutId) => {
@@ -287,6 +301,7 @@ export function useWorkspaces({ userId, projectId, roomId } = {}) {
   return {
     // State
     workspaces,
+    archivedWorkspaces,
     currentWorkspace,
     currentWorkspaceId,
     groupedWorkspaces,
@@ -301,6 +316,7 @@ export function useWorkspaces({ userId, projectId, roomId } = {}) {
     createPersonalWorkspace,
     updateWorkspace,
     deleteWorkspace,
+    restoreWorkspace,
     mergeBreakout,
   };
 }

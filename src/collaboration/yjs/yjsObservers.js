@@ -29,17 +29,6 @@ import { sync as log } from "@Utils/logger.js";
 // These are kept for backward compatibility with appInitializer.js
 // ============================================================================
 
-let isSystemReady = false;
-
-/**
- * Mark system as ready for processing
- * @deprecated v2.0 - Kept for backward compatibility, now a no-op
- */
-export function markSystemReady() {
-  log.debug("System marked as ready (no-op in v2.0 - state comes from server)");
-  isSystemReady = true;
-}
-
 // ============================================================================
 // PRESENCE OBSERVERS (Active in v2.0)
 // ============================================================================

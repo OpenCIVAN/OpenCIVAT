@@ -11,6 +11,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { ui as log } from "@Utils/logger.js";
+import { apiClient } from "@Services/apiClient.js";
 import { initializePhase3 } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { authService } from "@Services/authService.js";
@@ -219,6 +220,7 @@ export function CIAWebApp({ username, userId, projectId }) {
 
   const {
     workspaces,
+    archivedWorkspaces,
     currentWorkspace,
     currentWorkspaceId,
     selectWorkspace,
@@ -227,7 +229,17 @@ export function CIAWebApp({ username, userId, projectId }) {
     createPersonalWorkspace,
     updateWorkspace,
     deleteWorkspace,
+    restoreWorkspace,
   } = useWorkspaces({ userId, projectId, roomId: resolvedWorkspaceRoomId });
+
+  // Fetch project name
+  const [projectName, setProjectName] = useState(null);
+  useEffect(() => {
+    if (!projectId) return;
+    apiClient.get(`/projects/${projectId}`)
+      .then((data) => setProjectName(data?.name || null))
+      .catch(() => {});
+  }, [projectId]);
 
   const [workspaceOrder, setWorkspaceOrder] = useState([]);
   const [openWorkspaceIds, setOpenWorkspaceIds] = useState([]);
@@ -559,12 +571,18 @@ export function CIAWebApp({ username, userId, projectId }) {
   const handleDeleteWorkspace = useCallback(
     async (workspaceId) => {
       if (!workspaceId) return;
-      // Close the tab first
       handleCloseWorkspace(workspaceId);
-      // Then delete from database
       await deleteWorkspace?.(workspaceId);
     },
     [deleteWorkspace, handleCloseWorkspace]
+  );
+
+  const handleRestoreWorkspace = useCallback(
+    async (workspaceId) => {
+      if (!workspaceId) return;
+      await restoreWorkspace?.(workspaceId);
+    },
+    [restoreWorkspace]
   );
 
   const handleReorderWorkspaces = useCallback((draggedId, targetId) => {
@@ -929,13 +947,17 @@ export function CIAWebApp({ username, userId, projectId }) {
     setServerTileMaximizedId?.(tileMaximizedWorkspaceId);
   }, [tileMaximizedWorkspaceId, serverPrefsLoaded, setServerTileMaximizedId]);
 
-  // Initialize tileMaximizedWorkspaceId from server preferences
+  // Initialize tileMaximizedWorkspaceId from server preferences.
+  // Intentionally omits tileMaximizedWorkspaceId from deps: reacting to local state changes
+  // here creates a loop where clearing the local value immediately restores from a
+  // stale server cache. We only want to react to server-pushed changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
     if (serverPreferences?.tileMaximizedWorkspaceId && !tileMaximizedWorkspaceId) {
       setTileMaximizedWorkspaceId(serverPreferences.tileMaximizedWorkspaceId);
     }
-  }, [serverPrefsLoaded, serverPreferences?.tileMaximizedWorkspaceId, tileMaximizedWorkspaceId]);
+  }, [serverPrefsLoaded, serverPreferences?.tileMaximizedWorkspaceId]);
 
   // Callbacks for persisting window/viewport positions (for floating windows)
   const handleWindowPositionChange = useCallback((workspaceId, position) => {
@@ -1678,7 +1700,7 @@ export function CIAWebApp({ username, userId, projectId }) {
               // ─────────────────────────────────────────────────────────────
               topBar={
                 <Header
-                  currentProject={projectId ? { id: projectId, name: projectId } : null}
+                  currentProject={projectId ? { id: projectId, name: projectName || projectId } : null}
                   projects={[]}
                   user={
                     userId
@@ -1753,6 +1775,8 @@ export function CIAWebApp({ username, userId, projectId }) {
                       canvasMode={canvasMode}
                       onModeChange={setCanvasMode}
                       onJoinBreakout={handleJoinBreakout}
+                      archivedWorkspaces={archivedWorkspaces}
+                      onRestoreWorkspace={handleRestoreWorkspace}
                     />
                   )}
                 </div>
@@ -1761,7 +1785,7 @@ export function CIAWebApp({ username, userId, projectId }) {
               // LEFT PANEL (Activity Bar + Content)
               // ─────────────────────────────────────────────────────────────
               leftActivityBar={<LeftActivityBar />}
-              leftPanelContent={<LeftPanelContent />}
+              leftPanelContent={<LeftPanelContent workspaceId={currentWorkspaceId} />}
               // ─────────────────────────────────────────────────────────────
               // CENTER PANEL (Canvas Workspace)
               // ─────────────────────────────────────────────────────────────

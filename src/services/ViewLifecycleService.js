@@ -1718,7 +1718,7 @@ class ViewLifecycleService {
 
     // Dispatch navigation event
     window.dispatchEvent(
-      new CustomEvent("cia:navigate-to-cell", {
+      new CustomEvent("cia:viewport-navigate-to", {
         detail: { row: Math.max(0, row - 1), col: Math.max(0, col - 1) },
       })
     );

@@ -735,10 +735,17 @@ class VTKInstanceCursors {
     const screenX = cursorData.screen?.x ?? cursorData.x;
     const screenY = cursorData.screen?.y ?? cursorData.y;
 
-    // Convert from global page coords to container-relative coords
     const rect = this._getContainerRect(state);
-    const x = screenX - rect.left;
-    const y = screenY - rect.top;
+    let x, y;
+    if (cursorData.normalized) {
+      // Coordinates are (0-1) relative to sender's container — scale to ours
+      x = screenX * rect.width;
+      y = screenY * rect.height;
+    } else {
+      // Legacy: absolute page coords — subtract our container offset
+      x = screenX - rect.left;
+      y = screenY - rect.top;
+    }
 
     // Only show if cursor is within container bounds
     if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {

@@ -219,6 +219,29 @@ export function PanelShellProvider({ children }) {
   }, []);
 
   /**
+   * Register a panel without opening it (used by PanelShell on first mount
+   * when there is no saved state — prevents panels auto-opening on first visit).
+   */
+  const initPanel = useCallback((panelId, config = {}) => {
+    setPanels(prev => {
+      if (prev[panelId]) return prev; // already registered
+      markPanelTouched(panelId);
+      return {
+        ...prev,
+        [panelId]: {
+          id: panelId,
+          isOpen: false,
+          position: config.position || { x: 100, y: 100 },
+          size: config.size || { width: 320, height: 400 },
+          zIndex: BASE_Z_INDEX,
+          minimized: false,
+          meta: config.meta || {},
+        },
+      };
+    });
+  }, [markPanelTouched]);
+
+  /**
    * Open a panel with optional configuration
    */
   const openPanel = useCallback((panelId, config = {}) => {
@@ -263,6 +286,7 @@ export function PanelShellProvider({ children }) {
    * Toggle a panel open/closed
    */
   const togglePanel = useCallback((panelId, config = {}) => {
+    markPanelTouched(panelId);
     setPanels(prev => {
       const existing = prev[panelId];
       if (existing?.isOpen) {
@@ -274,8 +298,13 @@ export function PanelShellProvider({ children }) {
       // Opening panel
       const { nextZ, normalizedPanels } = getNextZIndex(prev, topZIndex);
       const base = normalizedPanels || prev;
-      const desiredPosition = existing?.position || config.position || { x: 100, y: 100 };
+      const rawPosition = existing?.position || config.position || { x: 100, y: 100 };
       const size = existing?.size || config.size || { width: 320, height: 400 };
+      // Clamp position to viewport so the panel is always reachable
+      const desiredPosition = {
+        x: Math.max(0, Math.min(rawPosition.x, window.innerWidth - (size.width || 320) - 20)),
+        y: Math.max(0, Math.min(rawPosition.y, window.innerHeight - 80)),
+      };
       const safePosition = computeSpawnPosition(panelId, desiredPosition, size, prev, SPAWN_OFFSET);
       const meta = existing?.meta || config.meta || {};
       setTopZIndex(nextZ);
@@ -293,7 +322,7 @@ export function PanelShellProvider({ children }) {
         },
       };
     });
-  }, [topZIndex, getNextZIndex]);
+  }, [topZIndex, getNextZIndex, markPanelTouched]);
 
   /**
    * Update panel position
@@ -390,6 +419,7 @@ export function PanelShellProvider({ children }) {
 
   const value = {
     panels,
+    initPanel,
     openPanel,
     closePanel,
     togglePanel,

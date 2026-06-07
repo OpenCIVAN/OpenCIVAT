@@ -53,18 +53,18 @@ router.get("/", async (req, res, next) => {
       LEFT JOIN file_project_access fpa ON d.id = fpa.file_id
       LEFT JOIN project_members pm ON fpa.project_id = pm.project_id
       WHERE d.status = 'active'
-        AND (d.uploaded_by = $1 OR pm.user_id = $1 OR d.public_path IS NOT NULL)
+        AND (d.uploaded_by = $1 OR pm.user_id::text = $1 OR d.public_path IS NOT NULL)
     `;
     const values = [user.id];
     let paramIndex = 2;
 
     if (projectId) {
-      query += ` AND fpa.project_id = $${paramIndex++}`;
+      query += ` AND fpa.project_id = $${paramIndex++}::uuid`;
       values.push(projectId);
     }
 
     if (orgId) {
-      query += ` AND d.organization_id = $${paramIndex++}`;
+      query += ` AND d.organization_id = $${paramIndex++}::uuid`;
       values.push(orgId);
     }
 

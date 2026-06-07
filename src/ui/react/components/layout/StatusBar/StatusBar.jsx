@@ -433,6 +433,18 @@ export function StatusBar() {
         };
     }, []);
 
+    // Canvas map open state (synced from CanvasMapPanel)
+    const [canvasMapOpen, setCanvasMapOpen] = useState(false);
+    useEffect(() => {
+        const handleVisibility = (e) => setCanvasMapOpen(e.detail?.isOpen ?? false);
+        window.addEventListener('cia:canvas-map-visibility', handleVisibility);
+        return () => window.removeEventListener('cia:canvas-map-visibility', handleVisibility);
+    }, []);
+
+    const handleToggleCanvasMap = useCallback(() => {
+        window.dispatchEvent(new CustomEvent('cia:toggle-canvas-map'));
+    }, []);
+
     // Toggle cursors visibility
     const handleToggleCursors = useCallback(() => {
         setCursorsVisible(prev => {
@@ -582,6 +594,16 @@ export function StatusBar() {
                 <div className="status-bar__divider" />
 
                 <VoiceCommandToggle size="sm" />
+
+                {/* Canvas Map toggle */}
+                <button
+                    className={`status-bar__item status-bar__item--toggle${canvasMapOpen ? ' status-bar__item--active' : ''}`}
+                    onClick={handleToggleCanvasMap}
+                    title="Toggle Canvas Map (M)"
+                    aria-label="Toggle canvas map"
+                >
+                    <Icon name="map" size={14} />
+                </button>
 
                 {/* Panel toggle button - at the right end */}
                 <button

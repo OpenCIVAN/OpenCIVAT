@@ -52,6 +52,12 @@ const cursorRemoveListeners = new Set();
 let activeInstanceId = null;
 // Track which viewConfig is currently active (shared across collaborators)
 let activeViewConfigId = null;
+// Container element for the active instance (used to normalize cursor coords)
+let activeContainerElement = null;
+
+export function setActiveContainerElement(element) {
+  activeContainerElement = element;
+}
 
 export function setActiveInstance(instanceId, viewConfigId = null) {
   const previousInstanceId = activeInstanceId;
@@ -165,18 +171,36 @@ function buildCursorData(windowActive = true) {
   // Update position data in Y.js
   if (!activeInstanceId) return null;
 
+  // Normalize screen coords to (0-1) relative to the container so remote
+  // clients can map to their own container size regardless of window layout.
+  const rect = activeContainerElement?.getBoundingClientRect?.();
+  let screenCoords;
+  let normalized = false;
+  if (rect && rect.width > 0 && rect.height > 0) {
+    screenCoords = {
+      x: (lastMousePosition.x - rect.left) / rect.width,
+      y: (lastMousePosition.y - rect.top) / rect.height,
+    };
+    normalized = true;
+  } else {
+    screenCoords = {
+      x: lastMousePosition.x,
+      y: lastMousePosition.y,
+    };
+  }
+
   return {
     instanceId: activeInstanceId,
     // ViewConfigId for collaborative matching (shared across users viewing same content)
     viewConfigId: activeViewConfigId,
-    // Screen coordinates (always present)
-    screen: {
-      x: lastMousePosition.x,
-      y: lastMousePosition.y,
-    },
-    // Legacy fields for backward compatibility
-    x: lastMousePosition.x,
-    y: lastMousePosition.y,
+    // Whether screen coords are normalized (0-1) relative to sender's container.
+    // Top-level so it survives motion-system cursorData spreads.
+    normalized,
+    // Screen coordinates
+    screen: screenCoords,
+    // Legacy fields (kept for backward compatibility with non-normalized consumers)
+    x: screenCoords.x,
+    y: screenCoords.y,
     // World coordinates (optional, set by 3D handlers)
     world: lastWorldPosition ? { ...lastWorldPosition } : null,
     // Surface normal (optional, for orientation)

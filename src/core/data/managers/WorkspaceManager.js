@@ -439,6 +439,35 @@ class WorkspaceManagerClass {
     return true;
   }
 
+  async restoreWorkspace(id) {
+    try {
+      const response = await this._fetch(`/workspaces/${id}/restore`, { method: "PATCH" });
+      const data = await response.json();
+      const workspace = new Workspace(this._normalizeWorkspaceData(data.workspace));
+      this._upsertWorkspace(workspace);
+      this.notify("workspace:updated", { workspace });
+      return workspace;
+    } catch (err) {
+      log.error("Failed to restore workspace:", err);
+      throw err;
+    }
+  }
+
+  async loadArchivedWorkspaces(userId, projectId = null) {
+    try {
+      const params = new URLSearchParams();
+      if (projectId) params.set("project_id", projectId);
+      const response = await this._fetch(
+        `/workspaces/archived${params.toString() ? `?${params.toString()}` : ""}`
+      );
+      const data = await response.json();
+      return (data.workspaces || []).map((ws) => this._normalizeWorkspaceData(ws));
+    } catch (err) {
+      log.error("Failed to load archived workspaces:", err);
+      return [];
+    }
+  }
+
   /**
    * Confirm workspace with server ID
    */

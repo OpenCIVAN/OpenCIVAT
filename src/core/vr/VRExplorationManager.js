@@ -366,8 +366,10 @@ class VRExplorationManager extends EventEmitter {
     this._lastFrameTime = time;
 
     try {
-      // Get input state
-      const inputState = this._gatherInputState(frame);
+      // Get input state — pass the stored reference space so poses are resolved
+      // synchronously inside the XR frame callback (reference spaces cannot be
+      // obtained asynchronously during a frame)
+      const inputState = this._gatherInputState(frame, vrContext.referenceSpace);
 
       // Update navigation (handles movement, teleport, scale)
       if (this._navigationController) {
@@ -400,7 +402,7 @@ class VRExplorationManager extends EventEmitter {
         vrScale: vrContext.vrScale || 1.0,
       });
 
-      // Let handler update VR rendering
+      // Render — must be synchronous inside the XR frame callback
       handler.updateVRExploration?.(vrContext, frame, inputState);
 
       // Emit frame event for UI
@@ -414,10 +416,8 @@ class VRExplorationManager extends EventEmitter {
     xrSession.requestAnimationFrame(this._onFrame);
   }
 
-  _gatherInputState(frame) {
+  _gatherInputState(frame, referenceSpace) {
     const session = frame.session;
-    const referenceSpace = vrManager.getReferenceSpace?.() ||
-      session.requestReferenceSpace?.('local-floor');
 
     const state = {
       headPose: null,

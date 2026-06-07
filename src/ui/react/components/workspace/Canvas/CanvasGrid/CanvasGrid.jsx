@@ -1674,11 +1674,12 @@ export function CanvasGrid({
 
     // Self-contained VG data for border rendering — subscribes directly to ViewGroupManager
     // so borders work regardless of how the prop chain passes (or doesn't pass) viewGroups.
+    // Only loads VGs for the current workspace to avoid cross-workspace contamination.
     const [liveViewGroups, setLiveViewGroups] = useState([]);
     useEffect(() => {
         const refresh = () => {
             try {
-                const all = viewGroupManager.getAllViewGroups();
+                const all = viewGroupManager.getCurrentWorkspaceViewGroups();
                 const withPos = all
                     .filter(vg => {
                         const pos = vg.getCanvasPosition?.() || vg.canvasPosition;
@@ -1708,8 +1709,25 @@ export function CanvasGrid({
         };
     }, []);
 
-    // Use prop if provided, otherwise fall back to self-contained data
-    const effectiveViewGroupsForBorders = viewGroups?.length ? viewGroups : liveViewGroups;
+    // Use prop if provided, otherwise fall back to self-contained data.
+    // Filter out ViewGroups that have no active placements — prevents stale outlines
+    // from remaining after all views in a group are removed.
+    const effectiveViewGroupsForBorders = useMemo(() => {
+        const raw = viewGroups?.length ? viewGroups : liveViewGroups;
+        if (!raw.length) return raw;
+        const placements = canvas?.placements;
+        if (!placements?.length) return [];
+        return raw.filter(vg => {
+            const pos = vg.canvasPosition || vg.position;
+            if (!pos) return false;
+            const { row = 0, col = 0, rowSpan = 1, colSpan = 1 } = pos;
+            return placements.some(p =>
+                p.row >= row && p.row < row + rowSpan &&
+                p.col >= col && p.col < col + colSpan &&
+                p.content?.viewConfigurationId,
+            );
+        });
+    }, [viewGroups, liveViewGroups, canvas?.placements]);
 
     const viewGroupBorders = useMemo(() => {
         if (!showViewGroupBorders || !effectiveViewGroupsForBorders?.length || !measurementsReady) return null;
@@ -2124,7 +2142,7 @@ export function CanvasGrid({
                             );
                         })()}
 
-                        {showCoordinates && isGridMode && !isFocusView && !isSubsetView && measurementsReady && (
+                        {showCoordinates && !isFocusView && !isSubsetView && measurementsReady && (
                             <div
                                 className="canvas-grid__grid-overlay"
                                 style={{

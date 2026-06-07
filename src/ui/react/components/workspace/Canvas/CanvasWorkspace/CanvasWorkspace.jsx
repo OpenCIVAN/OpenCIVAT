@@ -550,7 +550,7 @@ function CanvasWorkspaceInner({
     const [closedWorkspaceIds, setClosedWorkspaceIds] = useState([]);
     // Tile maximized state - use prop if provided, otherwise local state
     const [localTileMaximizedId, setLocalTileMaximizedId] = useState(null);
-    const effectiveTileMaximizedId = tileMaximizedWorkspaceId ?? localTileMaximizedId;
+    const rawTileMaximizedId = tileMaximizedWorkspaceId ?? localTileMaximizedId;
     const setTileMaximizedWorkspaceId = useCallback((id) => {
         // Update both local state and prop callback (for server persistence)
         setLocalTileMaximizedId(id);
@@ -632,6 +632,11 @@ function CanvasWorkspaceInner({
             isOpen: true,
         }));
     }, [workspaceTabs, workspacesForSelector]);
+
+    // Only treat as maximized if the workspace is still open — guards against stale IDs after workspace close
+    const effectiveTileMaximizedId = rawTileMaximizedId && tileWorkspaces.some(
+        (w) => w.isOpen && w.id === rawTileMaximizedId
+    ) ? rawTileMaximizedId : null;
 
     const hasOpenWorkspaces = useMemo(
         () => tileWorkspaces.some((workspace) => workspace.isOpen),
@@ -2172,7 +2177,7 @@ function CanvasWorkspaceInner({
             onCanvasSizeChange={handleCanvasSizeChange}
             onViewportSizeChange={handleViewportSizeChange}
             onOpenNavigator={() => {
-                // TODO: Open canvas navigator
+                window.dispatchEvent(new CustomEvent('cia:toggle-canvas-map'));
             }}
         />
     ), [
@@ -2331,27 +2336,30 @@ function CanvasWorkspaceInner({
                                 handleArchiveWorkspace(currentWorkspace.id);
                             }
                         },
-                        onCloseWorkspace: () => {
-                            if (workspaceViewMode === 'tile' && effectiveTileMaximizedId) {
-                                setTileMaximizedWorkspaceId(null);
-                                return;
-                            }
-                            if (workspaceViewMode === 'tile' && !effectiveTileMaximizedId) {
-                                if (skipCloseAllTilesConfirm) {
-                                    handleCloseAllTileWorkspaces();
-                                    return;
+                        isWorkspaceMaximized: workspaceViewMode === 'tile' && Boolean(effectiveTileMaximizedId),
+                        hasActiveWorkspace: workspaceViewMode === 'tile' && Boolean(activeWorkspaceKey),
+                        onCloseWorkspace: (() => {
+                            if (workspaceViewMode === 'tile') {
+                                if (effectiveTileMaximizedId) {
+                                    // Minimize: un-maximize
+                                    return () => setTileMaximizedWorkspaceId(null);
                                 }
-                                setShowCloseAllTilesConfirm(true);
-                                return;
+                                if (activeWorkspaceKey) {
+                                    // Maximize the focused workspace
+                                    return () => setTileMaximizedWorkspaceId(activeWorkspaceKey);
+                                }
+                                // No focused or maximized workspace - button is disabled, no handler needed
+                                return undefined;
                             }
+                            // Tabs/docked mode
                             if (onDeactivateWorkspace) {
-                                onDeactivateWorkspace();
-                                return;
+                                return () => onDeactivateWorkspace();
                             }
                             if (currentWorkspace?.id) {
-                                onCloseWorkspace?.(currentWorkspace.id);
+                                return () => onCloseWorkspace?.(currentWorkspace.id);
                             }
-                        },
+                            return undefined;
+                        })(),
                     }}
                     editBarProps={{
                         activeTool,

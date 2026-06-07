@@ -279,10 +279,25 @@ export class ViewGroupManager extends BaseManager {
     }
 
     /**
+     * The workspace this manager is currently scoped to (may be null)
+     */
+    get currentWorkspaceId() {
+        return this._workspaceId || null;
+    }
+
+    /**
      * Get ViewGroups for a specific workspace
      */
     getViewGroupsForWorkspace(workspaceId) {
         return this.getAllViewGroups().filter(vg => vg.workspaceId === workspaceId);
+    }
+
+    /**
+     * Get ViewGroups for the currently active workspace
+     */
+    getCurrentWorkspaceViewGroups() {
+        if (!this._workspaceId) return this.getAllViewGroups();
+        return this.getViewGroupsForWorkspace(this._workspaceId);
     }
 
     /**

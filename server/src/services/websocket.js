@@ -236,7 +236,7 @@ class WebSocketManager {
         `
         SELECT 1
         FROM project_members
-        WHERE project_id = $1 AND user_id = $2
+        WHERE project_id = $1::uuid AND user_id = $2::uuid
       `,
         [projectId, userId]
       );

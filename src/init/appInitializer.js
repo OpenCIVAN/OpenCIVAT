@@ -18,10 +18,7 @@ import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 import { textChat } from "@Collaboration/communication/textChat.js";
-import {
-  initializeAllObservers,
-  markSystemReady,
-} from "@Collaboration/yjs/yjsObservers.js";
+import { initializeAllObservers } from "@Collaboration/yjs/yjsObservers.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 import { config } from "@Core/config/clientConfig.js";
 import { app as log } from "@Utils/logger.js";
@@ -561,9 +558,6 @@ export async function initializePhase2() {
       await timeStartupStep("Y.js observers init", () => {
         if (typeof initializeAllObservers === "function") {
           initializeAllObservers();
-        }
-        if (typeof markSystemReady === "function") {
-          markSystemReady();
         }
       });
       log.debug("Y.js observers active");

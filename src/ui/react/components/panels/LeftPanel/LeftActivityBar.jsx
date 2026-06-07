@@ -11,6 +11,7 @@ import { useLeftPanelContext, LEFT_PANEL_TABS } from './LeftPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 import { useAdaptiveHover } from '@UI/react/hooks/useAdaptiveHover';
 import { DwellIndicator } from '@UI/react/components/atoms/DwellIndicator';
+import { useScratchPadFloating } from '@UI/react/components/panels/FloatingPanel';
 import './LeftPanel.scss';
 
 // =============================================================================
@@ -78,25 +79,19 @@ export function LeftActivityBar() {
         endPeek?.('left');
     }, [endPeek]);
 
-    // Track scratchpad and canvasOps state via events
-    const [scratchpadOpen, setScratchpadOpen] = useState(false);
+    // Scratchpad uses FloatingPanelContext directly
+    const { isOpen: scratchpadOpen, toggle: toggleScratchpad } = useScratchPadFloating();
+
+    // Canvas Ops uses the event-based popout system
     const [canvasOpsOpen, setCanvasOpsOpen] = useState(false);
 
-    // Listen for popout state changes from main app
     useEffect(() => {
         const handlePopoutChange = (e) => {
             const { popoutId, isOpen } = e.detail || {};
-            if (popoutId === 'scratchpad') setScratchpadOpen(isOpen);
             if (popoutId === 'canvasOps') setCanvasOpsOpen(isOpen);
         };
-
         window.addEventListener('cia:popout-state-change', handlePopoutChange);
         return () => window.removeEventListener('cia:popout-state-change', handlePopoutChange);
-    }, []);
-
-    // Toggle popouts via events
-    const toggleScratchpad = useCallback(() => {
-        window.dispatchEvent(new CustomEvent('cia:toggle-popout', { detail: { popoutId: 'scratchpad' } }));
     }, []);
 
     const toggleCanvasOps = useCallback(() => {
