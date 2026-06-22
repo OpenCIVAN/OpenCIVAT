@@ -14,6 +14,7 @@ import vtkSceneFeature from '@Core/instances/types/vtk/features/VTKSceneFeature.
 import { vtkSliceFeature } from '@Core/instances/types/vtk/features/VTKSliceFeature.js';
 import { vtkClippingFeature } from '@Core/instances/types/vtk/features/VTKClippingFeature.js';
 import { vtkMeasurementWidgetsFeature } from '@Core/instances/types/vtk/features/VTKMeasurementWidgetsFeature.js';
+import { vtkScalarColoringFeature } from '@Core/instances/types/vtk/features/VTKScalarColoringFeature.js';
 import { TOOL_SECTIONS, TRANSFORM_LIMITS } from './constants';
 import { normalizeInstanceToolsResult } from '@UI/react/utils/instanceTools.js';
 
@@ -914,13 +915,37 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
   // Sync colormap state from VTK when instance changes
   useEffect(() => {
     if (!activeInstance?.instanceId) return;
-    const colormap = instanceTools.getCurrentColormap?.(activeInstance.instanceId);
+    const scalarState = vtkScalarColoringFeature.getState?.(activeInstance.instanceId);
+    const colormap =
+      scalarState?.colormap ||
+      instanceTools.getCurrentColormap?.(activeInstance.instanceId);
     if (colormap) setCurrentColormap(colormap);
   }, [activeInstance?.instanceId]);
 
   const handleColormapChange = useCallback((colormapId) => {
     if (!activeInstance?.instanceId) return;
-    instanceTools.setColorMap?.(activeInstance.instanceId, colormapId);
+    const instanceId = activeInstance.instanceId;
+    const scalarState = vtkScalarColoringFeature.getState?.(instanceId);
+    const fallbackArray =
+      scalarState?.availableArrays?.point?.[0]
+        ? { ...scalarState.availableArrays.point[0], type: 'point' }
+        : scalarState?.availableArrays?.cell?.[0]
+          ? { ...scalarState.availableArrays.cell[0], type: 'cell' }
+          : null;
+
+    vtkScalarColoringFeature.setColormap?.(instanceId, colormapId);
+    if (!scalarState?.enabled && fallbackArray) {
+      vtkScalarColoringFeature.enableScalarColoring?.(
+        instanceId,
+        fallbackArray.name,
+        fallbackArray.type
+      );
+    }
+    window.dispatchEvent(
+      new CustomEvent('cia:tools-updated', {
+        detail: { instanceId, source: 'local' },
+      })
+    );
     setCurrentColormap(colormapId);
   }, [activeInstance?.instanceId]);
 

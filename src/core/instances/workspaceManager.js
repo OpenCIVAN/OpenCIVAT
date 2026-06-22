@@ -258,24 +258,34 @@ class WorkspaceManager {
             widget.type === "vtk-shared-state"
         );
         if (sharedVisualization?.state) {
-          const serializedSharedState = JSON.stringify(
-            sharedVisualization.state
-          );
-          if (
-            instance.instanceData._lastPublishedToolState !==
-            serializedSharedState
-          ) {
-            const changedPaths = sharedVisualization.changedPaths || [];
-            const transformOnly =
-              changedPaths.length > 0 &&
-              changedPaths.every(
-                (path) =>
-                  path === "widgets.vtk-shared-state.transform" ||
-                  path === "transform"
-              );
-            state.toolState = transformOnly
-              ? { transform: sharedVisualization.state.transform }
-              : sharedVisualization.state;
+          const sharedUpdatedAt = sharedVisualization.updatedAt || 0;
+          const lastSeenSharedUpdatedAt =
+            instance.instanceData._lastSeenSharedVisualizationUpdatedAt || 0;
+          const sharedStateIsNew =
+            !sharedUpdatedAt || sharedUpdatedAt > lastSeenSharedUpdatedAt;
+
+          if (sharedStateIsNew) {
+            const serializedSharedState = JSON.stringify(
+              sharedVisualization.state
+            );
+            if (
+              instance.instanceData._lastPublishedToolState !==
+              serializedSharedState
+            ) {
+              const changedPaths = sharedVisualization.changedPaths || [];
+              const transformOnly =
+                changedPaths.length > 0 &&
+                changedPaths.every(
+                  (path) =>
+                    path === "widgets.vtk-shared-state.transform" ||
+                    path === "transform"
+                );
+              state.toolState = transformOnly
+                ? { transform: sharedVisualization.state.transform }
+                : sharedVisualization.state;
+              instance.instanceData._lastSeenSharedVisualizationUpdatedAt =
+                sharedUpdatedAt || Date.now();
+            }
           }
         }
 

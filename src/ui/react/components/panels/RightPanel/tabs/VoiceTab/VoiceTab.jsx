@@ -113,6 +113,7 @@ export function VoiceTab({ workspaceId, channels: propChannels }) {
         channels,
         connectionState,
         isConnected,
+        isConnecting,
         muted,
         deafened,
         currentChannel,
@@ -257,8 +258,9 @@ export function VoiceTab({ workspaceId, channels: propChannels }) {
                                 icon="phone"
                                 variant="primary"
                                 onClick={handleJoin}
+                                disabled={isConnecting}
                             >
-                                Join Voice
+                                {isConnecting ? 'Joining...' : 'Join Voice'}
                             </Button>
                         </div>
                     )}

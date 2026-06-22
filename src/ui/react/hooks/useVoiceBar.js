@@ -108,6 +108,12 @@ export function useVoiceControls({
   // Derived state
   const inVoice = connectionState === VoiceConnectionState.CONNECTED;
   const isConnecting = connectionState === VoiceConnectionState.CONNECTING;
+  const isVoiceBusy = isJoining || isConnecting;
+
+  const confirmLeaveVoice = useCallback(() => {
+    if (typeof window === "undefined") return true;
+    return window.confirm("Leave voice chat?");
+  }, []);
 
   useEffect(() => {
     voiceRoomService.initialize();
@@ -117,7 +123,9 @@ export function useVoiceControls({
   useEffect(() => {
     const unsubConnection = voiceRoomService.onConnectionChange((state) => {
       setConnectionState(state);
-      setIsJoining(false);
+      if (state !== VoiceConnectionState.CONNECTING) {
+        setIsJoining(false);
+      }
       setCurrentRoomId(
         state === VoiceConnectionState.CONNECTED
           ? voiceRoomService.getCurrentRoom()
@@ -139,7 +147,7 @@ export function useVoiceControls({
 
   // Join voice in current room
   const joinVoice = useCallback(async (targetRoomId) => {
-    if (isJoining || inVoice) return;
+    if (isVoiceBusy || inVoice) return false;
 
     setIsJoining(true);
     try {
@@ -155,18 +163,19 @@ export function useVoiceControls({
       });
 
       onJoinVoice?.(voiceRoomName);
+      return true;
     } catch (error) {
       console.error("Failed to join voice:", error);
       setIsJoining(false);
+      return false;
     }
-  }, [roomId, userName, isJoining, inVoice, onJoinVoice]);
+  }, [roomId, userName, isVoiceBusy, inVoice, onJoinVoice]);
 
   const switchChannel = useCallback(async (targetRoomId) => {
-    if (!targetRoomId || isJoining) return;
+    if (!targetRoomId || isVoiceBusy) return false;
 
     if (!inVoice) {
-      await joinVoice(targetRoomId);
-      return;
+      return joinVoice(targetRoomId);
     }
 
     setIsJoining(true);
@@ -180,15 +189,20 @@ export function useVoiceControls({
         isMuted: voiceRoomService.isMuted,
         roomId: targetRoomId,
       });
+      return true;
     } catch (error) {
       console.error("Failed to switch voice channel:", error);
+      return false;
     } finally {
       setIsJoining(false);
     }
-  }, [inVoice, isJoining, joinVoice, userName]);
+  }, [inVoice, isVoiceBusy, joinVoice, userName]);
 
   // Leave voice
-  const leaveVoice = useCallback(async () => {
+  const leaveVoice = useCallback(async ({ confirm = true } = {}) => {
+    if (!inVoice && !isConnecting) return false;
+    if (confirm && !confirmLeaveVoice()) return false;
+
     await voiceRoomService.leaveRoom();
 
     presenceSystem.updateVoiceState({
@@ -199,7 +213,8 @@ export function useVoiceControls({
 
     setCurrentRoomId(null);
     onLeaveVoice?.();
-  }, [onLeaveVoice]);
+    return true;
+  }, [confirmLeaveVoice, inVoice, isConnecting, onLeaveVoice]);
 
   // Toggle mute
   const toggleMute = useCallback(async () => {
@@ -227,7 +242,7 @@ export function useVoiceControls({
   return {
     inVoice,
     isConnecting,
-    isJoining,
+    isJoining: isVoiceBusy,
     muted,
     deafened,
     currentRoom: currentRoomId || roomName,

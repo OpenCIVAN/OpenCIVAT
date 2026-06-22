@@ -929,12 +929,14 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             if (savedCamera.actorTransform.scale)
               actor.setScale(...savedCamera.actorTransform.scale);
           }
-          savedSharedToolState =
-            viewConfig?.widgets?.find(
-              (widget) =>
-                widget.id === "vtk-shared-state" ||
-                widget.type === "vtk-shared-state"
-            )?.state || savedCamera.toolState;
+          const savedSharedWidget = viewConfig?.widgets?.find(
+            (widget) =>
+              widget.id === "vtk-shared-state" ||
+              widget.type === "vtk-shared-state"
+          );
+          savedSharedToolState = savedSharedWidget?.state || savedCamera.toolState;
+          instanceData._lastSeenSharedVisualizationUpdatedAt =
+            savedSharedWidget?.updatedAt || 0;
 
           if (savedSharedToolState?.transform) {
             await this._applySharedToolState(instanceData, {
@@ -5819,6 +5821,8 @@ console.log('Tools:', tools);
     let latestCameraState = null;
     let cameraSyncTimeoutId = null;
     let cameraSyncFrameId = null;
+    let cameraServerTimeoutId = null;
+    let latestCameraStateForServer = null;
     let activeToolTransaction = null;
     let toolTransactionBeforeState = null;
     let toolHistoryTimeoutId = null;
@@ -5938,7 +5942,37 @@ console.log('Tools:', tools);
         : null,
     });
 
-    const publishCameraState = (cameraState) => {
+    const persistCameraStateToServer = (cameraState) => {
+      if (!instanceData.viewConfigId || !cameraState) return;
+      getViewConfigurationManager()?.updateCamera(
+        instanceData.viewConfigId,
+        cameraState
+      );
+    };
+
+    const scheduleCameraServerPersist = (cameraState) => {
+      if (!instanceData.viewConfigId || !cameraState) return;
+      latestCameraStateForServer = cameraState;
+      if (cameraServerTimeoutId) {
+        clearTimeout(cameraServerTimeoutId);
+      }
+      cameraServerTimeoutId = setTimeout(() => {
+        cameraServerTimeoutId = null;
+        persistCameraStateToServer(latestCameraStateForServer);
+        latestCameraStateForServer = null;
+      }, 250);
+    };
+
+    const flushCameraServerPersist = (cameraState) => {
+      if (cameraServerTimeoutId) {
+        clearTimeout(cameraServerTimeoutId);
+        cameraServerTimeoutId = null;
+      }
+      latestCameraStateForServer = null;
+      persistCameraStateToServer(cameraState);
+    };
+
+    const publishCameraState = (cameraState, options = {}) => {
       if (
         this._isApplyingRemoteState ||
         instanceData.isPaused ||
@@ -5954,11 +5988,11 @@ console.log('Tools:', tools);
           syncCameraToYjs(instanceData.viewConfigId, userId, cameraState);
         }
 
-        // PERSISTENCE: Sync to server via ViewConfigurationManager (throttled)
-        getViewConfigurationManager()?.updateCamera(
-          instanceData.viewConfigId,
-          cameraState
-        );
+        if (options.persistImmediately) {
+          flushCameraServerPersist(cameraState);
+        } else {
+          scheduleCameraServerPersist(cameraState);
+        }
       }
 
       if (instanceData.stateAdapter) {
@@ -6009,7 +6043,7 @@ console.log('Tools:', tools);
       cameraSyncPending = false;
       latestCameraState = null;
       lastCameraSyncAt = Date.now();
-      publishCameraState(getCameraState());
+      publishCameraState(getCameraState(), { persistImmediately: true });
     };
 
     // Listen for camera modifications and publish through adapter
@@ -6202,6 +6236,9 @@ console.log('Tools:', tools);
         clearTimeout(transformServerTimeoutId);
         transformServerTimeoutId = null;
       }
+      if (cameraServerTimeoutId) {
+        flushCameraServerPersist(latestCameraStateForServer || getCameraState());
+      }
       window.removeEventListener("cia:tools-updated", handleLocalToolsChange);
     };
 
@@ -6210,12 +6247,9 @@ console.log('Tools:', tools);
       try {
         flushCameraSync();
 
-        // CRITICAL: Add the same defensive checks here
-        if (!this._isApplyingRemoteState && instanceData.stateAdapter) {
-          // Get complete state and publish it
-          const state = this._getCurrentVTKState(instanceData);
-          instanceData.stateAdapter.updateState(state, "local");
-        }
+        // Camera and transform state use dedicated sync paths. Avoid pushing
+        // complete tool state from generic interaction end; it can replay stale
+        // color/widget state after a plain camera drag.
       } catch (error) {
         // Silently catch interaction state errors
         if (error) {

@@ -73,6 +73,7 @@ export function useVoiceTab(options = {}) {
   const animationFrameRef = useRef(null);
 
   const isConnected = connectionState === VoiceConnectionState.CONNECTED;
+  const isConnecting = connectionState === VoiceConnectionState.CONNECTING;
 
   // Subscribe to voice service events
   useEffect(() => {
@@ -249,6 +250,13 @@ export function useVoiceTab(options = {}) {
 
   // Handlers
   const handleJoin = useCallback(async () => {
+    if (
+      connectionState === VoiceConnectionState.CONNECTING ||
+      connectionState === VoiceConnectionState.CONNECTED
+    ) {
+      return;
+    }
+
     try {
       const userName = getUserName() || "Anonymous User";
       const roomId = currentChannel || channels[0]?.id || "main";
@@ -259,12 +267,22 @@ export function useVoiceTab(options = {}) {
     } catch (error) {
       toast.error("Failed to join voice. Make sure LiveKit is running.");
     }
-  }, [currentChannel, channels]);
+  }, [connectionState, currentChannel, channels]);
 
   const handleLeave = useCallback(async () => {
+    if (
+      connectionState !== VoiceConnectionState.CONNECTED &&
+      connectionState !== VoiceConnectionState.CONNECTING
+    ) {
+      return;
+    }
+    if (typeof window !== "undefined" && !window.confirm("Leave voice chat?")) {
+      return;
+    }
+
     await voiceRoomService.leaveRoom();
     setParticipants([]);
-  }, []);
+  }, [connectionState]);
 
   const handleToggleMute = useCallback(async () => {
     await voiceRoomService.toggleMute();
@@ -279,6 +297,7 @@ export function useVoiceTab(options = {}) {
       setCurrentChannel(channelId);
 
       // If already connected, switch rooms
+      if (connectionState === VoiceConnectionState.CONNECTING) return;
       if (connectionState === VoiceConnectionState.CONNECTED) {
         try {
           const userName = getUserName() || "Anonymous User";
@@ -329,6 +348,7 @@ export function useVoiceTab(options = {}) {
     // Connection state
     connectionState,
     isConnected,
+    isConnecting,
     muted,
     deafened,
     currentChannel,

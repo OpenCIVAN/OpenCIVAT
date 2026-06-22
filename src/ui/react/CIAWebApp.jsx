@@ -1236,11 +1236,12 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   // CALLBACKS - SECONDARY FOOTER (Voice)
   // ===========================================================================
-  const handleJoinLeaveVoice = useCallback(() => {
+  const handleJoinLeaveVoice = useCallback(async () => {
+    if (voice.isJoining || voice.isConnecting) return;
     if (voice.inVoice) {
-      voice.leaveVoice?.();
+      await voice.leaveVoice?.();
     } else {
-      voice.joinVoice?.();
+      await voice.joinVoice?.();
     }
   }, [voice]);
 
@@ -1748,13 +1749,17 @@ export function CIAWebApp({ username, userId, projectId }) {
                     pinnedRoomIds={pinnedRoomIds}
                     onSelectRoom={handleRoomSelect}
                     onJoinVoice={(roomId) => {
+                      if (voice.isJoining || voice.isConnecting) return;
                       if (roomId) voice.switchChannel?.(roomId);
                       else voice.joinVoice?.();
                     }}
                     onJoinBreakout={handleJoinBreakout}
-                    onLeaveVoice={() => {
-                      voice.leaveVoice?.();
-                      setActiveBreakoutId(null);
+                    onLeaveVoice={async () => {
+                      if (voice.isJoining || voice.isConnecting) return;
+                      const left = await voice.leaveVoice?.();
+                      if (left) {
+                        setActiveBreakoutId(null);
+                      }
                     }}
                     onTogglePin={handleTogglePin}
                     isMuted={voice.muted}

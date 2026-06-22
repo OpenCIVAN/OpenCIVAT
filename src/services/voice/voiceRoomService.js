@@ -52,6 +52,9 @@ class VoiceRoomService {
     this.isDeafened = false;
     this._isInitialized = false;
     this._initializePromise = null;
+    this._joinPromise = null;
+    this._joinRoomName = null;
+    this._leavePromise = null;
 
     // Participants (including self)
     this.participants = new Map();
@@ -164,9 +167,14 @@ class VoiceRoomService {
 
     const authToken = await authService.getAccessToken();
     const headers = { "Content-Type": "application/json" };
+    const participantIdentity = this._getParticipantIdentity(
+      this._getVoiceUserId(authToken)
+    );
+
     if (authToken) {
       headers.Authorization = `Bearer ${authToken}`;
     }
+    headers["x-voice-participant-id"] = participantIdentity;
 
     if (this._isDevBypass()) {
       Object.assign(headers, this._getDevUserHeaders(userName));
@@ -178,6 +186,7 @@ class VoiceRoomService {
       body: JSON.stringify({
         roomName,
         userName,
+        participantIdentity,
         ...this._getDevUserBody(userName),
       }),
     });
@@ -191,6 +200,10 @@ class VoiceRoomService {
       throw new Error("No token in response");
     }
 
+    if (data.identity) {
+      log.debug("Received LiveKit identity:", data.identity);
+    }
+
     return data.token;
   }
 
@@ -201,6 +214,38 @@ class VoiceRoomService {
   _getDevUser() {
     const storedId = getStoredMockUserId();
     return storedId ? getMockUser(storedId) || getDefaultMockUser() : getDefaultMockUser();
+  }
+
+  _getVoiceUserId(authToken = null) {
+    if (this._isDevBypass()) {
+      return this._getDevUser().id;
+    }
+    const authUser = authService.getUser?.();
+    return (
+      authUser?.id ||
+      authUser?.sub ||
+      authUser?.externalId ||
+      this._getUserIdFromToken(authToken) ||
+      "voice-user"
+    );
+  }
+
+  _getUserIdFromToken(token) {
+    if (!token || typeof atob === "undefined") return null;
+    try {
+      const [, payload] = token.split(".");
+      if (!payload) return null;
+      const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = normalized.padEnd(
+        normalized.length + ((4 - (normalized.length % 4)) % 4),
+        "="
+      );
+      const decoded = JSON.parse(atob(padded));
+      return decoded.sub || null;
+    } catch (error) {
+      log.warn("Unable to read voice user id from token:", error.message);
+      return null;
+    }
   }
 
   _getDevUserHeaders(fallbackName) {
@@ -266,13 +311,35 @@ class VoiceRoomService {
    * @returns {Promise<void>}
    */
   async joinRoom(roomName, userName) {
+    if (this._leavePromise) {
+      await this._leavePromise.catch(() => {});
+    }
+
+    if (this._joinPromise) {
+      if (this._joinRoomName === roomName) {
+        return this._joinPromise;
+      }
+      await this._joinPromise.catch(() => {});
+    }
+
+    this._joinRoomName = roomName;
+    this._joinPromise = this._joinRoom(roomName, userName);
+    try {
+      return await this._joinPromise;
+    } finally {
+      this._joinPromise = null;
+      this._joinRoomName = null;
+    }
+  }
+
+  async _joinRoom(roomName, userName) {
     if (this.connectionState === VoiceConnectionState.CONNECTED) {
       if (this.currentRoomName === roomName) {
         log.debug("Already in this room");
         return;
       }
       // Leave current room first
-      await this.leaveRoom();
+      await this._leaveRoom({ waitForJoin: false });
     }
 
     this._setConnectionState(VoiceConnectionState.CONNECTING);
@@ -341,6 +408,23 @@ class VoiceRoomService {
    * Leave the current voice room
    */
   async leaveRoom() {
+    if (this._leavePromise) {
+      return this._leavePromise;
+    }
+
+    this._leavePromise = this._leaveRoom();
+    try {
+      return await this._leavePromise;
+    } finally {
+      this._leavePromise = null;
+    }
+  }
+
+  async _leaveRoom({ waitForJoin = true } = {}) {
+    if (waitForJoin && this._joinPromise) {
+      await this._joinPromise.catch(() => {});
+    }
+
     if (!this.room) return;
 
     log.debug("Leaving voice room...");

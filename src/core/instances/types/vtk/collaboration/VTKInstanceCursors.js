@@ -731,12 +731,14 @@ class VTKInstanceCursors {
     cursorActor.circleSource.setRadius(ringRadius);
     cursorActor.circleSource.setCenter([world.x, world.y, world.z]);
 
-    // Orient the ring to lie flat on the surface if we have a normal
-    if (normal && (normal.x !== 0 || normal.y !== 0 || normal.z !== 0)) {
-      cursorActor.circleSource.setNormal([normal.x, normal.y, normal.z]);
-    } else {
-      // Default to facing camera (Z-up)
-      cursorActor.circleSource.setNormal([0, 0, 1]);
+    // Orient the ring when supported. Some vtk.js CircleSource builds do not
+    // expose setNormal(), so keep the default XY ring instead of crashing.
+    if (typeof cursorActor.circleSource.setNormal === "function") {
+      if (normal && (normal.x !== 0 || normal.y !== 0 || normal.z !== 0)) {
+        cursorActor.circleSource.setNormal([normal.x, normal.y, normal.z]);
+      } else {
+        cursorActor.circleSource.setNormal([0, 0, 1]);
+      }
     }
 
     // Set color from user

@@ -119,12 +119,15 @@ export function LeftActivityBar() {
     const activeTabConfig = LEFT_PANEL_TABS.find(tab => tab.id === activeTab);
     const activeColor = activeTabConfig?.color || 'blue';
 
+    // SIMPLIFIED MODE: hide tabs that aren't ready yet
+    const SIMPLIFIED_HIDDEN_TABS = new Set(['datasets']);
+
     return (
         // data-color attribute controls the colored indicator line on the activity bar
         <div className="left-panel__activity-bar" data-color={activeColor}>
             {/* Tab buttons */}
             <div className="left-panel__activity-tabs">
-                {LEFT_PANEL_TABS.map((tab) => {
+                {LEFT_PANEL_TABS.filter(tab => !SIMPLIFIED_HIDDEN_TABS.has(tab.id)).map((tab) => {
                     const isActive = activeTab === tab.id;
                     const isPeeking = leftPeekingTab === tab.id;
 

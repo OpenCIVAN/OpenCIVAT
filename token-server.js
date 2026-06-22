@@ -57,12 +57,22 @@ function getScopedVoiceIdentity(req, userId) {
   const requestedIdentity =
     req.get("x-voice-participant-id") || req.body?.participantIdentity;
 
-  if (
-    typeof requestedIdentity === "string" &&
-    requestedIdentity.startsWith(`${userId}:`) &&
-    /^[a-zA-Z0-9:_@.+-]{1,160}$/.test(requestedIdentity)
-  ) {
-    return requestedIdentity;
+  if (typeof requestedIdentity === "string") {
+    const identityPattern = /^[a-zA-Z0-9:_@.+-]{1,160}$/;
+    if (
+      requestedIdentity.startsWith(`${userId}:`) &&
+      identityPattern.test(requestedIdentity)
+    ) {
+      return requestedIdentity;
+    }
+
+    const requestedSuffix = requestedIdentity.split(":").pop();
+    if (
+      requestedSuffix &&
+      /^[a-zA-Z0-9_@.+-]{1,80}$/.test(requestedSuffix)
+    ) {
+      return `${userId}:${requestedSuffix}`;
+    }
   }
 
   return userId;
@@ -90,8 +100,9 @@ app.post("/token", requireAuth, async (req, res) => {
     log.info("Generating token for user:", effectiveName, "in room:", roomName);
     log.debug("Using API Key:", LIVEKIT_API_KEY);
 
+    const tokenIdentity = req.user?.voiceIdentity || req.user?.id || effectiveName;
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-      identity: req.user?.voiceIdentity || req.user?.id || effectiveName,
+      identity: tokenIdentity,
       name: effectiveName, // Also set display name
     });
 
@@ -108,7 +119,7 @@ app.post("/token", requireAuth, async (req, res) => {
 
     if (typeof token === "string") {
       log.info("Token generated successfully");
-      res.json({ token });
+      res.json({ token, identity: tokenIdentity });
     } else {
       log.error("Token is not a string! Type:", typeof token);
       res.status(500).json({ error: "Token generation failed" });

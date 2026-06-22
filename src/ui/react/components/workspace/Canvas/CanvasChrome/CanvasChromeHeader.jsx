@@ -393,6 +393,9 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                                 {allowWorkspaceSwitch ? <Icon name="chevronDown" size={12} /> : null}
                             </button>
 
+                            {/* SIMPLIFIED MODE: ViewGroup selector hidden */}
+                            {false && (
+                            <>
                             <Icon name="chevronRight" size={12} className="canvas-chrome-header__chevron" />
 
                             <button
@@ -436,13 +439,16 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                                 )}
                                 <Icon name="chevronDown" size={12} />
                             </button>
+                            </>
+                            )}
                         </div>
                     </div>
                 </HeaderSection>
             </div>
 
             <div className="canvas-chrome-header__center">
-                {!hideEditGroup && (
+                {/* SIMPLIFIED MODE: Edit section hidden */}
+                {false && !hideEditGroup && (
                     <HeaderSection label="Edit" color="amber">
                         <div className="canvas-chrome-header__group">
                             <div className="canvas-chrome-header__edit">
@@ -751,8 +757,8 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                 ) : null}
             />
 
-            {/* ViewGroup dropdown */}
-            <DropdownList
+            {/* ViewGroup dropdown — SIMPLIFIED MODE: hidden */}
+            {false && <DropdownList
                 open={viewGroupOpen}
                 onClose={handleCloseViewGroups}
                 triggerRef={viewGroupTriggerRef}
@@ -893,7 +899,7 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                         <span className="canvas-chrome-header__dropdown-text">Manage ViewGroups</span>
                     </button>
                 ) : null}
-            />
+            />}
 
             {/* Display options dropdown */}
             <DropdownList
@@ -929,7 +935,7 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                 className="canvas-chrome-header__overflow"
             >
                 <div className="canvas-chrome-header__overflow-panel">
-                    {hideEditGroup && (
+                    {false && hideEditGroup && (
                         <div className="canvas-chrome-header__overflow-section">
                             <div className="canvas-chrome-header__label canvas-chrome-header__label--amber">Edit</div>
                             <div className="canvas-chrome-header__overflow-content">

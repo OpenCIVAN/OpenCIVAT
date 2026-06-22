@@ -2310,15 +2310,9 @@ function CanvasWorkspaceInner({
                         viewGroups: formattedViewGroups,
                         onViewGroupChange: (viewGroup) => handleSelectViewGroup(viewGroup?.id ?? null),
                         isViewGroupLinked,
-                        onEditViewGroup: (viewGroup) => {
-                            if (viewGroup?.id) {
-                                handleSelectViewGroup(viewGroup.id);
-                            }
-                            setLeftDockedOpen(true);
-                        },
-                        onOpenViewGroupManager: () => {
-                            setLeftDockedOpen(true);
-                        },
+                        onEditViewGroup: undefined, // SIMPLIFIED (was: open left panel to edit view group)
+                        onOpenViewGroupManager: undefined, // SIMPLIFIED (was: () => setLeftDockedOpen(true))
+
                         isEditMode: editMode,
                         onToggleEditMode: handleEditModeChange,
                         flowDirection: flowDirection === 'row' ? 'right' : 'down',
