@@ -22,7 +22,7 @@
  * <FilesTab workspaceId="ws-1" />
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Icon, IconButton, Tooltip } from '@UI/react/components/atoms';
 import { LabeledButton, ToggleGroup } from '@UI/react/components/molecules';
 import {
@@ -120,6 +120,34 @@ export function FilesPanelContent({
         mockError,
     });
 
+    const fileInputRef = useRef(null);
+
+    const handleFileInputChange = useCallback(
+        (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach((file) => handleUpload(file));
+            e.target.value = '';
+        },
+        [handleUpload]
+    );
+
+    const handleDragEnter = useCallback(
+        (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragOver(true);
+        },
+        [setIsDragOver]
+    );
+
+    const handleDragOver = useCallback(
+        (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        },
+        []
+    );
+
     // Render file items based on view mode
     const renderFileItems = useCallback(
         (items, options = {}) => {
@@ -181,14 +209,37 @@ export function FilesPanelContent({
         ]
     );
 
+    const acceptTypes = supportedFileTypes.length > 0
+        ? supportedFileTypes.map((t) => `.${t}`).join(',')
+        : '.vtp,.vtk,.vti,.nii,.dcm,.csv';
+
     return (
-        <div className="files-tab">
+        <div className="files-tab" onDragEnter={handleDragEnter} onDragOver={handleDragOver}>
+            {/* Hidden file input for local file picker */}
+            <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept={acceptTypes}
+                style={{ display: 'none' }}
+                onChange={handleFileInputChange}
+            />
+
             {/* Header */}
             <div className="panel-header panel-header--blue">
                 <Icon name="folderOpen" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Files</span>
                 <div className="panel-header__spacer" />
                 <div className="panel-header__actions">
+                    <Tooltip content="Upload Files" placement="bottom">
+                        <IconButton
+                            icon="upload"
+                            label="Upload Files"
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => fileInputRef.current?.click()}
+                        />
+                    </Tooltip>
                     <Tooltip content="New Folder" placement="bottom">
                         <IconButton
                             icon="folderPlus"
