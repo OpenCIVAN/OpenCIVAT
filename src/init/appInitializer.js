@@ -664,34 +664,7 @@ export async function initializePhase2() {
   }
 }
 
-/**
- * Phase 3: Enhanced Systems (CURRENTLY DISABLED)
- *
- * This phase was designed to load optional enhancement systems that
- * extend core functionality. These systems don't exist yet, so this
- * phase is commented out.
- *
- * Future systems to add here:
- * - Advanced VR features (spatial UI, controller mapping)
- * - Plugin system for custom visualizations
- * - Advanced collaboration features (screen sharing, co-editing)
- * - Cloud sync and backup
- * - Analytics and telemetry
- */
-export async function initializePhase3() {
-  log.info(
-    "Phase 3: Enhanced Systems (Currently Disabled)\n====================================="
-  );
-  log.debug("Phase 3 is disabled until enhancement systems are implemented");
-  log.debug("See comments in appInitializer.js for details");
-
-  // When ready, uncomment and implement:
-  // await initializeVREnhancements();
-  // await initializePluginSystem();
-  // await initializeCloudSync();
-
-  log.info("Phase 3 complete (no optional systems loaded)");
-}
+// Phase 3 removed — no enhancement systems implemented yet.
 
 /**
  * Wait for Y.js to synchronize with the server

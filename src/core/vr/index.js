@@ -11,8 +11,7 @@
 // Components:
 // - VRManager: Session lifecycle, mode switching
 // - VRSceneRenderer: WebXR stereo rendering for VTK.js
-// - VRGridLayout: Curved grid positioning in VR space
-// - VRIsolationMode: Room-scale single view mode
+// - VRGridLayout: Flat grid positioning in VR space
 // - VRCursorSync: Cross-platform cursor visibility
 // - VRExplorationManager: Exploration session lifecycle
 // - VRNavigationController: Navigation modes (fly, teleport, walk)
@@ -21,7 +20,6 @@ export { VRManager, vrManager } from "./VRManager.js";
 export { VRSceneRenderer } from "./VRSceneRenderer.js";
 export { VRControllerRenderer } from "./VRControllerRenderer.js";
 export { VRGridLayout, vrGridLayout } from "./VRGridLayout.js";
-export { VRIsolationMode, vrIsolationMode } from "./VRIsolationMode.js";
 export { VRCursorSync, vrCursorSync } from "./VRCursorSync.js";
 export { vrExplorationManager } from "./VRExplorationManager.js";
 

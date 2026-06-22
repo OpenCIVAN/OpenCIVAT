@@ -1,0 +1,117 @@
+// CIAWebApp.scss — VR-first application layout
+
+.vr-app {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #0a0e1a;
+  color: #e2e8f0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+// ── Header ──────────────────────────────────────────────────────────────────
+
+.vr-app__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  height: 48px;
+  min-height: 48px;
+  background: #111827;
+  border-bottom: 1px solid #1f2937;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.vr-app__brand {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  color: #60a5fa;
+  white-space: nowrap;
+}
+
+.vr-app__session {
+  font-size: 13px;
+  color: #94a3b8;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vr-app__users {
+  opacity: 0.7;
+}
+
+.vr-app__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+// ── Buttons ──────────────────────────────────────────────────────────────────
+
+.vr-app__btn {
+  padding: 6px 14px;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  background: #1f2937;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms, border-color 120ms;
+
+  &:hover {
+    background: #2d3748;
+    border-color: #4b5563;
+  }
+
+  &:active {
+    background: #374151;
+  }
+
+  // Enter VR — prominent
+  &--vr {
+    background: #1e3a8a;
+    border-color: #2563eb;
+    color: #bfdbfe;
+    font-weight: 600;
+
+    &:hover {
+      background: #1d4ed8;
+      border-color: #3b82f6;
+    }
+
+    &:active {
+      background: #1e40af;
+    }
+  }
+
+  // Ghost variant (sign-out)
+  &--ghost {
+    background: transparent;
+    border-color: transparent;
+    color: #6b7280;
+    font-size: 12px;
+
+    &:hover {
+      color: #9ca3af;
+      background: #1f2937;
+    }
+  }
+}
+
+// ── Canvas ───────────────────────────────────────────────────────────────────
+
+.vr-app__canvas {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}

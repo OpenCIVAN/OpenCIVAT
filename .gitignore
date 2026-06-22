@@ -262,3 +262,7 @@ yarn.lock
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Local Claude Code config (not for repo)
+CLAUDE.local.md
+.claude/settings.local.json
