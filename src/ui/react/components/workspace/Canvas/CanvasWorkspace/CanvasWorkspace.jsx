@@ -2292,8 +2292,20 @@ function CanvasWorkspaceInner({
                         workspace: currentWorkspace || { id: projectId, name: 'Workspace', type: 'project' },
                         workspaces: workspacesForSelector,
                         onWorkspaceChange: handleWorkspaceSelect,
-                        allowWorkspaceSwitch: workspaceViewMode === 'tile',
-                        onOpenCreateWorkspace: handleOpenCreateWorkspace,
+                        // SIMPLIFIED MODE: workspace switching, create, view mode change, archive/close all disabled.
+                        // To restore: set allowWorkspaceSwitch back to (workspaceViewMode === 'tile'),
+                        //   onOpenCreateWorkspace: handleOpenCreateWorkspace,
+                        //   onWorkspaceViewModeChange: onSetWorkspaceViewMode,
+                        //   onArchiveWorkspace: () => { if (currentWorkspace?.id) { handleArchiveWorkspace(currentWorkspace.id); } },
+                        //   isWorkspaceMaximized: workspaceViewMode === 'tile' && Boolean(effectiveTileMaximizedId),
+                        //   hasActiveWorkspace: workspaceViewMode === 'tile' && Boolean(activeWorkspaceKey),
+                        //   onCloseWorkspace: (workspaceViewMode === 'tile'
+                        //     ? (effectiveTileMaximizedId ? () => setTileMaximizedWorkspaceId(null)
+                        //       : activeWorkspaceKey ? () => setTileMaximizedWorkspaceId(activeWorkspaceKey) : undefined)
+                        //     : (onDeactivateWorkspace ? () => onDeactivateWorkspace()
+                        //       : currentWorkspace?.id ? () => onCloseWorkspace?.(currentWorkspace.id) : undefined))
+                        allowWorkspaceSwitch: false,
+                        onOpenCreateWorkspace: undefined,
                         viewGroup: activeHeaderViewGroup,
                         viewGroups: formattedViewGroups,
                         onViewGroupChange: (viewGroup) => handleSelectViewGroup(viewGroup?.id ?? null),
@@ -2318,7 +2330,7 @@ function CanvasWorkspaceInner({
                         onToggleCoordinates: setShowCoordinates,
                         onToggleViewGroupBorders: setShowViewGroupBorders,
                         workspaceViewMode,
-                        onWorkspaceViewModeChange: onSetWorkspaceViewMode,
+                        onWorkspaceViewModeChange: undefined,
                         canvasSize,
                         viewportSize: sharedViewportSize,
                         viewportPosition: syncedViewport,
@@ -2331,35 +2343,10 @@ function CanvasWorkspaceInner({
                         },
                         windowMode: canvasMode === CANVAS_MODES.FULLSCREEN ? 'full' : canvasMode,
                         showWindowControls: false,
-                        onArchiveWorkspace: () => {
-                            if (currentWorkspace?.id) {
-                                handleArchiveWorkspace(currentWorkspace.id);
-                            }
-                        },
-                        isWorkspaceMaximized: workspaceViewMode === 'tile' && Boolean(effectiveTileMaximizedId),
-                        hasActiveWorkspace: workspaceViewMode === 'tile' && Boolean(activeWorkspaceKey),
-                        onCloseWorkspace: (() => {
-                            if (workspaceViewMode === 'tile') {
-                                if (effectiveTileMaximizedId) {
-                                    // Minimize: un-maximize
-                                    return () => setTileMaximizedWorkspaceId(null);
-                                }
-                                if (activeWorkspaceKey) {
-                                    // Maximize the focused workspace
-                                    return () => setTileMaximizedWorkspaceId(activeWorkspaceKey);
-                                }
-                                // No focused or maximized workspace - button is disabled, no handler needed
-                                return undefined;
-                            }
-                            // Tabs/docked mode
-                            if (onDeactivateWorkspace) {
-                                return () => onDeactivateWorkspace();
-                            }
-                            if (currentWorkspace?.id) {
-                                return () => onCloseWorkspace?.(currentWorkspace.id);
-                            }
-                            return undefined;
-                        })(),
+                        onArchiveWorkspace: undefined,
+                        isWorkspaceMaximized: false,
+                        hasActiveWorkspace: false,
+                        onCloseWorkspace: undefined,
                     }}
                     editBarProps={{
                         activeTool,
@@ -2454,38 +2441,42 @@ function CanvasWorkspaceInner({
                                 />
                             ) : (
                                 <div className="canvas-workspace__empty">
-                                    <p>No workspace open</p>
-                                    <div className="canvas-workspace__empty-hint">
-                                        Open a workspace from the Workspace Bar above, or choose one below.
-                                    </div>
-                                    <div className="canvas-workspace__empty-actions">
-                                        <button
-                                            onClick={() => handleOpenCreateWorkspaceLimited('empty', ['project', 'personal'])}
-                                        >
-                                            Create Workspace
-                                        </button>
-                                        <button
-                                            onClick={() => handleOpenCreateWorkspaceLimited('scratch', ['personal'])}
-                                        >
-                                            Create Scratchpad
-                                        </button>
-                                    </div>
-                                    {tileWorkspaces.filter((workspace) => !workspace.isOpen).length > 0 && (
-                                        <div className="canvas-workspace__empty-list">
-                                            <div className="canvas-workspace__empty-label">Open workspace</div>
-                                            <div className="canvas-workspace__empty-buttons">
-                                                {tileWorkspaces
-                                                    .filter((workspace) => !workspace.isOpen)
-                                                    .map((workspace) => (
-                                                        <button
-                                                            key={workspace.id}
-                                                            onClick={() => handleWorkspaceSelect(workspace)}
-                                                        >
-                                                            {workspace.name || 'Untitled Workspace'}
-                                                        </button>
-                                                    ))}
+                                    <p>Loading workspace...</p>
+                                    {false && (
+                                        <>
+                                            <div className="canvas-workspace__empty-hint">
+                                                Open a workspace from the Workspace Bar above, or choose one below.
                                             </div>
-                                        </div>
+                                            <div className="canvas-workspace__empty-actions">
+                                                <button
+                                                    onClick={() => handleOpenCreateWorkspaceLimited('empty', ['project', 'personal'])}
+                                                >
+                                                    Create Workspace
+                                                </button>
+                                                <button
+                                                    onClick={() => handleOpenCreateWorkspaceLimited('scratch', ['personal'])}
+                                                >
+                                                    Create Scratchpad
+                                                </button>
+                                            </div>
+                                            {tileWorkspaces.filter((workspace) => !workspace.isOpen).length > 0 && (
+                                                <div className="canvas-workspace__empty-list">
+                                                    <div className="canvas-workspace__empty-label">Open workspace</div>
+                                                    <div className="canvas-workspace__empty-buttons">
+                                                        {tileWorkspaces
+                                                            .filter((workspace) => !workspace.isOpen)
+                                                            .map((workspace) => (
+                                                                <button
+                                                                    key={workspace.id}
+                                                                    onClick={() => handleWorkspaceSelect(workspace)}
+                                                                >
+                                                                    {workspace.name || 'Untitled Workspace'}
+                                                                </button>
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             )}

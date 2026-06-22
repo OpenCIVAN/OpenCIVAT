@@ -790,6 +790,8 @@ export class ViewConfigurationManager extends BaseManager {
       userName: metadata.userName || getUserName(),
       transactionId: metadata.transactionId,
       description: metadata.description,
+      changedPaths: metadata.changedPaths || [],
+      patch: !!metadata.patch,
     });
 
     this._syncToServer(view, {

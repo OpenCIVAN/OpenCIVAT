@@ -668,9 +668,10 @@ class VTKInstanceCursors {
 
     // Match on viewConfigId (shared across collaborators) if available
     // Fall back to instanceId matching for backward compatibility
-    const shouldShow = state.viewConfigId
-      ? cursorData.viewConfigId === state.viewConfigId
-      : cursorData.instanceId === instanceId;
+    const shouldShow =
+      state.viewConfigId && cursorData.viewConfigId
+        ? String(cursorData.viewConfigId) === String(state.viewConfigId)
+        : cursorData.instanceId === instanceId;
 
     if (!shouldShow) {
       this.removeCursor(instanceId, userId);
@@ -680,11 +681,7 @@ class VTKInstanceCursors {
     // Determine render mode based on available coordinates
     const hasWorld = hasWorldPosition(cursorData);
     const hasSceneObjects = !!state.sceneObjects?.renderer;
-    // Remote normalized screen coordinates are more stable than repeated
-    // surface picks while either participant rotates the camera.
-    const preferScreenOverlay = !isSelf && cursorData.normalized;
-    const mode =
-      !preferScreenOverlay && hasWorld && hasSceneObjects ? "actor" : "dom";
+    const mode = hasWorld && hasSceneObjects ? "actor" : "dom";
 
     if (!isSelf) {
       const previousMode = state.renderModes.get(userId);

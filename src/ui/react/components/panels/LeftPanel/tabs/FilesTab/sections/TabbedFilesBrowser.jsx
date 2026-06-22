@@ -156,16 +156,18 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
 
     return (
         <div className={classList}>
-            {/* Tab bar */}
+            {/* Tab bar — Workspace tab hidden in simplified mode */}
             <div className="tabbed-files-browser__tabs">
-                <TabButton
-                    icon="folder"
-                    label="Workspace"
-                    active={activeTab === 'workspace'}
-                    badge={hasGlobalFilters && activeTab === 'workspace' ? filteredFiles.length : workspaceFiles.length}
-                    color="blue"
-                    onClick={() => onTabChange('workspace')}
-                />
+                {false && (
+                    <TabButton
+                        icon="folder"
+                        label="Workspace"
+                        active={activeTab === 'workspace'}
+                        badge={hasGlobalFilters && activeTab === 'workspace' ? filteredFiles.length : workspaceFiles.length}
+                        color="gray"
+                        onClick={() => onTabChange('workspace')}
+                    />
+                )}
                 <TabButton
                     icon="folderOpen"
                     label="Available"

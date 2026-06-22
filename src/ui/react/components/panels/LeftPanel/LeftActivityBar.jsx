@@ -150,7 +150,8 @@ export function LeftActivityBar() {
             {/* Spacer pushes bottom items down */}
             <div className="left-panel__activity-spacer" />
 
-            {/* Bottom items: Notes, Ops */}
+            {/* SIMPLIFIED MODE: Notes and Canvas Operations hidden until those features are stable */}
+            {false && (
             <div className="left-panel__activity-bottom">
                 <TabButton
                     icon="stickyNote"
@@ -173,6 +174,7 @@ export function LeftActivityBar() {
 
                 <div className="left-panel__activity-divider" />
             </div>
+            )}
 
             {/* Toggle panel button at bottom */}
             <TabButton

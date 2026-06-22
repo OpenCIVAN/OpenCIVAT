@@ -175,7 +175,7 @@ export function FilesTab({
     // Section states
     const [starredExpanded, setStarredExpanded] = useState(true);
     const [starredHeight, setStarredHeight] = useState(140);
-    const [activeTab, setActiveTab] = useState('workspace');
+    const [activeTab, setActiveTab] = useState('available');
     const [isResizing, setIsResizing] = useState(false);
     const [selectedFileId, setSelectedFileId] = useState(null);
     const [showHelpPanel, setShowHelpPanel] = useState(false);

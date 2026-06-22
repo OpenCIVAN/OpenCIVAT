@@ -56,6 +56,7 @@ import {
   updateCursorWorldPosition,
   clearCursorWorldPosition,
   setActiveInstance,
+  setActiveContainerElement,
 } from "@Collaboration/presence/cursors.js";
 
 // Import manifest data - single source of truth for file type capabilities
@@ -885,6 +886,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       );
     }
 
+    let savedSharedToolState = null;
+
     // CRITICAL: Prevent Y.js sync during initial camera setup
     // Without this, resetCamera() broadcasts default position to all users
     this._isApplyingRemoteState = true;
@@ -926,14 +929,22 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             if (savedCamera.actorTransform.scale)
               actor.setScale(...savedCamera.actorTransform.scale);
           }
-          await this._applySharedToolState(
-            instanceData,
+          savedSharedToolState =
             viewConfig?.widgets?.find(
               (widget) =>
                 widget.id === "vtk-shared-state" ||
                 widget.type === "vtk-shared-state"
-            )?.state || savedCamera.toolState
-          );
+            )?.state || savedCamera.toolState;
+
+          if (savedSharedToolState?.transform) {
+            await this._applySharedToolState(instanceData, {
+              transform: savedSharedToolState.transform,
+            });
+          }
+
+          if (!savedSharedToolState?.transform && savedCamera.toolState) {
+            savedSharedToolState = savedCamera.toolState;
+          }
 
           // CRITICAL: Reset clipping range after applying saved camera state
           // This ensures objects aren't clipped incorrectly when camera is at
@@ -961,6 +972,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     instanceData.dataClass = dataInfo.dataClass;
     instanceData.hasData = true;
 
+    if (dataInfo.isPolyData && mapper?.setScalarVisibility) {
+      mapper.setScalarVisibility(false);
+    }
+
     // ==========================================================================
     // POST-LOAD FEATURE SETUP
     // Scan for available arrays and enable features based on data type
@@ -976,6 +991,16 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         log.debug(`Scanned data arrays for features`);
       } catch (e) {
         log.warn(`Failed to scan data arrays: ${e.message}`);
+      }
+    }
+
+    if (savedSharedToolState) {
+      this._isApplyingRemoteState = true;
+      try {
+        instanceData._lastAppliedSharedToolState = null;
+        await this._applySharedToolState(instanceData, savedSharedToolState);
+      } finally {
+        this._isApplyingRemoteState = false;
       }
     }
 
@@ -1742,7 +1767,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       onClick: () => {
         if (!caps.hasData) return;
         instanceData.transformMode = 'rotate';
-        this._emitToolsUpdate(instanceId);
+        this._emitToolsUpdate(instanceId, { persist: false });
         window.dispatchEvent(new CustomEvent('cia:transform-mode-changed', {
           detail: { instanceId, mode: 'rotate' },
         }));
@@ -1781,7 +1806,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       onClick: () => {
         if (!caps.hasData) return;
         instanceData.transformMode = 'pan';
-        this._emitToolsUpdate(instanceId);
+        this._emitToolsUpdate(instanceId, { persist: false });
         window.dispatchEvent(new CustomEvent('cia:transform-mode-changed', {
           detail: { instanceId, mode: 'pan' },
         }));
@@ -1820,7 +1845,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       onClick: () => {
         if (!caps.hasData) return;
         instanceData.transformMode = 'scale';
-        this._emitToolsUpdate(instanceId);
+        this._emitToolsUpdate(instanceId, { persist: false });
         window.dispatchEvent(new CustomEvent('cia:transform-mode-changed', {
           detail: { instanceId, mode: 'scale' },
         }));
@@ -2193,8 +2218,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // ========================================================================
     // 🆕 COLORMAP MENU (extracted from old visualization menu)
     // ========================================================================
+    const toolbarScalarState = vtkScalarColoringFeature.getState(instanceId);
     const currentColormap = caps.canUseColormap
-      ? instanceTools.getCurrentColormap?.(instanceId) || "viridis"
+      ? toolbarScalarState?.colormap ||
+        instanceTools.getCurrentColormap?.(instanceId) ||
+        "viridis"
       : "viridis";
 
     tools.push({
@@ -2268,7 +2296,28 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           ],
           onColormapChange: (colormapId) => {
             if (!caps.canUseColormap) return;
-            instanceTools.setColorMap(instanceId, colormapId);
+            const scalarState = vtkScalarColoringFeature.getState(instanceId);
+            const fallbackArray =
+              scalarState?.availableArrays?.point?.[0]
+                ? {
+                    ...scalarState.availableArrays.point[0],
+                    type: "point",
+                  }
+                : scalarState?.availableArrays?.cell?.[0]
+                  ? {
+                      ...scalarState.availableArrays.cell[0],
+                      type: "cell",
+                    }
+                  : null;
+
+            vtkScalarColoringFeature.setColormap(instanceId, colormapId);
+            if (!scalarState?.enabled && fallbackArray) {
+              vtkScalarColoringFeature.enableScalarColoring(
+                instanceId,
+                fallbackArray.name,
+                fallbackArray.type
+              );
+            }
             this._emitToolsUpdate(instanceId);
             log.debug(`Colormap changed to: ${colormapId}`);
           },
@@ -3097,11 +3146,15 @@ console.log('Tools:', tools);
   /**
    * Emit event that tools changed (triggers React re-render)
    */
-  _emitToolsUpdate(instanceId) {
+  _emitToolsUpdate(instanceId, options = {}) {
     if (typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("cia:tools-updated", {
-          detail: { instanceId },
+          detail: {
+            instanceId,
+            source: options.source || "local",
+            persist: options.persist !== false,
+          },
         })
       );
     }
@@ -3952,6 +4005,13 @@ console.log('Tools:', tools);
     const cleanPolyData = vtkCleanPolyDataFeature.getState(instanceId);
 
     return {
+      transform: instanceData.sceneObjects?.actor
+        ? {
+            position: instanceData.sceneObjects.actor.getPosition(),
+            rotation: instanceData.sceneObjects.actor.getOrientation(),
+            scale: instanceData.sceneObjects.actor.getScale(),
+          }
+        : null,
       appearance: {
         opacity: instanceTools.getOpacity(instanceId),
         representation: instanceTools.getRepresentation(instanceId),
@@ -4078,6 +4138,26 @@ console.log('Tools:', tools);
       return;
     }
     instanceData._lastAppliedSharedToolState = serializedToolState;
+
+    const transform = toolState.transform;
+    if (transform && instanceData.sceneObjects?.actor) {
+      const actor = instanceData.sceneObjects.actor;
+      if (transform.position) actor.setPosition(...transform.position);
+      if (transform.rotation) actor.setOrientation(...transform.rotation);
+      if (transform.scale) actor.setScale(...transform.scale);
+      instanceData.sceneObjects.renderWindow?.render();
+      window.dispatchEvent(
+        new CustomEvent("cia:transform-changed", {
+          detail: {
+            instanceId,
+            position: actor.getPosition(),
+            rotation: actor.getOrientation(),
+            scale: actor.getScale(),
+            source: "remote",
+          },
+        })
+      );
+    }
 
     if (toolState.appearance) {
       const appearance = toolState.appearance;
@@ -5742,6 +5822,10 @@ console.log('Tools:', tools);
     let activeToolTransaction = null;
     let toolTransactionBeforeState = null;
     let toolHistoryTimeoutId = null;
+    let latestRealtimeTransform = null;
+    let transformRealtimePending = false;
+    let transformServerTimeoutId = null;
+    let latestMergedTransformState = null;
 
     const serializeToolState = (toolState) =>
       JSON.stringify(toolState || {});
@@ -5750,11 +5834,56 @@ console.log('Tools:', tools);
     instanceData._lastPublishedToolState ||=
       serializeToolState(this._getSharedToolState(instanceData));
 
+    const getPersistedSharedToolState = () => {
+      const viewConfig = instanceData.viewConfigId
+        ? getViewConfigurationManager()?.getView?.(instanceData.viewConfigId)
+        : null;
+      const sharedWidget = viewConfig?.widgets?.find(
+        (widget) =>
+          widget.id === "vtk-shared-state" ||
+          widget.type === "vtk-shared-state"
+      );
+      return sharedWidget?.state
+        ? JSON.parse(JSON.stringify(sharedWidget.state))
+        : null;
+    };
+
+    const getActorTransformState = () =>
+      instanceData.sceneObjects?.actor
+        ? {
+            position: instanceData.sceneObjects.actor.getPosition(),
+            rotation: instanceData.sceneObjects.actor.getOrientation(),
+            scale: instanceData.sceneObjects.actor.getScale(),
+          }
+        : null;
+
+    const publishRealtimeTransform = () => {
+      if (transformRealtimePending) return;
+      transformRealtimePending = true;
+      requestAnimationFrame(() => {
+        transformRealtimePending = false;
+        if (
+          this._isApplyingRemoteState ||
+          instanceData.isPaused ||
+          !instanceData.viewConfigId ||
+          !latestRealtimeTransform
+        ) {
+          return;
+        }
+        const userId = getUserId();
+        if (userId) {
+          syncViewVisualStateToYjs(instanceData.viewConfigId, userId, {
+            transform: latestRealtimeTransform,
+          });
+        }
+      });
+    };
+
     const persistToolState = (toolState, metadata = {}) => {
       if (!instanceData.viewConfigId || !toolState) return;
 
       const userId = getUserId();
-      if (userId) {
+      if (userId && metadata.realtime !== false) {
         syncViewVisualStateToYjs(
           instanceData.viewConfigId,
           userId,
@@ -5769,7 +5898,9 @@ console.log('Tools:', tools);
           transactionId: metadata.transactionId || activeToolTransaction,
           description:
             metadata.description || "Update visualization tools/widgets",
-          changedPaths: ["widgets.vtk-shared-state"],
+          changedPaths:
+            metadata.changedPaths || ["widgets.vtk-shared-state"],
+          patch: !!metadata.patch,
         }
       );
       instanceData._lastPublishedToolState =
@@ -5915,24 +6046,7 @@ console.log('Tools:', tools);
       }
     });
 
-    const handleLocalTransformChange = (event) => {
-      if (event.detail?.instanceId !== instanceData.instanceId) return;
-      if (event.detail?.source === "remote") return;
-    };
-    window.addEventListener(
-      "cia:transform-changed",
-      handleLocalTransformChange
-    );
-    instanceData._transformSyncCleanup = () => {
-      window.removeEventListener(
-        "cia:transform-changed",
-        handleLocalTransformChange
-      );
-    };
-
-    const handleLocalToolsChange = (event) => {
-      if (event.detail?.instanceId !== instanceData.instanceId) return;
-      if (event.detail?.source === "remote") return;
+    const publishLocalSharedToolState = (description) => {
       if (this._isApplyingRemoteState) return;
 
       const previousSerialized =
@@ -5948,6 +6062,7 @@ console.log('Tools:', tools);
       }
       persistToolState(nextToolState, {
         transactionId: activeToolTransaction,
+        description,
       });
 
       if (toolHistoryTimeoutId) {
@@ -5964,26 +6079,128 @@ console.log('Tools:', tools);
 
         canvasHistory.record({
           type: "UPDATE",
-          description: "Update visualization tools/widgets",
+          description,
           undo: () =>
             applyToolStateForHistory(
               beforeState,
-              "Undo visualization tools/widgets"
+              `Undo ${description.toLowerCase()}`
             ),
           redo: () =>
             applyToolStateForHistory(
               afterState,
-              "Redo visualization tools/widgets"
+              `Redo ${description.toLowerCase()}`
             ),
         });
       }, 350);
 
+    };
+
+    const publishLocalTransformState = () => {
+      if (this._isApplyingRemoteState) return;
+
+      const transform = getActorTransformState();
+      if (!transform) return;
+
+      latestRealtimeTransform = transform;
+      publishRealtimeTransform();
+
+      const previousState =
+        getPersistedSharedToolState() || this._getSharedToolState(instanceData);
+      const previousSerialized = serializeToolState(previousState);
+      const nextToolState = {
+        ...previousState,
+        transform,
+      };
+      const nextSerialized = serializeToolState(nextToolState);
+      if (previousSerialized === nextSerialized) return;
+
+      if (!activeToolTransaction) {
+        activeToolTransaction = createToolTransaction();
+        toolTransactionBeforeState = previousSerialized;
+      }
+
+      latestMergedTransformState = nextToolState;
+      instanceData._lastPublishedToolState = nextSerialized;
+
+      if (transformServerTimeoutId) {
+        clearTimeout(transformServerTimeoutId);
+      }
+      transformServerTimeoutId = setTimeout(() => {
+        transformServerTimeoutId = null;
+        if (!latestMergedTransformState) return;
+        persistToolState(latestMergedTransformState, {
+          transactionId: activeToolTransaction,
+          description: "Update transform",
+          changedPaths: ["widgets.vtk-shared-state.transform"],
+          patch: true,
+          realtime: false,
+        });
+      }, 250);
+
+      if (toolHistoryTimeoutId) {
+        clearTimeout(toolHistoryTimeoutId);
+      }
+      toolHistoryTimeoutId = setTimeout(() => {
+        const beforeState = JSON.parse(
+          toolTransactionBeforeState || previousSerialized
+        );
+        const afterState = latestMergedTransformState;
+        toolHistoryTimeoutId = null;
+        activeToolTransaction = null;
+        toolTransactionBeforeState = null;
+        latestMergedTransformState = null;
+
+        canvasHistory.record({
+          type: "UPDATE",
+          description: "Update transform",
+          undo: () =>
+            applyToolStateForHistory(beforeState, "Undo update transform"),
+          redo: () =>
+            applyToolStateForHistory(afterState, "Redo update transform"),
+        });
+      }, 350);
+    };
+
+    const handleLocalTransformChange = (event) => {
+      if (event.detail?.instanceId !== instanceData.instanceId) return;
+      if (event.detail?.source === "remote") return;
+      publishLocalTransformState();
+    };
+    window.addEventListener(
+      "cia:transform-changed",
+      handleLocalTransformChange
+    );
+    instanceData._transformSyncCleanup = () => {
+      window.removeEventListener(
+        "cia:transform-changed",
+        handleLocalTransformChange
+      );
+    };
+
+    const handleLocalToolsChange = (event) => {
+      if (event.detail?.instanceId !== instanceData.instanceId) return;
+      if (event.detail?.source === "remote") return;
+      if (event.detail?.persist === false) return;
+      publishLocalSharedToolState("Update visualization tools/widgets");
     };
     window.addEventListener("cia:tools-updated", handleLocalToolsChange);
     instanceData._toolsSyncCleanup = () => {
       if (toolHistoryTimeoutId) {
         clearTimeout(toolHistoryTimeoutId);
         toolHistoryTimeoutId = null;
+      }
+      if (transformServerTimeoutId) {
+        if (latestMergedTransformState) {
+          persistToolState(latestMergedTransformState, {
+            transactionId: activeToolTransaction,
+            description: "Update transform",
+            changedPaths: ["widgets.vtk-shared-state.transform"],
+            patch: true,
+            realtime: false,
+          });
+        }
+        clearTimeout(transformServerTimeoutId);
+        transformServerTimeoutId = null;
       }
       window.removeEventListener("cia:tools-updated", handleLocalToolsChange);
     };
@@ -6161,6 +6378,7 @@ console.log('Tools:', tools);
 
       // Set this instance as active for cursor tracking (include viewConfigId for collaboration)
       setActiveInstance(instanceData.instanceId, instanceData.viewConfigId);
+      setActiveContainerElement(container);
 
       // Only raycast if we have data loaded
       if (!hasDataLoaded) {

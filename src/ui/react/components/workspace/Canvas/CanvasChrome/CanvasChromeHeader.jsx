@@ -592,6 +592,7 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                     </HeaderSection>
                 )}
 
+                {(showWindowControls || onArchiveWorkspace || onCloseWorkspace) && (
                 <HeaderSection label="Canvas" color="purple">
                     <div className="canvas-chrome-header__group">
                         {showWindowControls ? (
@@ -616,26 +617,30 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                                 </button>
                             </div>
                         ) : null}
+                        {onArchiveWorkspace && (
                         <button
                             type="button"
                             className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--secondary"
                             onClick={handleArchiveWorkspace}
                             title="Archive workspace"
-                            disabled={!onArchiveWorkspace}
                         >
                             <Icon name="archive" size={14} />
                         </button>
+                        )}
+                        {onCloseWorkspace && (
                         <button
                             type="button"
                             className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--secondary"
                             onClick={() => onCloseWorkspace?.()}
                             title={isWorkspaceMaximized ? 'Minimize workspace' : 'Maximize workspace'}
-                            disabled={!onCloseWorkspace || (!isWorkspaceMaximized && !hasActiveWorkspace)}
+                            disabled={!isWorkspaceMaximized && !hasActiveWorkspace}
                         >
                             <Icon name={isWorkspaceMaximized ? 'minimize' : 'maximize'} size={14} />
                         </button>
+                        )}
                     </div>
                 </HeaderSection>
+                )}
             </div>
 
             {/* Workspace dropdown */}

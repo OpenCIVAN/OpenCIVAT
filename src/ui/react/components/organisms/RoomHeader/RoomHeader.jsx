@@ -81,13 +81,18 @@ const RoomHeader = memo(function RoomHeader({
         onTogglePin?.(roomId);
     }, [onTogglePin]);
 
+    // SIMPLIFIED MODE: fixed to Main Room — room switching and pinned rooms hidden, voice stays active.
     return (
         <div className="room-header" style={style}>
             {/* Section Labels Row */}
             <div className="room-header__labels">
                 <span className="room-header__label room-header__label--room">Room</span>
-                <span className="room-header__label-divider" />
-                <span className="room-header__label room-header__label--pinned">Pinned</span>
+                {false && (
+                    <>
+                        <span className="room-header__label-divider" />
+                        <span className="room-header__label room-header__label--pinned">Pinned</span>
+                    </>
+                )}
                 <span className="room-header__label-spacer" />
                 <span className="room-header__label-divider" />
                 <span className="room-header__label room-header__label--voice">Voice</span>
@@ -104,21 +109,24 @@ const RoomHeader = memo(function RoomHeader({
                     pinnedRoomIds={pinnedRoomIds}
                     mainRooms={mainRooms}
                     personalRooms={personalRooms}
-                    showDropdown={showViewingDropdown}
-                    onToggleDropdown={toggleViewing}
+                    showDropdown={false}
+                    onToggleDropdown={() => {}}
                     onCloseDropdown={closeAll}
                     onSelectRoom={handleSelectRoom}
                     onTogglePin={handleTogglePin}
                     onCreateRoom={onCreateRoom}
                 />
 
-                <div className="room-header__divider" />
-
-                <PinnedSection
-                    pinnedRooms={pinnedRooms}
-                    voiceRoomId={voiceRoomId}
-                    onSelectRoom={handleSelectRoom}
-                />
+                {false && (
+                    <>
+                        <div className="room-header__divider" />
+                        <PinnedSection
+                            pinnedRooms={pinnedRooms}
+                            voiceRoomId={voiceRoomId}
+                            onSelectRoom={handleSelectRoom}
+                        />
+                    </>
+                )}
 
                 <div className="room-header__spacer" />
                 <div className="room-header__divider" />

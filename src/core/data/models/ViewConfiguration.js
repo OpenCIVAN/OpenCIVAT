@@ -872,15 +872,25 @@ export class ViewConfiguration {
   updateVisualizationState(toolState, metadata = {}) {
     const widgetId = "vtk-shared-state";
     const existing = this.widgets.find((widget) => widget.id === widgetId);
+    const incomingState = JSON.parse(JSON.stringify(toolState || {}));
+    const state =
+      metadata.patch && existing?.state
+        ? {
+            ...JSON.parse(JSON.stringify(existing.state || {})),
+            ...incomingState,
+          }
+        : incomingState;
     const nextWidget = {
       id: widgetId,
       type: "vtk-shared-state",
-      state: JSON.parse(JSON.stringify(toolState || {})),
+      state,
       updatedAt: Date.now(),
       updatedBy: metadata.userId || null,
       updatedByName: metadata.userName || null,
       transactionId: metadata.transactionId || null,
       description: metadata.description || "Update visualization state",
+      changedPaths: metadata.changedPaths || [],
+      patch: !!metadata.patch,
     };
 
     if (existing) {

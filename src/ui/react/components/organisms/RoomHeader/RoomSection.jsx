@@ -95,7 +95,7 @@ const RoomSection = memo(function RoomSection({
 
     return (
         <div className="room-header__section room-header__room-section" ref={dropdownRef}>
-            {/* Viewing Room Dropdown Trigger */}
+            {/* Viewing Room Dropdown Trigger — SIMPLIFIED MODE: showDropdown always false from parent */}
             <button
                 className="room-header__viewing-btn"
                 onClick={onToggleDropdown}
@@ -107,9 +107,9 @@ const RoomSection = memo(function RoomSection({
                     <Icon name="eye" size={12} />
                 </span>
                 <span className="room-header__viewing-name">
-                    {viewingRoom?.name || 'No Room'}
+                    {viewingRoom?.name || 'Main Room'}
                 </span>
-                <Icon name="chevronDown" size={12} className="room-header__viewing-chevron" />
+                {false && <Icon name="chevronDown" size={12} className="room-header__viewing-chevron" />}
             </button>
 
             {/* Presence Count */}
@@ -118,7 +118,7 @@ const RoomSection = memo(function RoomSection({
                 <span>{viewingRoom?.usersOnline || 0}</span>
             </div>
 
-            {/* Room Picker Dropdown */}
+            {/* Room Picker Dropdown — hidden while showDropdown is always false */}
             {showDropdown && (
                 <div className="room-header__room-dropdown">
                     <div className="room-header__dropdown-content">

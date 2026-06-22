@@ -252,10 +252,6 @@ class WorkspaceManager {
           state.camera = view.camera;
         }
 
-        if (view.colorMaps) {
-          state.colorMaps = view.colorMaps;
-        }
-
         const sharedVisualization = view.widgets?.find(
           (widget) =>
             widget.id === "vtk-shared-state" ||
@@ -269,7 +265,17 @@ class WorkspaceManager {
             instance.instanceData._lastPublishedToolState !==
             serializedSharedState
           ) {
-            state.toolState = sharedVisualization.state;
+            const changedPaths = sharedVisualization.changedPaths || [];
+            const transformOnly =
+              changedPaths.length > 0 &&
+              changedPaths.every(
+                (path) =>
+                  path === "widgets.vtk-shared-state.transform" ||
+                  path === "transform"
+              );
+            state.toolState = transformOnly
+              ? { transform: sharedVisualization.state.transform }
+              : sharedVisualization.state;
           }
         }
 

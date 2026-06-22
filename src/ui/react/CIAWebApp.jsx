@@ -246,6 +246,10 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [showCloseAllTabsConfirm, setShowCloseAllTabsConfirm] = useState(false);
   const [skipCloseAllTabsConfirm, setSkipCloseAllTabsConfirm] = useState(false);
   const workspaceTabsLoadedRef = useRef(false);
+  const pendingActiveWorkspaceRef = useRef(null);
+  // Set to true once server prefs have been applied so the workspaces effect
+  // doesn't re-merge openWorkspaceIds back to the localStorage/default value.
+  const serverPrefsAppliedRef = useRef(false);
 
   // ===========================================================================
   // SERVER-SIDE PREFERENCES (persisted per-user, per-project)
@@ -357,24 +361,19 @@ export function CIAWebApp({ username, userId, projectId }) {
     [projectId, updateWorkspace, userId, workspaces]
   );
 
+  // SIMPLIFIED MODE: always auto-select and maximize the single shared project workspace.
+  // Tile mode with maximizedWorkspaceId fills the entire canvas area.
   useEffect(() => {
     if (!workspaces || workspaces.length === 0) return;
-    if (!openWorkspaceIds.length && !currentWorkspaceId) return;
-
-    const targets = new Set(openWorkspaceIds || []);
-    if (currentWorkspaceId) {
-      targets.add(currentWorkspaceId);
+    const projectWs = workspaces.find((ws) => ws.type === 'project');
+    if (!projectWs) return;
+    if (currentWorkspaceId !== projectWs.id) {
+      selectWorkspace(projectWs.id);
     }
-
-    targets.forEach((workspaceId) => {
-      ensureCanvasForWorkspace(workspaceId);
-    });
-  }, [
-    currentWorkspaceId,
-    ensureCanvasForWorkspace,
-    openWorkspaceIds,
-    workspaces,
-  ]);
+    setOpenWorkspaceIds([projectWs.id]);
+    setTileMaximizedWorkspaceId(projectWs.id);
+    ensureCanvasForWorkspace(projectWs.id);
+  }, [workspaces, currentWorkspaceId, selectWorkspace, ensureCanvasForWorkspace]);
 
   useEffect(() => {
     if (!workspaces || workspaces.length === 0) {
@@ -426,7 +425,9 @@ export function CIAWebApp({ username, userId, projectId }) {
       }
     }
 
-    const allowEmpty = workspaceTabsLoadedRef.current;
+    // If server prefs have been applied, always use allowEmpty=true so we never
+    // revert to "all workspaces open" when currentWorkspaceId changes.
+    const allowEmpty = workspaceTabsLoadedRef.current || serverPrefsAppliedRef.current;
     workspaceTabsLoadedRef.current = true;
     setWorkspaceOrder((prev) => mergeOrder(prev));
     setOpenWorkspaceIds((prev) => mergeOpen(prev, allowEmpty));
@@ -435,6 +436,7 @@ export function CIAWebApp({ username, userId, projectId }) {
   useEffect(() => {
     if (!workspaceTabsStorageKey) return;
     workspaceTabsLoadedRef.current = false;
+    serverPrefsAppliedRef.current = false;
   }, [workspaceTabsStorageKey]);
 
   useEffect(() => {
@@ -737,6 +739,7 @@ export function CIAWebApp({ username, userId, projectId }) {
 
   // Workspace Bar state: canvas mode, popouts
   // workspaces, currentWorkspaceId, and handleCreateWorkspace come from useWorkspaces hook above
+  // SIMPLIFIED MODE: lock to 'tile' — the single workspace is maximized to fill the area
   const [canvasMode, setCanvasMode] = useState('tile');
   const [popouts, setPopouts] = useState([]);
   const [ensuringWorkspaceIds, setEnsuringWorkspaceIds] = useState({});
@@ -855,18 +858,7 @@ export function CIAWebApp({ username, userId, projectId }) {
   }, [openWorkspaceIds, workspaces]);
 
   useEffect(() => {
-    if (!canvasModeStorageKey) return;
-    canvasModeLoadedRef.current = false;
-    try {
-      const stored = window.localStorage.getItem(canvasModeStorageKey);
-      if (stored === "tabs" || stored === "tile") {
-        setCanvasMode(stored);
-      } else {
-        setCanvasMode("tile");
-      }
-    } catch (err) {
-      log.debug("Canvas mode localStorage read failed:", err);
-    }
+    // SIMPLIFIED MODE: always 'tile' with maximized workspace — skip localStorage load
     canvasModeLoadedRef.current = true;
   }, [canvasModeStorageKey]);
 
@@ -883,12 +875,11 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   // SERVER PREFERENCES SYNC
   // ===========================================================================
-  // Initialize from server preferences when they load (if no localStorage data)
+  // Initialize from server preferences on first load (runs once; server is the authority)
   useEffect(() => {
     if (!serverPrefsLoaded || serverPrefsSyncedRef.current) return;
     serverPrefsSyncedRef.current = true;
 
-    // Only apply server preferences if we have them and localStorage is empty
     if (!serverPreferences || Object.keys(serverPreferences).length === 0) {
       return;
     }
@@ -900,52 +891,69 @@ export function CIAWebApp({ username, userId, projectId }) {
       setCanvasMode(serverPreferences.viewMode);
     }
 
-    // Apply workspace state from server if localStorage hasn't set it
-    if (!workspaceTabsLoadedRef.current) {
-      if (serverPreferences.openWorkspaceIds?.length > 0) {
-        setOpenWorkspaceIds(serverPreferences.openWorkspaceIds);
-      }
-      if (serverPreferences.workspaceOrder?.length > 0) {
-        setWorkspaceOrder(serverPreferences.workspaceOrder);
-      }
-      if (serverPreferences.activeWorkspaceId) {
+    // Server is the authority for workspace layout state — always apply
+    if (serverPreferences.openWorkspaceIds?.length > 0) {
+      serverPrefsAppliedRef.current = true;
+      setOpenWorkspaceIds(serverPreferences.openWorkspaceIds);
+    }
+    if (serverPreferences.workspaceOrder?.length > 0) {
+      setWorkspaceOrder(serverPreferences.workspaceOrder);
+    }
+    if (serverPreferences.activeWorkspaceId) {
+      // selectWorkspace silently no-ops if workspace manager hasn't loaded yet;
+      // store the ID and retry once workspaces appear
+      const alreadyLoaded = workspaces?.find(w => w.id === serverPreferences.activeWorkspaceId);
+      if (alreadyLoaded) {
         selectWorkspace(serverPreferences.activeWorkspaceId);
+      } else {
+        pendingActiveWorkspaceRef.current = serverPreferences.activeWorkspaceId;
       }
     }
-  }, [serverPrefsLoaded, serverPreferences, selectWorkspace]);
+  }, [serverPrefsLoaded, serverPreferences, selectWorkspace, workspaces]);
 
-  // Sync state changes to server (debounced by the hook)
+  // Apply deferred active workspace once the workspace manager has loaded it
+  useEffect(() => {
+    const id = pendingActiveWorkspaceRef.current;
+    if (!id || !workspaces?.length) return;
+    const exists = workspaces.find(w => w.id === id);
+    if (!exists) return;
+    pendingActiveWorkspaceRef.current = null;
+    selectWorkspace(id);
+  }, [workspaces, selectWorkspace]);
+
+  // Sync state changes to server. serverPrefsLoaded is intentionally NOT in deps —
+  // including it would fire these effects the moment prefs load, saving the wrong
+  // initial (pre-restore) state. We only want to save when the user actually changes
+  // something. serverPrefsSyncedRef (a ref, not state) acts as the gate instead.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
-
-    // Sync viewMode
     setServerViewMode?.(canvasMode);
-  }, [canvasMode, serverPrefsLoaded, setServerViewMode]);
+  }, [canvasMode, setServerViewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
-
-    // Sync workspace state
     setServerOpenWorkspaceIds?.(openWorkspaceIds);
-  }, [openWorkspaceIds, serverPrefsLoaded, setServerOpenWorkspaceIds]);
+  }, [openWorkspaceIds, setServerOpenWorkspaceIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
-
     setServerActiveWorkspaceId?.(currentWorkspaceId);
-  }, [currentWorkspaceId, serverPrefsLoaded, setServerActiveWorkspaceId]);
+  }, [currentWorkspaceId, setServerActiveWorkspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
-
     setServerWorkspaceOrder?.(workspaceOrder);
-  }, [workspaceOrder, serverPrefsLoaded, setServerWorkspaceOrder]);
+  }, [workspaceOrder, setServerWorkspaceOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
-
     setServerTileMaximizedId?.(tileMaximizedWorkspaceId);
-  }, [tileMaximizedWorkspaceId, serverPrefsLoaded, setServerTileMaximizedId]);
+  }, [tileMaximizedWorkspaceId, setServerTileMaximizedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize tileMaximizedWorkspaceId from server preferences.
   // Intentionally omits tileMaximizedWorkspaceId from deps: reacting to local state changes
@@ -1759,7 +1767,8 @@ export function CIAWebApp({ username, userId, projectId }) {
                     }}
                     onCreateRoom={handleCreateRoom}
                   />
-                  {canvasMode === 'tabs' && (
+                  {/* SIMPLIFIED MODE: WorkspaceBar hidden — single shared workspace, no switching needed */}
+                  {false && canvasMode === 'tabs' && (
                     <WorkspaceBar
                       workspaces={workspaceBarItems}
                       activeWorkspaceId={currentWorkspaceId}

@@ -3,6 +3,7 @@
 
 import { instance as log } from "@Utils/logger.js";
 import vtkColorTransferFunction from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction";
+import vtkColorMaps from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction/ColorMaps";
 import vtkWidgetManager from "@kitware/vtk.js/Widgets/Core/WidgetManager";
 
 // Import camera utilities for animated transitions
@@ -800,6 +801,7 @@ class InstanceToolsManager {
       detail: {
         instanceId,
         ...state,
+        source: "local",
       },
     }));
   }
@@ -1174,50 +1176,61 @@ class InstanceToolsManager {
     if (!tools) return;
 
     const { actor, renderWindow } = tools.sceneObjects;
+    const mapper = actor?.getMapper?.();
+    const scalars = mapper?.getInputData?.()?.getPointData?.()?.getScalars?.();
+
+    if (!mapper || !scalars) {
+      log.warn(
+        `Cannot set color map: no scalar data for instance ${instanceId}`
+      );
+      return;
+    }
+
     const ctf = vtkColorTransferFunction.newInstance();
+    const dataRange = scalars.getRange();
+    const vtkPreset = vtkColorMaps.getPresetByName(preset);
 
-    // Define presets
-    const presets = {
-      rainbow: [
-        [0.0, 0, 0, 1],
-        [0.33, 0, 1, 1],
-        [0.66, 1, 1, 0],
-        [1.0, 1, 0, 0],
-      ],
-      grayscale: [
-        [0.0, 0, 0, 0],
-        [1.0, 1, 1, 1],
-      ],
-      hot: [
-        [0.0, 0, 0, 0],
-        [0.33, 1, 0, 0],
-        [0.66, 1, 1, 0],
-        [1.0, 1, 1, 1],
-      ],
-      cool: [
-        [0.0, 0, 0, 1],
-        [0.5, 0, 1, 1],
-        [1.0, 0, 1, 0],
-      ],
-    };
+    if (vtkPreset) {
+      ctf.applyColorMap(vtkPreset);
+      ctf.setMappingRange(dataRange[0], dataRange[1]);
+      ctf.updateRange();
+    } else {
+      // Define lightweight local presets for names that are not in vtk.js presets.
+      const presets = {
+        rainbow: [
+          [0.0, 0, 0, 1],
+          [0.33, 0, 1, 1],
+          [0.66, 1, 1, 0],
+          [1.0, 1, 0, 0],
+        ],
+        grayscale: [
+          [0.0, 0, 0, 0],
+          [1.0, 1, 1, 1],
+        ],
+        hot: [
+          [0.0, 0, 0, 0],
+          [0.33, 1, 0, 0],
+          [0.66, 1, 1, 0],
+          [1.0, 1, 1, 1],
+        ],
+        cool: [
+          [0.0, 0, 0, 1],
+          [0.5, 0, 1, 1],
+          [1.0, 0, 1, 0],
+        ],
+      };
 
-    const colors = presets[preset] || presets.rainbow;
+      const colors = presets[preset] || presets.rainbow;
 
-    // Get data range
-    const mapper = actor.getMapper();
-    const dataRange = mapper
-      .getInputData()
-      .getPointData()
-      .getScalars()
-      .getRange();
+      colors.forEach(([pos, r, g, b]) => {
+        const value = dataRange[0] + pos * (dataRange[1] - dataRange[0]);
+        ctf.addRGBPoint(value, r, g, b);
+      });
+    }
 
-    // Apply color map
-    colors.forEach(([pos, r, g, b]) => {
-      const value = dataRange[0] + pos * (dataRange[1] - dataRange[0]);
-      ctf.addRGBPoint(value, r, g, b);
-    });
-
+    mapper.setScalarVisibility(true);
     mapper.setLookupTable(ctf);
+    mapper.setScalarRange(dataRange[0], dataRange[1]);
     tools.colorMap = ctf;
     tools.currentColormap = preset;
 
