@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Q&A (GitHub Discussions)
+    url: ../../discussions/categories/q-a
+    about: Ask a question about installation, usage, or development
+  - name: Ideas (GitHub Discussions)
+    url: ../../discussions/categories/ideas
+    about: Early-stage feature ideas not ready for a formal issue
+  - name: Contributor onboarding
+    url: ../../discussions/categories/contributor-onboarding
+    about: Questions from new contributors

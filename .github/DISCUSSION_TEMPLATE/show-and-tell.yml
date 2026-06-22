@@ -1,0 +1,26 @@
+title: "[Show and Tell] "
+labels: [showcase]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share a visualization, deployment, or project built with OpenCIVAN.
+  - type: textarea
+    id: what
+    attributes:
+      label: What did you build or visualize?
+    validations:
+      required: true
+  - type: textarea
+    id: features
+    attributes:
+      label: Which OpenCIVAN features did you use?
+    validations:
+      required: false
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots, links, or recordings
+      description: Paste images, GIFs, or links here.
+    validations:
+      required: false

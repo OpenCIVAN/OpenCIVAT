@@ -1,0 +1,22 @@
+title: "[Q&A] "
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask a question about OpenCIVAN setup, usage, or development.
+        Check [existing discussions](../../discussions/categories/q-a) before posting.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What do you want to know?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What have you already tried? Include relevant environment details.
+    validations:
+      required: false
