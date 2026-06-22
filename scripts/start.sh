@@ -49,6 +49,11 @@ echo ""
 
 # Start Docker services
 echo "🐳 Starting Docker services (PostgreSQL, MinIO, Redis, API, Y.js, VTK Worker, Thumbnail Worker)..."
+echo "  Cleaning up any stale containers..."
+docker-compose down --remove-orphans 2>/dev/null || true
+for _c in cia-postgres cia-minio cia-redis cia-api cia-yjs cia-keycloak cia-vtk-worker cia-thumbnail-worker; do
+    docker rm -f "$_c" 2>/dev/null || true
+done
 docker-compose up -d
 
 # Start Matrix Federation services

@@ -477,11 +477,12 @@ export function useFilesTab({
       try {
         await uploadFile({ file });
         refetch();
+        await datasetManager.syncDatasetsFromServer();
       } catch (err) {
         log.error("Upload failed:", err);
       }
     },
-    [uploadFile, refetch]
+    [uploadFile, refetch, datasetManager]
   );
 
   return {
