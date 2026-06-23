@@ -111,4 +111,38 @@
     &__item:hover &__item-arrow {
         opacity: 1;
     }
+
+    &__section-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 16px 4px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.55;
+    }
+
+    &__loading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        font-size: 13px;
+        opacity: 0.6;
+    }
+
+    &__empty-small {
+        padding: 10px 16px;
+        font-size: 12px;
+        opacity: 0.6;
+
+        code {
+            font-family: monospace;
+            background: rgba(0,0,0,0.1);
+            padding: 0 4px;
+            border-radius: 3px;
+        }
+    }
 }

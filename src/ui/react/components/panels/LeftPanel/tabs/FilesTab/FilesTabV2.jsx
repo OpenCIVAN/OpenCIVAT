@@ -45,6 +45,7 @@ import { GlobalFiltersBar } from './components/GlobalFiltersBar';
 import { HelpPanel } from './components/HelpPanel';
 import { NewFolderDialog } from './components/NewFolderDialog';
 import { FileDetailsModal } from '@UI/react/components/modals/FileDetailsModal';
+import { SampleDatasetsSection } from './components/SampleDatasetsSection';
 import { useFilesTab } from './hooks/useFilesTab';
 import { useResponsiveMode } from '@UI/react/hooks/useResponsiveMode';
 import { useGlobalFilters } from '@UI/react/hooks/useGlobalFilters';
@@ -145,6 +146,13 @@ export function FilesTabV2({
         // Upload
         isDragOver,
         setIsDragOver,
+
+        // Built-in sample datasets
+        builtInDatasets,
+        builtInUnavailable,
+        loadingBuiltInId,
+        builtInLoadError,
+        handleLoadBuiltIn,
     } = useFilesTab({
         workspaceId,
         mockFiles,
@@ -419,6 +427,15 @@ export function FilesTabV2({
                 ) : (
                     /* Full Mode: Starred + Tabbed Browser */
                     <>
+                        {/* Built-in sample VTP files — always visible, no upload required */}
+                        <SampleDatasetsSection
+                            datasets={builtInDatasets}
+                            onLoad={handleLoadBuiltIn}
+                            loadingId={loadingBuiltInId}
+                            loadError={builtInLoadError}
+                            unavailable={builtInUnavailable}
+                        />
+
                         <StarredSection
                             items={starredFiles}
                             filters={filters}

@@ -16,6 +16,7 @@ import { AdaptiveProvider } from "@UI/react/context/AdaptiveContext.jsx";
 // Panels (providers needed by CanvasWorkspace sub-components)
 import {
   LeftPanelProvider,
+  LeftPanelContent,
 } from "@UI/react/components/panels/LeftPanel";
 import {
   RightPanelProvider,
@@ -84,7 +85,18 @@ export function CIAWebApp({ username, userId, projectId }) {
     currentWorkspaceId,
     selectWorkspace,
     updateWorkspace,
+    isLoading: isWorkspacesLoading,
+    createPersonalWorkspace,
   } = useWorkspaces({ userId, projectId, roomId: resolvedWorkspaceRoomId });
+
+  // Auto-create a personal workspace on first run (no workspace in this project/room yet)
+  useEffect(() => {
+    if (isWorkspacesLoading || !userId || !projectId) return;
+    if ((workspaces || []).length > 0) return;
+    createPersonalWorkspace?.('My Workspace').catch((err) => {
+      log.warn('Auto-create workspace failed:', err.message);
+    });
+  }, [isWorkspacesLoading, workspaces, userId, projectId, createPersonalWorkspace]);
 
   // Ensure the active workspace has a canvas
   const ensureCanvas = useCallback(
@@ -310,6 +322,9 @@ export function CIAWebApp({ username, userId, projectId }) {
                             userId={userId || sessionManager.getUserId?.() || "anonymous"}
                             projectId={projectId}
                             layoutMode={layoutMode}
+                            leftPanelContent={
+                              <LeftPanelContent workspaceId={currentWorkspaceId || 'default'} />
+                            }
                           />
                         </main>
 

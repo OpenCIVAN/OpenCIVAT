@@ -1,15 +1,10 @@
 /**
  * @file DatasetSelectorModal.jsx
  * @description Modal for selecting a dataset to place in an empty canvas cell.
- *
- * Features:
- * - Lists all available datasets
- * - Search filtering
- * - Displays dataset metadata (point count, uploaded by, etc.)
- * - Creates view configuration and placement on selection
+ * Shows built-in sample VTP files from public/vtp_files/ and any uploaded files.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import Modal from '@UI/react/components/modals/Modal';
 import { Icon } from '@UI/react/components/atoms';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
@@ -18,15 +13,12 @@ import { viewLifecycleService } from '@Services/ViewLifecycleService.js';
 import { toast } from '@UI/react/store/toastStore';
 import './DatasetSelectorModal.scss';
 
-/**
- * DatasetSelectorModal component.
- *
- * @param {Object} props
- * @param {boolean} props.isOpen - Whether the modal is visible
- * @param {Function} props.onClose - Callback when modal should close
- * @param {number} props.targetRow - Target row for placement
- * @param {number} props.targetCol - Target column for placement
- */
+const MANIFEST_URL = '/vtp_files/manifest.json';
+
+function cleanName(name) {
+    return name ? name.replace(/\.vtp$/i, '') : name;
+}
+
 export function DatasetSelectorModal({
     isOpen,
     onClose,
@@ -35,93 +27,179 @@ export function DatasetSelectorModal({
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isPlacing, setIsPlacing] = useState(false);
+    const [placingId, setPlacingId] = useState(null);
+    // Manifest entries as fallback when DatasetManager hasn't loaded built-ins yet
+    const [manifestEntries, setManifestEntries] = useState(null);
 
     const datasets = useDatasets();
 
-    // Filter datasets based on search
-    const filteredDatasets = useMemo(() => {
-        if (!searchQuery) return datasets;
-        const q = searchQuery.toLowerCase();
-        return datasets.filter(d =>
-            d.name?.toLowerCase().includes(q) ||
-            d.uploadedByName?.toLowerCase().includes(q)
-        );
-    }, [datasets, searchQuery]);
+    // Split into built-in samples and user uploads
+    const builtInDatasets = useMemo(
+        () => datasets.filter(d => d.id?.startsWith('builtin-')),
+        [datasets]
+    );
+    const uploadedDatasets = useMemo(
+        () => datasets.filter(d => !d.id?.startsWith('builtin-')),
+        [datasets]
+    );
 
-    // Handle dataset selection
-    const handleSelect = useCallback(async (dataset) => {
+    // Fetch manifest directly as fallback if built-ins haven't loaded yet
+    useEffect(() => {
+        if (!isOpen) return;
+        if (builtInDatasets.length > 0) {
+            setManifestEntries(null); // DatasetManager has them — no need for fallback
+            return;
+        }
+        fetch(MANIFEST_URL)
+            .then(r => r.ok ? r.json() : null)
+            .then(entries => setManifestEntries(Array.isArray(entries) ? entries : []))
+            .catch(() => setManifestEntries([]));
+    }, [isOpen, builtInDatasets.length]);
+
+    // Filter lists by search query
+    const q = searchQuery.toLowerCase();
+    const filteredBuiltIns = useMemo(() =>
+        q ? builtInDatasets.filter(d => cleanName(d.name)?.toLowerCase().includes(q)) : builtInDatasets,
+        [builtInDatasets, q]
+    );
+    const filteredUploads = useMemo(() =>
+        q ? uploadedDatasets.filter(d => d.name?.toLowerCase().includes(q)) : uploadedDatasets,
+        [uploadedDatasets, q]
+    );
+    const filteredManifest = useMemo(() =>
+        manifestEntries
+            ? (q ? manifestEntries.filter(e => e.name?.toLowerCase().includes(q)) : manifestEntries)
+            : null,
+        [manifestEntries, q]
+    );
+
+    const handleSelect = useCallback(async (datasetId, datasetName) => {
         if (isPlacing) return;
         setIsPlacing(true);
-
+        setPlacingId(datasetId);
         try {
             await viewLifecycleService.createAndPlaceView(
-                dataset.id,
+                datasetId,
                 { row: targetRow, col: targetCol },
-                { name: dataset.name }
+                { name: datasetName }
             );
-            toast.success(`Placed ${dataset.name} at row ${targetRow + 1}, col ${targetCol + 1}`);
+            toast.success(`Loading ${datasetName}…`);
             onClose();
         } catch (error) {
             console.error('Failed to place dataset:', error);
-            toast.error(error.message || 'Failed to place dataset');
+            const msg = error.message?.includes('No canvas')
+                ? 'Canvas is still initializing — please try again in a moment.'
+                : (error.message || 'Failed to load dataset');
+            toast.error(msg);
         } finally {
             setIsPlacing(false);
+            setPlacingId(null);
         }
     }, [isPlacing, targetRow, targetCol, onClose]);
+
+    // Determine what to show for built-in samples
+    const showManifestFallback = builtInDatasets.length === 0 && filteredManifest && filteredManifest.length > 0;
+    const sampleItems = showManifestFallback ? null : filteredBuiltIns;
+    const isLoadingSamples = builtInDatasets.length === 0 && manifestEntries === null;
+
+    const renderDatasetButton = (id, name, meta, onClickFn) => (
+        <button
+            key={id}
+            className="dataset-selector-modal__item"
+            onClick={onClickFn}
+            disabled={isPlacing}
+        >
+            {placingId === id
+                ? <Icon name="loader" size={16} className="dataset-selector-modal__item-icon spin" />
+                : <Icon name="hexagon" size={16} className="dataset-selector-modal__item-icon" />
+            }
+            <div className="dataset-selector-modal__item-info">
+                <span className="dataset-selector-modal__item-name">{name}</span>
+                {meta && <span className="dataset-selector-modal__item-meta">{meta}</span>}
+            </div>
+            <Icon name="chevronRight" size={14} className="dataset-selector-modal__item-arrow" />
+        </button>
+    );
 
     return (
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Select Dataset"
+            title="Load Dataset"
             icon="database"
             size="md"
             testId="dataset-selector-modal"
         >
             <div className="dataset-selector-modal">
-                <p className="dataset-selector-modal__hint">
-                    Select a dataset to place at row {targetRow + 1}, column {targetCol + 1}
-                </p>
-
                 <SearchBar
                     value={searchQuery}
                     onChange={setSearchQuery}
-                    placeholder="Search datasets..."
+                    placeholder="Search datasets…"
                     className="dataset-selector-modal__search"
                 />
 
+                {/* ── Sample Datasets ── */}
+                <div className="dataset-selector-modal__section-header">
+                    <Icon name="layers" size={13} />
+                    <span>Sample Datasets</span>
+                </div>
+
                 <div className="dataset-selector-modal__list">
-                    {filteredDatasets.length === 0 ? (
-                        <div className="dataset-selector-modal__empty">
-                            <Icon name="inbox" size={24} />
-                            <p>{datasets.length === 0 ? 'No datasets available' : 'No matching datasets'}</p>
-                            {datasets.length === 0 && (
-                                <p className="dataset-selector-modal__empty-hint">
-                                    Upload a dataset to get started
-                                </p>
-                            )}
+                    {isLoadingSamples && (
+                        <div className="dataset-selector-modal__loading">
+                            <Icon name="loader" size={16} className="spin" />
+                            <span>Loading samples…</span>
                         </div>
-                    ) : (
-                        filteredDatasets.map(dataset => (
-                            <button
-                                key={dataset.id}
-                                className="dataset-selector-modal__item"
-                                onClick={() => handleSelect(dataset)}
-                                disabled={isPlacing}
-                            >
-                                <Icon name="hexagon" size={16} className="dataset-selector-modal__item-icon" />
-                                <div className="dataset-selector-modal__item-info">
-                                    <span className="dataset-selector-modal__item-name">{dataset.name}</span>
-                                    <span className="dataset-selector-modal__item-meta">
-                                        {dataset.pointCount > 0 && `${dataset.pointCount.toLocaleString()} points`}
-                                        {dataset.uploadedByName && ` • ${dataset.uploadedByName}`}
-                                    </span>
-                                </div>
-                                <Icon name="chevronRight" size={14} className="dataset-selector-modal__item-arrow" />
-                            </button>
-                        ))
+                    )}
+
+                    {/* Built-ins from DatasetManager */}
+                    {sampleItems && sampleItems.length > 0 && sampleItems.map(d =>
+                        renderDatasetButton(
+                            d.id,
+                            cleanName(d.name),
+                            d.metadata?.sizeHint || d.fileType?.toUpperCase(),
+                            () => handleSelect(d.id, cleanName(d.name))
+                        )
+                    )}
+
+                    {/* Manifest fallback (DatasetManager hasn't registered them yet) */}
+                    {showManifestFallback && filteredManifest.map(entry =>
+                        renderDatasetButton(
+                            entry.id,
+                            entry.name,
+                            entry.sizeHint || entry.description,
+                            () => handleSelect(entry.id, entry.name)
+                        )
+                    )}
+
+                    {/* Empty sample state */}
+                    {!isLoadingSamples && (sampleItems?.length === 0) && !showManifestFallback && (
+                        <div className="dataset-selector-modal__empty-small">
+                            No sample datasets found.
+                            Check <code>public/vtp_files/manifest.json</code>.
+                        </div>
                     )}
                 </div>
+
+                {/* ── Uploaded Files ── */}
+                {filteredUploads.length > 0 && (
+                    <>
+                        <div className="dataset-selector-modal__section-header">
+                            <Icon name="upload" size={13} />
+                            <span>My Files</span>
+                        </div>
+                        <div className="dataset-selector-modal__list">
+                            {filteredUploads.map(d =>
+                                renderDatasetButton(
+                                    d.id,
+                                    d.name,
+                                    d.pointCount > 0 ? `${d.pointCount.toLocaleString()} pts` : null,
+                                    () => handleSelect(d.id, d.name)
+                                )
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
         </Modal>
     );

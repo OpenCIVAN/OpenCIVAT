@@ -524,8 +524,8 @@ function CanvasWorkspaceInner({
     const [loadError, setLoadError] = useState(null);
     const instanceCreationInProgress = useRef(false);
 
-    // Floating panel state
-    const [leftPanelOpen, setLeftPanelOpen] = useState(false);
+    // Floating panel state — open by default so Files/Sample Datasets are immediately visible
+    const [leftPanelOpen, setLeftPanelOpen] = useState(true);
     const [rightPanelOpen, setRightPanelOpen] = useState(false);
     const [showCreateWorkspacePanel, setShowCreateWorkspacePanel] = useState(false);
     const [createWorkspaceDefaults, setCreateWorkspaceDefaults] = useState({

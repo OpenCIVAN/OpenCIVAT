@@ -150,6 +150,15 @@ export function Bootstrap() {
                     setBootstrapState('initializing');
                     await runPhase2Initialization(existingName);
                 }
+            } else if (isDevBypass) {
+                // Dev bypass active — auto-fill from mock dev user, skip the username form
+                log.info("Bootstrap: Dev bypass — auto-setting dev username");
+                const devUser = authService.getUser();
+                const devName = devUser?.name || devUser?.username || 'Developer';
+                setUserName(devName);
+                setUsername(devName);
+                setBootstrapState('initializing');
+                await runPhase2Initialization(devName);
             } else {
                 log.debug("Bootstrap: Username required");
                 setBootstrapState('username');
