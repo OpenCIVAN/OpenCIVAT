@@ -11,7 +11,7 @@ This guide covers setting up OpenCIVAN for local development or self-hosted rese
 | [Prerequisites](#prerequisites) | [Quick Start](#quick-start) |
 | [Environment Variables](#environment-variables) | [Service Configuration](#service-configuration) |
 | [Frontend Dev Server](#frontend-dev-server) | [Authentication](#authentication) |
-| [Loading Data](#loading-data) | [VR / Quest 2](#vr--quest-2) |
+| [Loading Data](#loading-data) | [WebXR / Immersive Mode](#webxr--immersive-mode) |
 | [Production Deployment](#production-deployment) | [Troubleshooting](#troubleshooting) |
 
 ---
@@ -25,7 +25,7 @@ This guide covers setting up OpenCIVAN for local development or self-hosted rese
 | Docker Desktop | ≥ 24 | Runs all backend services |
 | Git | any | |
 | Chrome / Chromium | ≥ 120 | Recommended browser (WebXR support) |
-| Meta Quest 2 or 3 | any | For VR mode testing |
+| WebXR browser | — | Any modern browser; Apple Vision Pro, Meta Quest, Chrome/Edge all work |
 
 Python 3.10+ and the VTK Python package are used by the compute worker inside Docker — no host Python installation required.
 
@@ -231,20 +231,23 @@ Demo files can be loaded automatically:
 
 ---
 
-## VR / Quest 2
+## WebXR / Immersive Mode
 
-WebXR requires HTTPS. The development server uses a self-signed certificate — you must accept it in the Quest browser before VR will work.
+WebXR requires HTTPS. The app uses capability detection — it works in any browser that supports WebXR, including Apple Vision Pro, Meta Quest browsers, and desktop WebXR browsers.
 
 ### Steps
 
-1. Connect Quest 2 to the same network as your dev machine.
-2. Open the Quest browser and navigate to `https://<your-dev-machine-ip>:8081`.
-3. Accept the certificate warning.
-4. Enter your username and join the session.
-5. Click **Enter VR** in the top bar. The browser will request permission to enter immersive VR.
-6. Use the right thumbstick for teleport, left thumbstick for turning. The wrist menu (look at your left wrist) provides data controls.
+1. Start the toolkit over HTTPS (use `npm start` with SSL certs, or expose via ngrok/Cloudflare Tunnel).
+2. Open the HTTPS URL in your target browser or headset.
+3. Accept any certificate warning.
+4. Join or create a session.
+5. Click **Enter Immersive Mode** in the toolbar. The browser requests permission to enter immersive VR.
 
-> **Note:** WebXR requires a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts). HTTP mode will not allow VR entry.
+> **Note:** WebXR requires a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts). HTTP mode will not allow immersive VR entry.
+
+For Apple Vision Pro specifically, see **[docs/apple-vision-pro.md](apple-vision-pro.md)**.
+
+For the full WebXR + headset workflow from a Windows machine, see **[docs/getting-started.md](getting-started.md#10-apple-vision-pro)**.
 
 ---
 
@@ -277,7 +280,7 @@ Key things to change for any shared or production deployment:
 <summary>WebXR / Enter VR button not shown</summary>
 
 - WebXR requires HTTPS. Make sure you are on `https://`, not `http://`.
-- The Quest browser must have accepted the certificate. Navigate directly to the HTTPS URL first.
+- The headset browser must have accepted the certificate. Navigate directly to the HTTPS URL first.
 - Try `navigator.xr.isSessionSupported('immersive-vr')` in the browser console — it should return `true`.
 
 </details>

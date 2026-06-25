@@ -1,8 +1,10 @@
 # OpenCIVAN
 
-**Open Collaborative Immersive Visualization and Analytics Network**
+**Open Collaborative Immersive Visualization and Analytics**
 
-OpenCIVAN is an open-source platform for real-time, multi-user scientific data visualization in 3D and immersive (VR) environments. It targets research teams who need to explore large datasets together — from the same desk or across the globe — in a browser-native, headset-ready interface.
+OpenCIVAN is an open-source research toolkit for real-time, multi-user 3D scientific visualization. It is designed for research teams who need to explore large volumetric and surface datasets together — from the same machine or across a network — in a browser-native, headset-capable interface.
+
+The toolkit is **not** production-ready software. It is an initial open-source base for collaborative immersive visualization and analytics of high-dimensional scientific data that research groups can build on.
 
 ---
 
@@ -10,10 +12,10 @@ OpenCIVAN is an open-source platform for real-time, multi-user scientific data v
 
 | | |
 |---|---|
-| [Features](#features) | [Quick Start](#quick-start) |
-| [Documentation](docs/README.md) | [Architecture](docs/architecture.md) |
-| [Contributing](CONTRIBUTING.md) | [Roadmap](ROADMAP.md) |
-| [Code of Conduct](CODE_OF_CONDUCT.md) | [License](#license) |
+| [Quick Start](#quick-start) | [Run Instructions](docs/getting-started.md) |
+| [Documentation](#documentation) | [Architecture](docs/architecture.md) |
+| [Windows + GPU Setup](docs/windows-gpu-setup.md) | [Apple Vision Pro](docs/apple-vision-pro.md) |
+| [Contributing](CONTRIBUTING.md) | [License](#license) |
 
 ---
 
@@ -21,11 +23,11 @@ OpenCIVAN is an open-source platform for real-time, multi-user scientific data v
 
 | Category | Capability |
 |---|---|
-| **Visualization** | 3D volume rendering, isosurfaces, slicing (MPR), scalar coloring, glyphs, clipping, thresholding, time series — powered by VTK.js |
-| **Immersive / VR** | WebXR support (Quest 2 / Quest 3 browser); controller and hand tracking; VR wrist menu; fly and teleport navigation |
-| **Collaboration** | Synchronous multi-user sessions; shared cursor and camera presence via Y.js; voice communication via LiveKit; 3D avatar presence in VR sessions |
-| **Data workflow** | Upload VTK/VTP datasets; server-side compute jobs (Python VTK worker); thumbnail generation |
-| **Architecture** | Server-authoritative state (REST + WebSocket); Y.js presence layer; React 18 frontend; Docker-based backend |
+| **Visualization** | 3D surface rendering, volume rendering, isosurfaces, slicing (MPR), scalar coloring, glyphs, clipping, thresholding, time series — powered by VTK.js and server-side Python VTK |
+| **Immersive / XR** | WebXR support; works in Apple Vision Pro browser, desktop WebXR browsers, and standard browsers without XR hardware |
+| **Collaboration** | Synchronous multi-user sessions; shared cursor and camera presence via Y.js; voice communication via LiveKit |
+| **Data workflow** | Server-side VTK rendering (`.vtp`, `.vtu`, `.vti`); built-in sample datasets; browser VTK.js fallback |
+| **Architecture** | Python VTK render server (server-side rendering); Node.js API; React 18 frontend; Docker-based backend |
 
 ---
 
@@ -34,76 +36,123 @@ OpenCIVAN is an open-source platform for real-time, multi-user scientific data v
 | Layer | Technology |
 |---|---|
 | Frontend | React 18, VTK.js ≥ 34, Webpack 5, SCSS |
-| Visualization | [@kitware/vtk.js](https://kitware.github.io/vtk-js/) |
-| VR / XR | WebXR Device API, [React Three XR](https://github.com/pmndrs/react-xr) |
+| Visualization | [@kitware/vtk.js](https://kitware.github.io/vtk-js/) + Python VTK server |
+| XR | WebXR Device API |
 | Collaboration | [Y.js](https://yjs.dev/) (presence), [y-websocket](https://github.com/yjs/y-websocket) |
 | Voice | [LiveKit](https://livekit.io/) WebRTC |
-| Backend | Node.js, Express 4 |
+| Render server | Python 3.11, VTK 9.3+, FastAPI, uvicorn |
+| Backend API | Node.js 18+, Express 4 |
 | Database | PostgreSQL 15 |
 | Object storage | MinIO |
 | Job queue | BullMQ + Redis 7 |
-| Compute worker | Python 3 + VTK |
 | Auth | Keycloak (OIDC) or dev-bypass mode |
-| Avatar system | [`@pixiv/three-vrm`](https://github.com/pixiv/three-vrm) (VRM 0.x / 1.x) |
 
 ---
 
-## Avatars
+## Platform Targets
 
-The toolkit includes an open avatar subsystem for collaborative WebXR sessions. It supports lightweight procedural fallback avatars by default and can load VRM-compatible avatars through the `@pixiv/three-vrm` integration. Avatar pose, pointer state, and user metadata are synchronized through the Y.js collaboration layer rather than through a platform-specific avatar service. See **[docs/avatars.md](docs/avatars.md)** for full documentation.
-
----
-
-## Sample VTP Datasets
-
-The application automatically lists datasets from `public/vtp_files/` in the left panel under **"Sample Datasets"**. No upload or backend connection is required.
-
-To add a new built-in dataset:
-
-1. Place the `.vtp` file in `public/vtp_files/`.
-2. Add an entry to `public/vtp_files/manifest.json`:
-   ```json
-   { "id": "builtin-mydata", "name": "My Dataset", "path": "/vtp_files/mydata.vtp", "description": "...", "sizeHint": "5 MB" }
-   ```
-3. Restart the dev server if needed.
-4. Open the app — the file appears in the Sample Datasets section immediately.
-
-## Uploading Local VTP Files
-
-Users can load their own `.vtp` files by clicking the upload button or dragging and dropping a file onto the Files panel.
-
-- **With backend running** (Docker): files are uploaded to the server and persist across sessions.
-- **Without backend**: files are loaded directly in the browser for the current session only. No data is sent to any server.
-
-Supported formats: `.vtp`, `.vtk`, `.vti`, `.obj`, `.stl`, `.ply`, `.csv`, `.nii`, `.dcm`.
+| Role | Platform |
+|------|----------|
+| Dev machine + render server | Windows + NVIDIA GPU (GPU-accelerated Docker rendering) |
+| Primary client | Apple Vision Pro browser (thin client, receives rendered frames) |
+| Secondary client | Desktop browser — Chrome, Firefox, Edge, Safari |
+| macOS dev | macOS — CPU/Mesa rendering only, frontend and API work |
 
 ---
 
 ## Quick Start
 
-> **Prerequisites:** Docker Desktop, Node.js ≥ 18, Git.  
-> For full setup details see **[docs/installation.md](docs/installation.md)**.
+### Prerequisites
+
+- Node.js ≥ 18
+- npm ≥ 9 (bundled with Node.js)
+- Python 3.11+ (for local render server)
+- Docker Desktop (for full stack or GPU rendering)
+
+### Path A — Frontend only (no backend needed)
+
+Built-in sample datasets (Bones, Lungs, Skull, etc.) load directly in the browser without any backend.
 
 ```bash
-# 1. Clone
 git clone https://github.com/<your-org>/opencivan.git
 cd opencivan
-
-# 2. Configure environment
-cp .env.example .env          # edit as needed
-
-# 3. Start backend services (PostgreSQL, MinIO, Redis, API, Y.js, workers)
-./scripts/start.sh
-
-# 4. Install frontend dependencies
 npm install
-
-# 5. Start frontend dev server (HTTPS, port 8081)
-npm start
-# → open https://localhost:8081  (accept the self-signed certificate)
+cp .env.example .env
+npm run start:http
 ```
 
-To skip Keycloak during development, set `DEV_BYPASS_AUTH=true` in `.env`.
+Open **http://localhost:8081** — the main workspace appears with built-in datasets in the left panel.
+
+### Path B — Frontend + render server (two terminals)
+
+For server-side VTK rendering without running the full Docker stack.
+
+**Terminal 1 — render server:**
+```bash
+cd server/render_server
+python -m venv .venv
+source .venv/bin/activate        # Windows PowerShell: .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+DATASET_DIR=../../public/vtp_files uvicorn app:app --host 0.0.0.0 --port 7001 --reload
+```
+
+**Terminal 2 — frontend:**
+```bash
+# In repo root, with RENDER_MODE=server in .env
+npm run start:http
+```
+
+Open **http://localhost:8081** — datasets render through the Python VTK server.
+
+Verify render server: `curl http://localhost:7001/health`
+
+### Path C — Full Docker stack (CPU)
+
+Runs all backend services: PostgreSQL, MinIO, Redis, API, Y.js, VTK render server.
+
+```bash
+cp .env.example .env
+docker-compose up --build
+npm install
+npm run start:http
+```
+
+### Path D — Full Docker stack (Windows + NVIDIA GPU)
+
+```bash
+cp .env.example .env
+# Set ENABLE_GPU_RENDERING=true in .env
+docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+npm install
+npm run start:http
+```
+
+Test GPU access first:
+```bash
+docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+```
+
+See **[docs/windows-gpu-setup.md](docs/windows-gpu-setup.md)** for full setup.
+
+---
+
+## Sample Datasets
+
+Built-in datasets live in `public/vtp_files/` and load in the browser without any backend:
+
+| File | Type | Size |
+|------|------|------|
+| Bones.vtp | Surface mesh | 26 MB |
+| LungVessels.vtp | Surface mesh | 27 MB |
+| Lungs.vtp | Surface mesh | 10 MB |
+| Skull.vtp | Surface mesh | 19 MB |
+| Ventricles.vtp | Surface mesh | 16 MB |
+| diskout.vtp | Polydata sample | — |
+| earth.vtp | Surface mesh | — |
+
+To add datasets: copy `.vtp`, `.vtu`, or `.vti` files to `public/vtp_files/` and add an entry to `public/vtp_files/manifest.json`.
+
+For server-side datasets: copy files to `server/datasets/` (auto-scanned by render server).
 
 ---
 
@@ -111,31 +160,23 @@ To skip Keycloak during development, set `DEV_BYPASS_AUTH=true` in `.env`.
 
 | Document | Description |
 |---|---|
-| [docs/installation.md](docs/installation.md) | Full installation and configuration guide |
+| [docs/getting-started.md](docs/getting-started.md) | Step-by-step run instructions for all workflows |
+| [docs/windows-gpu-setup.md](docs/windows-gpu-setup.md) | Windows + NVIDIA + WSL2 + Docker GPU setup |
+| [docs/apple-vision-pro.md](docs/apple-vision-pro.md) | Apple Vision Pro browser client guide |
+| [docs/server-rendering.md](docs/server-rendering.md) | Server-side rendering architecture and protocol |
 | [docs/architecture.md](docs/architecture.md) | System architecture and design decisions |
+| [docs/installation.md](docs/installation.md) | Full installation and configuration reference |
 | [docs/tutorials.md](docs/tutorials.md) | Step-by-step tutorials for new users |
-| [docs/examples.md](docs/examples.md) | Example datasets and use cases |
-| [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) | Developer reference (imports, services, patterns) |
 
 ---
 
 ## Contributing
 
-We welcome contributions of all kinds — bug reports, documentation improvements, new VTK features, VR interaction research, and more.
+We welcome contributions — bug reports, documentation improvements, new VTK features, XR interaction research.
 
 - Read **[CONTRIBUTING.md](CONTRIBUTING.md)** for the workflow
 - Browse [open issues](../../issues) for tasks labeled `good first issue` or `help wanted`
 - Join the conversation in [GitHub Discussions](../../discussions)
-
----
-
-## Community
-
-| Channel | Purpose |
-|---|---|
-| [GitHub Issues](../../issues) | Bug reports and feature requests |
-| [GitHub Discussions](../../discussions) | Q&A, announcements, research showcases |
-| [GitHub Projects](../../projects) | Roadmap and sprint tracking |
 
 ---
 
@@ -151,7 +192,7 @@ TBD — citation information will be added after first stable release.
 
 ## License
 
-OpenCIVAN is released under the **MIT License**.  
+OpenCIVAN is released under the **MIT License**.
 See [LICENSE](LICENSE) for the full text.
 
 Copyright (c) 2026 OpenCIVAN Contributors.

@@ -313,6 +313,10 @@ app.use("/api/sync", optionalAuth, syncRouter);
 // VR exploration routes
 app.use("/api/vr", optionalAuth, vrRouter);
 
+// GPU / render backend status (no auth — diagnostic)
+const gpuRouter = require("./routes/gpu");
+app.use("/api/gpu", gpuRouter);
+
 // Matrix federation routes (Phase 5)
 app.use("/api/matrix", optionalAuth, matrixRouter);
 

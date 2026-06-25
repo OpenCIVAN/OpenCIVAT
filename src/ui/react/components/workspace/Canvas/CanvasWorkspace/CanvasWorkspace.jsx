@@ -2153,7 +2153,7 @@ function CanvasWorkspaceInner({
 
                     await vrManager.enterVR(glContext, {
                         navigationMode: 'teleport',
-                        deviceProfile: 'meta-quest',
+                        deviceProfile: 'generic',
                         optionalFeatures: ['bounded-floor', 'local-floor', 'hand-tracking', 'layers'],
                     });
                 }}

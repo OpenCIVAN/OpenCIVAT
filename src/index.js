@@ -30,6 +30,7 @@ function checkBrowserCompatibility() {
 
   if (missing.length > 0) {
     log.warn(`Missing browser features: ${missing.join(", ")}`);
+    window.__CIA_MISSING_FEATURES = missing;
     return false;
   }
 
@@ -92,9 +93,12 @@ async function initializeApp() {
 
   // Check browser compatibility first
   if (!checkBrowserCompatibility()) {
+    const missing = window.__CIA_MISSING_FEATURES || ["unknown"];
     showFatalError(
-      "Your browser doesn't support all required features. " +
-        "Please use a modern browser like Chrome, Firefox, or Edge."
+      `Your browser is missing required features: <strong>${missing.join(", ")}</strong>.<br><br>` +
+        "CIA Web requires WebGL2, WebSocket, and IndexedDB support. " +
+        "Safari on Apple Vision Pro, Chrome, Firefox, Edge, and other modern browsers are all supported " +
+        "as long as these features are available."
     );
     return;
   }

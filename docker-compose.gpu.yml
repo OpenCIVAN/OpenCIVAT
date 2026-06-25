@@ -1,0 +1,39 @@
+# docker-compose.gpu.yml — NVIDIA GPU override for render-server and vtk-worker
+#
+# Usage (Windows/NVIDIA + WSL2):
+#   docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up
+#
+# Prerequisites:
+#   - NVIDIA driver with WSL2 support installed on Windows host
+#   - Docker Desktop with WSL2 backend enabled
+#   - nvidia-container-toolkit available in WSL2
+#   - Test GPU access first:
+#       docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+#
+# macOS note: This override does nothing useful on macOS (no NVIDIA GPU).
+# Use the base docker-compose.yml alone on macOS for CPU/Mesa rendering.
+
+services:
+  render-server:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      ENABLE_GPU_RENDERING: "true"
+
+  vtk-worker:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      ENABLE_GPU_RENDERING: "true"

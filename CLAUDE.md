@@ -6,6 +6,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **CIA Web** — Collaborative Immersive Analytics platform for real-time multi-user 3D scientific visualization. Stack: React 18 + VTK.js + WebXR frontend (Webpack), Node.js Express API, Y.js WebSocket server, Keycloak auth, PostgreSQL, MinIO object storage, Redis + BullMQ job queues, LiveKit voice, Python VTK worker, and Node thumbnail worker.
 
+## Platform Targets
+
+| Role | Platform | Notes |
+|------|----------|-------|
+| Dev + render server | **Windows + NVIDIA GPU** | Run Docker with `docker-compose.gpu.yml` override; GPU-accelerated VTK rendering |
+| Primary client | **Apple Vision Pro** (Safari/visionOS) | Thin browser client; no local VTK parsing; receives rendered frames |
+| Secondary client | Desktop browser (Chrome/Firefox/Edge/Safari) | Full feature set |
+| macOS dev | macOS | CPU/Mesa rendering only — no NVIDIA Docker GPU support on macOS; good for frontend and API work |
+
+**For Windows GPU setup:** see `docs/windows-gpu-setup.md`  
+**For Apple Vision Pro:** see `docs/apple-vision-pro.md`
+
+GPU Docker command:
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up
+```
+
+GPU status check:
+```bash
+curl http://localhost:3001/api/gpu/status
+```
+
 ## Commands
 
 ### Frontend (Webpack, port 8081)
