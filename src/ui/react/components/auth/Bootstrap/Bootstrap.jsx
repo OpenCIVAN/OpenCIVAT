@@ -221,18 +221,40 @@ export function Bootstrap() {
         initializationStarted.current = true;
         log.debug("Bootstrap: Starting Phase 2 initialization...");
 
+        // 5-second hard timeout: if Phase 2 hangs (slow API, WebSocket delay, etc.)
+        // we still transition to the workspace. Collaboration reconnects on its own.
+        const PHASE2_TIMEOUT_MS = 5000;
+        let timedOut = false;
+
         try {
-            await initializePhase2();
+            await Promise.race([
+                initializePhase2(),
+                new Promise((_, reject) =>
+                    setTimeout(() => {
+                        timedOut = true;
+                        reject(new Error('TIMEOUT'));
+                    }, PHASE2_TIMEOUT_MS)
+                ),
+            ]);
 
             phase2Complete.current = true;
             log.info("Bootstrap: Phase 2 complete, user services ready");
-
-            setBootstrapState('ready');
         } catch (error) {
-            log.error("Bootstrap: Phase 2 initialization failed:", error);
-            setErrorMessage(`Failed to initialize user services: ${error.message}`);
-            setBootstrapState('error');
+            if (timedOut || error.message === 'TIMEOUT') {
+                // Timeout: enter workspace anyway — collaboration reconnects on its own.
+                // Do NOT show an error page; that blocks the user forever.
+                log.warn("Bootstrap: Phase 2 timed out after 5s — entering workspace with degraded state");
+                console.warn('[CIA Init] Initialization timed out. Collaboration may still be connecting.');
+                phase2Complete.current = true;
+            } else {
+                log.error("Bootstrap: Phase 2 initialization failed:", error);
+                setErrorMessage(`Failed to initialize user services: ${error.message}`);
+                setBootstrapState('error');
+                return;
+            }
         }
+
+        setBootstrapState('ready');
     }
 
     function handleRetry() {

@@ -35,6 +35,9 @@ import { VRWristMenu } from "@UI/react/components/organisms/VRWristMenu";
 // Canvas
 import { CanvasWorkspace } from "@UI/react/components/workspace";
 
+// Session sharing panel
+import { SessionPanel } from "@UI/react/components/panels/SessionPanel/SessionPanel.jsx";
+
 // Modals
 import { CreateRoomModal } from "@UI/react/components/modals/CreateRoomModal";
 import { DatasetSelectorModal } from "@UI/react/components/modals/DatasetSelectorModal";
@@ -47,13 +50,13 @@ import { ServerRenderOverlay } from "@/rendering/ServerRenderOverlay.jsx";
 import { ToastContainer } from "@UI/react/components/molecules/Toast";
 import { toast } from "@UI/react/store/toastStore";
 
+// Config
+import { config } from "@Core/config/clientConfig.js";
+
 // Hooks
 import { useWorkspaces } from "@UI/react/hooks/useWorkspaces.js";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
-import {
-  useWebXRAvailability,
-  LAYOUT_MODES,
-} from "@UI/react/components/organisms";
+import { useWebXRAvailability } from "@UI/react/components/organisms";
 import { useVoiceControls } from "@UI/react/hooks/useVoiceBar.js";
 import { useRoomIndicator } from "@UI/react/hooks/useRoomIndicator.js";
 import { vrManager } from "@Core/vr/VRManager.js";
@@ -90,7 +93,11 @@ export function CIAWebApp({ username, userId, projectId }) {
     updateWorkspace,
     isLoading: isWorkspacesLoading,
     createPersonalWorkspace,
-  } = useWorkspaces({ userId, projectId, roomId: resolvedWorkspaceRoomId });
+  // Note: do NOT pass roomId here. The Y.js session UUID (roomId from sessionManager)
+  // is the collaboration channel key and is NOT a server-side rooms table record.
+  // Passing it as roomId triggers a FK violation when creating workspaces for new link-based sessions.
+  // Y.js already uses sessionManager.getRoomId() independently via yjsSetup.js.
+  } = useWorkspaces({ userId, projectId });
 
   // Auto-create a personal workspace on first run (no workspace in this project/room yet)
   useEffect(() => {
@@ -152,7 +159,7 @@ export function CIAWebApp({ username, userId, projectId }) {
 
   // ── VR ────────────────────────────────────────────────────────────────────
   const vrAvailable = useWebXRAvailability();
-  const [layoutMode] = useState(LAYOUT_MODES.NORMAL);
+  const workspaceViewMode = config.enableMultiView ? 'tabs' : 'single';
 
   const handleEnterVR = useCallback(async () => {
     try {
@@ -170,6 +177,12 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [datasetSelectorTarget, setDatasetSelectorTarget] = useState(null);
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [deleteViewTarget, setDeleteViewTarget] = useState(null);
+
+  // ── Manipulator awareness ─────────────────────────────────────────────────
+  const [activeManipulator, setActiveManipulator] = useState(null);
+
+  // ── Session panel ─────────────────────────────────────────────────────────
+  const [showSessionPanel, setShowSessionPanel] = useState(false);
 
   // ── Event bridges ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -197,15 +210,22 @@ export function CIAWebApp({ username, userId, projectId }) {
       if (roomId) switchRoom(roomId);
     };
 
+    const onManipulatorChanged = (e) => {
+      const { manipulator } = e.detail || {};
+      setActiveManipulator(manipulator?.target ? manipulator : null);
+    };
+
     window.addEventListener("cia:open-dataset-selector", onOpenDataset);
     window.addEventListener("cia:delete-view", onDeleteView);
     window.addEventListener("cia:toast", onToast);
     window.addEventListener("cia:switch-room", onSwitchRoom);
+    window.addEventListener("cia:manipulator-changed", onManipulatorChanged);
     return () => {
       window.removeEventListener("cia:open-dataset-selector", onOpenDataset);
       window.removeEventListener("cia:delete-view", onDeleteView);
       window.removeEventListener("cia:toast", onToast);
       window.removeEventListener("cia:switch-room", onSwitchRoom);
+      window.removeEventListener("cia:manipulator-changed", onManipulatorChanged);
     };
   }, [switchRoom]);
 
@@ -292,8 +312,8 @@ export function CIAWebApp({ username, userId, projectId }) {
 
                             <button
                               className="vr-app__btn"
-                              onClick={() => setShowCreateRoomModal(true)}
-                              title="Manage collaboration session"
+                              onClick={() => setShowSessionPanel((v) => !v)}
+                              title="Share or join a collaboration session"
                             >
                               Session
                             </button>
@@ -324,7 +344,7 @@ export function CIAWebApp({ username, userId, projectId }) {
                             workspaceId={currentWorkspaceId}
                             userId={userId || sessionManager.getUserId?.() || "anonymous"}
                             projectId={projectId}
-                            layoutMode={layoutMode}
+                            workspaceViewMode={workspaceViewMode}
                             leftPanelContent={
                               <LeftPanelContent workspaceId={currentWorkspaceId || 'default'} />
                             }
@@ -333,6 +353,25 @@ export function CIAWebApp({ username, userId, projectId }) {
 
                         {/* Floating instance tools panel */}
                         <AllFloatingPanels workspaceId={currentWorkspaceId} />
+
+                        {/* Active manipulator badge */}
+                        {activeManipulator && (
+                          <div className="vr-app__manipulator-badge" aria-live="polite">
+                            <span className="vr-app__manipulator-dot" />
+                            <span>
+                              {activeManipulator.displayName || activeManipulator.userId}{" "}
+                              is {activeManipulator.action || "manipulating"} the {activeManipulator.target}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Session sharing panel */}
+                        {showSessionPanel && (
+                          <SessionPanel
+                            roomMembers={roomMembers}
+                            onClose={() => setShowSessionPanel(false)}
+                          />
+                        )}
 
                         {/* VR wrist menu (only in headset) */}
                         <VRWristMenu showInDesktop={false} />

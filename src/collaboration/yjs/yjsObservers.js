@@ -15,10 +15,14 @@
 // ============================================================================
 
 import {
+  ydoc,
   yCursors,
   yCameras,
   yAvatars,
   yViewPresence,
+  yVisualizationState,
+  yManipulatorState,
+  yActiveDataset,
 } from "@Collaboration/yjs/yjsSetup.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { sync as log } from "@Utils/logger.js";
@@ -180,8 +184,10 @@ export function initializeCameraObserver() {
     event.changes.keys.forEach((change, viewId) => {
       const cameraData = yCameras.get(viewId);
 
-      // Skip if this is our own camera update
-      if (cameraData && cameraData.userId === myId) return;
+      // Skip if this update came from THIS browser connection (prevents feedback loop).
+      // Use ydoc.clientID (unique per WebSocket connection) not userId, so
+      // two windows logged in as the same user still sync with each other.
+      if (cameraData && cameraData.clientId === ydoc.clientID) return;
 
       cameraChangeCallbacks.forEach((cb) => {
         try {
@@ -202,21 +208,163 @@ export function initializeCameraObserver() {
 }
 
 // ============================================================================
+// Visualization State Observer
+// ============================================================================
+
+let visualizationChangeCallbacks = [];
+
+export function onVisualizationChange(callback) {
+  visualizationChangeCallbacks.push(callback);
+  return () => {
+    visualizationChangeCallbacks = visualizationChangeCallbacks.filter(
+      (cb) => cb !== callback
+    );
+  };
+}
+
+export function initializeVisualizationObserver() {
+  log.debug("Setting up visualization state observer");
+
+  yVisualizationState.observe((event) => {
+    event.changes.keys.forEach((change, viewId) => {
+      const data = yVisualizationState.get(viewId);
+      if (!data) return;
+
+      // Skip updates that came from this browser connection
+      if (data.clientId === ydoc.clientID) return;
+
+      log.debug(`[CIA Collab] ← viz from ${data.userId} for view ${viewId}`, data.visualization);
+
+      visualizationChangeCallbacks.forEach((cb) => {
+        try {
+          cb({
+            action: change.action,
+            viewId,
+            visualization: data.visualization,
+            userId: data.userId,
+          });
+        } catch (error) {
+          log.error("Visualization observer callback error:", error);
+        }
+      });
+    });
+  });
+
+  log.debug("Visualization state observer initialized");
+}
+
+// ============================================================================
+// Manipulator State Observer
+// ============================================================================
+
+let manipulatorChangeCallbacks = [];
+
+export function onManipulatorChange(callback) {
+  manipulatorChangeCallbacks.push(callback);
+  return () => {
+    manipulatorChangeCallbacks = manipulatorChangeCallbacks.filter(
+      (cb) => cb !== callback
+    );
+  };
+}
+
+export function initializeManipulatorObserver() {
+  log.debug("Setting up manipulator state observer");
+
+  yManipulatorState.observe((event) => {
+    event.changes.keys.forEach((change, userId) => {
+      const data = yManipulatorState.get(userId);
+
+      // Skip own manipulation events
+      if (data && data.clientId === ydoc.clientID) return;
+
+      manipulatorChangeCallbacks.forEach((cb) => {
+        try {
+          cb({
+            action: change.action,
+            userId,
+            manipulator: data || null,
+          });
+        } catch (error) {
+          log.error("Manipulator observer callback error:", error);
+        }
+      });
+    });
+  });
+
+  log.debug("Manipulator state observer initialized");
+}
+
+// ============================================================================
+// Active Dataset Observer
+// ============================================================================
+
+let activeDatasetChangeCallbacks = [];
+
+export function onActiveDatasetChange(callback) {
+  activeDatasetChangeCallbacks.push(callback);
+  return () => {
+    activeDatasetChangeCallbacks = activeDatasetChangeCallbacks.filter(
+      (cb) => cb !== callback
+    );
+  };
+}
+
+export function initializeActiveDatasetObserver() {
+  log.debug("Setting up active dataset observer");
+
+  yActiveDataset.observe((event) => {
+    event.changes.keys.forEach((change, roomId) => {
+      const data = yActiveDataset.get(roomId);
+      if (!data) return;
+
+      // Skip updates that came from this browser connection
+      if (data.clientId === ydoc.clientID) return;
+
+      console.log(
+        '[CIA Collab] ← activeDataset received',
+        data.datasetId, 'v' + data.version,
+        'from', data.updatedBy
+      );
+
+      activeDatasetChangeCallbacks.forEach((cb) => {
+        try {
+          cb({ roomId, ...data });
+        } catch (e) {
+          log.error("activeDataset observer callback error:", e);
+        }
+      });
+    });
+  });
+
+  log.debug("Active dataset observer initialized");
+}
+
+// ============================================================================
 // Initialize All Observers
 // ============================================================================
 
 export function initializeAllObservers() {
-  log.debug("Setting up Y.js observers (v2.0 - presence only)");
+  log.debug("Setting up Y.js observers (v2.1 - presence + visualization sync)");
 
-  // v2.0: Only presence observers are active
   initializeCursorObserver();
   initializeAvatarObserver();
   initializeViewPresenceObserver();
-  initializeCameraObserver(); // Real-time camera sync
+  initializeCameraObserver();
+  initializeVisualizationObserver();
+  initializeManipulatorObserver();
+  initializeActiveDatasetObserver();
 
-  // State (datasets, views, annotations) comes from server via:
+  // Persistent state (datasets, views, annotations) still comes from server:
   // - REST API: useProjectFiles, DatasetManager.fetchDatasetsFromServer
   // - WebSocket: serverSync.js broadcasts
 
-  log.info("Y.js observers initialized (presence only)");
+  // Diagnostic: log collaboration identity on connect
+  const myId = getUserId();
+  console.group("[CIA Collab] Observers initialized");
+  console.log("User ID:", myId);
+  console.log("Y.js clientID (unique per connection):", ydoc.clientID);
+  console.groupEnd();
+
+  log.info("Y.js observers initialized (v2.1)");
 }

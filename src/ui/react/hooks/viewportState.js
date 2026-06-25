@@ -48,8 +48,8 @@ export const VIEWPORT_SIZE_EVENT = "cia:viewport-size-changed";
  * @constant {{ rows: number, cols: number }}
  */
 export const DEFAULT_VIEWPORT_SIZE = Object.freeze({
-  rows: 2,
-  cols: 3,
+  rows: 1,
+  cols: 1,
 });
 
 /**

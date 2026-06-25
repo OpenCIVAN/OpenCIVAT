@@ -162,12 +162,30 @@ class ApiClient {
     log.debug(`${method} ${endpoint}`);
 
     try {
+      // 8-second timeout prevents hung requests from blocking Phase 2 initialization.
+      // Must be shorter than Bootstrap's 5-second Phase 2 timeout so errors surface.
+      const timeoutSignal = AbortSignal.timeout
+        ? AbortSignal.timeout(8000)
+        : (() => {
+            const ctrl = new AbortController();
+            setTimeout(() => ctrl.abort(new Error('API request timed out')), 8000);
+            return ctrl.signal;
+          })();
+
+      // Merge caller's signal (if any) with our timeout signal
+      const signal = fetchOptions.signal
+        ? AbortSignal.any
+          ? AbortSignal.any([fetchOptions.signal, timeoutSignal])
+          : timeoutSignal   // fallback: prefer timeout signal if any() not available
+        : timeoutSignal;
+
       const response = await fetch(url, {
         method,
         headers,
         body: requestBody,
         credentials: "include", // Include cookies for session-based auth
         ...fetchOptions,
+        signal,
       });
 
       // Handle 401 Unauthorized

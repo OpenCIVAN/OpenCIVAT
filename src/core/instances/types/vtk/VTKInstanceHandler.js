@@ -35,8 +35,12 @@ import { vtkCleanPolyDataFeature } from "@VTK/features/VTKCleanPolyDataFeature";
 import { vtkOrientationWidget, ORIENTATION_STYLES } from "@VTK/widgets/orientation/VTKOrientationWidget";
 import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
 import { getViewConfigurationManager } from "@Init/appInitializer.js";
-import { syncCameraToYjs } from "@Collaboration/yjs/yjsSetup.js";
-import { getUserId } from "@Collaboration/presence/userManagement.js";
+import {
+  syncCameraToYjs,
+  syncVisualizationToYjs,
+  syncManipulatorToYjs,
+} from "@Collaboration/yjs/yjsSetup.js";
+import { getUserId, getUserName } from "@Collaboration/presence/userManagement.js";
 
 // Raycasting and cursor collaboration
 import {
@@ -2167,6 +2171,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             if (!caps.hasData) return;
             instanceTools.setOpacity?.(instanceId, value);
             this._emitToolsUpdate(instanceId);
+            if (!this._isApplyingRemoteState) {
+              const vId = this.instances.get(instanceId)?.viewConfigId;
+              if (vId) syncVisualizationToYjs(vId, getUserId(), { opacity: value });
+            }
           },
         },
 
@@ -2186,6 +2194,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             if (!caps.hasData) return;
             instanceTools.setRepresentation?.(instanceId, "surface");
             this._emitToolsUpdate(instanceId);
+            if (!this._isApplyingRemoteState) {
+              const vId = this.instances.get(instanceId)?.viewConfigId;
+              if (vId) syncVisualizationToYjs(vId, getUserId(), { representation: "surface" });
+            }
           },
         },
         {
@@ -2199,6 +2211,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             if (!caps.hasData) return;
             instanceTools.setRepresentation?.(instanceId, "wireframe");
             this._emitToolsUpdate(instanceId);
+            if (!this._isApplyingRemoteState) {
+              const vId = this.instances.get(instanceId)?.viewConfigId;
+              if (vId) syncVisualizationToYjs(vId, getUserId(), { representation: "wireframe" });
+            }
           },
         },
         {
@@ -2212,6 +2228,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             if (!caps.hasData) return;
             instanceTools.setRepresentation?.(instanceId, "points");
             this._emitToolsUpdate(instanceId);
+            if (!this._isApplyingRemoteState) {
+              const vId = this.instances.get(instanceId)?.viewConfigId;
+              if (vId) syncVisualizationToYjs(vId, getUserId(), { representation: "points" });
+            }
           },
         },
 
@@ -2693,6 +2713,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
               onClick: () => {
                 vtkScalarColoringFeature.disableScalarColoring(instanceId);
                 this._emitToolsUpdate(instanceId);
+                if (!this._isApplyingRemoteState) {
+                  const vId = this.instances.get(instanceId)?.viewConfigId;
+                  if (vId) syncVisualizationToYjs(vId, getUserId(), { activeArray: null });
+                }
               },
             },
             { type: "separator" },
@@ -2704,6 +2728,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
               onClick: () => {
                 vtkScalarColoringFeature.enableScalarColoring(instanceId, array.name, array.type);
                 this._emitToolsUpdate(instanceId);
+                if (!this._isApplyingRemoteState) {
+                  const vId = this.instances.get(instanceId)?.viewConfigId;
+                  if (vId) syncVisualizationToYjs(vId, getUserId(), { activeArray: array.name, activeArrayType: array.type });
+                }
               },
             })),
           ],
@@ -2718,14 +2746,20 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             label: colormap || "Colormap",
             description: "Change colormap",
             options: [
-              { id: "cmap-viridis", label: "Viridis", active: colormap === 'viridis', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'viridis'); this._emitToolsUpdate(instanceId); } },
-              { id: "cmap-plasma", label: "Plasma", active: colormap === 'plasma', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'plasma'); this._emitToolsUpdate(instanceId); } },
-              { id: "cmap-inferno", label: "Inferno", active: colormap === 'inferno', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'inferno'); this._emitToolsUpdate(instanceId); } },
-              { id: "cmap-magma", label: "Magma", active: colormap === 'magma', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'magma'); this._emitToolsUpdate(instanceId); } },
-              { id: "cmap-coolToWarm", label: "Cool to Warm", active: colormap === 'coolToWarm', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'coolToWarm'); this._emitToolsUpdate(instanceId); } },
-              { id: "cmap-rainbow", label: "Rainbow", active: colormap === 'rainbow', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'rainbow'); this._emitToolsUpdate(instanceId); } },
-              { id: "cmap-grayscale", label: "Grayscale", active: colormap === 'grayscale', onClick: () => { vtkScalarColoringFeature.setColormap(instanceId, 'grayscale'); this._emitToolsUpdate(instanceId); } },
-            ],
+              'viridis', 'plasma', 'inferno', 'magma', 'coolToWarm', 'rainbow', 'grayscale',
+            ].map((cmapName) => ({
+              id: `cmap-${cmapName}`,
+              label: cmapName.charAt(0).toUpperCase() + cmapName.slice(1).replace(/([A-Z])/g, ' $1'),
+              active: colormap === cmapName,
+              onClick: () => {
+                vtkScalarColoringFeature.setColormap(instanceId, cmapName);
+                this._emitToolsUpdate(instanceId);
+                if (!this._isApplyingRemoteState) {
+                  const vId = this.instances.get(instanceId)?.viewConfigId;
+                  if (vId) syncVisualizationToYjs(vId, getUserId(), { colormap: cmapName });
+                }
+              },
+            })),
           });
         }
       }
@@ -4039,6 +4073,7 @@ console.log('Tools:', tools);
       // Apply visualization properties
       if (state.visualization && instanceData.sceneObjects.actor) {
         const property = instanceData.sceneObjects.actor.getProperty();
+        const instanceId = instanceData.instanceId;
 
         if (state.visualization.opacity !== undefined) {
           property.setOpacity(state.visualization.opacity);
@@ -4046,6 +4081,32 @@ console.log('Tools:', tools);
 
         if (state.visualization.representation !== undefined) {
           property.setRepresentation(state.visualization.representation);
+        }
+
+        // Scalar coloring: colormap change
+        if (state.visualization.colormap !== undefined) {
+          try {
+            vtkScalarColoringFeature.setColormap(instanceId, state.visualization.colormap);
+          } catch (e) {
+            log.warn("applySharedState: failed to set colormap", e);
+          }
+        }
+
+        // Scalar coloring: array selection enable/disable
+        if (state.visualization.activeArray !== undefined) {
+          try {
+            if (state.visualization.activeArray === null) {
+              vtkScalarColoringFeature.disableScalarColoring(instanceId);
+            } else {
+              vtkScalarColoringFeature.enableScalarColoring(
+                instanceId,
+                state.visualization.activeArray,
+                state.visualization.activeArrayType || 'point'
+              );
+            }
+          } catch (e) {
+            log.warn("applySharedState: failed to apply scalar coloring", e);
+          }
         }
       }
 
@@ -5118,6 +5179,14 @@ console.log('Tools:', tools);
           const userId = getUserId();
           if (userId) {
             syncCameraToYjs(instanceData.viewConfigId, userId, cameraState);
+
+            // Broadcast active manipulator; auto-clear after 1.5 s of inactivity
+            syncManipulatorToYjs(userId, getUserName(), 'camera', 'manipulating');
+            if (this._manipulatorClearTimer) clearTimeout(this._manipulatorClearTimer);
+            this._manipulatorClearTimer = setTimeout(() => {
+              syncManipulatorToYjs(userId, null, null, null);
+              this._manipulatorClearTimer = null;
+            }, 1500);
           }
 
           // PERSISTENCE: Sync to server via ViewConfigurationManager (throttled)

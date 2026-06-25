@@ -1,0 +1,275 @@
+// SessionPanel — collaboration session sharing panel
+
+.session-panel__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 8000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 56px 16px 0 0; // 56px = header height + 8px gap
+}
+
+.session-panel {
+  width: 340px;
+  max-height: calc(100vh - 72px);
+  overflow-y: auto;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  color: #e2e8f0;
+  font-size: 13px;
+}
+
+// ── Header ───────────────────────────────────────────────────────────────────
+
+.session-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #1f2937;
+  flex-shrink: 0;
+}
+
+.session-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #f1f5f9;
+}
+
+.session-panel__close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+
+  &:hover { color: #d1d5db; background: #1f2937; }
+}
+
+// ── Status bar ────────────────────────────────────────────────────────────────
+
+.session-panel__status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #0d1421;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.session-panel__room-id {
+  color: #4b5563;
+  font-family: monospace;
+  font-size: 10px;
+}
+
+// ── Status colors ─────────────────────────────────────────────────────────────
+
+.session-panel__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.session-panel__status--connected {
+  color: #34d399;
+
+  &.session-panel__status-dot { background: #34d399; }
+}
+
+.session-panel__status--disconnected {
+  color: #f87171;
+
+  &.session-panel__status-dot { background: #f87171; }
+}
+
+.session-panel__status--connecting {
+  color: #fbbf24;
+
+  &.session-panel__status-dot {
+    background: #fbbf24;
+    animation: session-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes session-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+// ── Sections ──────────────────────────────────────────────────────────────────
+
+.session-panel__section {
+  padding: 14px 16px;
+  border-bottom: 1px solid #1a2332;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &--last { border-bottom: none; }
+}
+
+.session-panel__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.session-panel__count {
+  background: #1f2937;
+  color: #9ca3af;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+// ── Inputs & rows ────────────────────────────────────────────────────────────
+
+.session-panel__row {
+  display: flex;
+  gap: 6px;
+}
+
+.session-panel__input {
+  flex: 1;
+  background: #0d1421;
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: #e2e8f0;
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+
+  &::placeholder { color: #374151; }
+  &:focus { border-color: #374151; }
+
+  &.session-panel__url-input {
+    font-family: monospace;
+    font-size: 11px;
+    color: #60a5fa;
+    cursor: text;
+  }
+}
+
+// ── Buttons ──────────────────────────────────────────────────────────────────
+
+.session-panel__btn {
+  padding: 7px 14px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 100ms, border-color 100ms;
+
+  &:hover:not(:disabled) { background: #2d3748; border-color: #4b5563; }
+  &:active:not(:disabled) { background: #374151; }
+  &:disabled { opacity: 0.4; cursor: default; }
+
+  &--success {
+    background: #065f46;
+    border-color: #10b981;
+    color: #6ee7b7;
+  }
+
+  &--ghost {
+    background: transparent;
+    border-color: transparent;
+    color: #6b7280;
+    font-size: 12px;
+    padding: 5px 0;
+
+    &:hover:not(:disabled) { color: #9ca3af; background: transparent; }
+  }
+}
+
+// ── Connected users ───────────────────────────────────────────────────────────
+
+.session-panel__users {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.session-panel__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-panel__user-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.session-panel__user-name {
+  color: #d1d5db;
+  font-size: 12px;
+}
+
+.session-panel__you {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.session-panel__empty {
+  color: #374151;
+  font-size: 12px;
+  font-style: italic;
+}
+
+// ── Invite message ───────────────────────────────────────────────────────────
+
+.session-panel__invite-note {
+  font-size: 11px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.07);
+  border: 1px solid rgba(251, 191, 36, 0.18);
+  border-radius: 5px;
+  padding: 6px 8px;
+}
+
+.session-panel__invite-msg {
+  width: 100%;
+  background: #0d1421;
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #9ca3af;
+  font-size: 11px;
+  font-family: monospace;
+  resize: vertical;
+  cursor: text;
+  box-sizing: border-box;
+}

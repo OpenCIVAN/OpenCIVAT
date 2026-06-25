@@ -113,6 +113,18 @@ class SessionManager {
     window.location.reload();
   }
 
+  /**
+   * Generate a fresh UUID-based session and navigate to it.
+   * Creates a shareable /rooms/{uuid} URL and reloads the page.
+   * @returns {string} The new session ID
+   */
+  generateNewSession() {
+    const newId = (window.crypto || crypto).randomUUID();
+    log.info(`Generating new session: ${newId}`);
+    this.switchRoom(newId);
+    return newId;
+  }
+
   /*
    * Get current user ID
    * Returns CIA Admin user ID if not set (for development)

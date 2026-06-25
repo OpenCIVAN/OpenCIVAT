@@ -460,6 +460,14 @@ export async function initializePhase2() {
   );
   logInfo("Initializing user services...");
 
+  // Diagnostic: log key identifiers so the browser console shows where we are
+  console.log('[CIA Init] Phase 2 starting');
+  console.log('[CIA Init] Room ID (Y.js session):', sessionManager.getRoomId?.());
+  console.log('[CIA Init] Project ID:', sessionManager.getProjectId?.() || config.defaultSessionId);
+  console.log('[CIA Init] Y.js WebSocket URL:', config.yjsWebSocketUrl);
+  try { console.log('[CIA Init] User ID:', getUserId?.()); } catch (_) {}
+  console.log('[CIA Init] URL:', typeof window !== 'undefined' ? window.location.href : 'n/a');
+
   try {
     // STEP 1: Initialize Y.js provider and wait for sync
     emitProgress('yjs-sync', 'active', 0);

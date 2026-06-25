@@ -69,6 +69,10 @@ module.exports = {
     // Server config (HTTPS or HTTP based on USE_HTTP env var)
     server: getServerConfig(),
     allowedHosts: "all",
+    // SPA fallback: serve in-memory index.html for any non-asset, non-proxy 404.
+    // Must be `true` (not a rewrite object) — the rewrite form looks for the file
+    // on disk, but in dev mode index.html is generated in memory by HtmlWebpackPlugin.
+    historyApiFallback: true,
     // Proxy API requests to the backend - eliminates CORS issues
     proxy: [
       // Render server WebSocket (must be before /render-api to match /render-ws exactly)

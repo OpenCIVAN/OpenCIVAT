@@ -5,6 +5,7 @@
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
+const path = require("path");
 const { Pool } = require("pg");
 const Minio = require("minio");
 const { authenticate, optionalAuth, requireWriteAuth, setPool: setAuthPool } = require("./middleware/auth");
@@ -386,6 +387,21 @@ app.get("/api/status", optionalAuth, async (req, res) => {
     });
   }
 });
+
+// ============================================================================
+// SPA FALLBACK — serve index.html for /rooms/* so deep links work on hard refresh
+// Only applies when the built frontend is available (production / Docker)
+// ============================================================================
+
+const distIndexPath = path.join(__dirname, '../../dist', 'index.html');
+const fs = require('fs');
+if (fs.existsSync(distIndexPath)) {
+  app.use(express.static(path.join(__dirname, '../../dist')));
+  app.get('/rooms/*', (req, res) => {
+    res.sendFile(distIndexPath);
+  });
+  log.info('SPA fallback enabled — serving dist/index.html for /rooms/*');
+}
 
 // ============================================================================
 // ERROR HANDLING

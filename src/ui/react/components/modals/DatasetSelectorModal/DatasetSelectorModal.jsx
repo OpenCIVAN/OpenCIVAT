@@ -17,6 +17,9 @@ import { viewLifecycleService } from '@Services/ViewLifecycleService.js';
 import { getDatasetManager } from '@Init/appInitializer.js';
 import { config } from '@Core/config/clientConfig.js';
 import { toast } from '@UI/react/store/toastStore';
+import { syncActiveDatasetToYjs } from '@Collaboration/yjs/yjsSetup.js';
+import { getUserId } from '@Collaboration/presence/userManagement.js';
+import { sessionManager } from '@Core/session/sessionManager.js';
 import './DatasetSelectorModal.scss';
 
 const MANIFEST_URL = '/vtp_files/manifest.json';
@@ -146,6 +149,20 @@ export function DatasetSelectorModal({
                 { row: targetRow, col: targetCol },
                 { name: datasetName }
             );
+            // Broadcast to other tabs/users in the same room
+            try {
+                const ds = getDatasetManager()?.getDataset(datasetId);
+                console.log('[CIA Collab] Local dataset selected:', datasetId, datasetName);
+                syncActiveDatasetToYjs(sessionManager.getRoomId(), getUserId(), {
+                    datasetId,
+                    name: datasetName,
+                    path: ds?.publicPath || null,
+                    type: ds?.fileType || null,
+                    source: 'uploaded',
+                });
+            } catch (syncErr) {
+                console.warn('[CIA Collab] Failed to broadcast dataset selection:', syncErr);
+            }
             toast.success(`Loading ${datasetName}…`);
             onClose();
         } catch (error) {
@@ -175,6 +192,20 @@ export function DatasetSelectorModal({
             console.warn('[DatasetSelector] DatasetManager not ready — lookup may fail');
         }
 
+        // Broadcast BEFORE local load — entry.path is from the manifest so it's available here
+        try {
+            console.log('[CIA Collab] Local dataset selected (builtin):', entry.id, entry.name);
+            syncActiveDatasetToYjs(sessionManager.getRoomId(), getUserId(), {
+                datasetId: entry.id,
+                name: entry.name,
+                path: entry.path,
+                type: 'vtp',
+                source: 'builtin',
+            });
+        } catch (syncErr) {
+            console.warn('[CIA Collab] Failed to broadcast built-in dataset selection:', syncErr);
+        }
+
         await handleSelect(entry.id, entry.name);
     }, [handleSelect]);
 
@@ -191,6 +222,20 @@ export function DatasetSelectorModal({
         window.dispatchEvent(new CustomEvent('cia:open-server-render', {
             detail: { datasetId: entry.id, path: entry.path, fileType: entry.type, name: entry.name },
         }));
+
+        // Broadcast to other tabs/users in the same room
+        try {
+            console.log('[CIA Collab] Local dataset selected (server):', entry.id, entry.name);
+            syncActiveDatasetToYjs(sessionManager.getRoomId(), getUserId(), {
+                datasetId: entry.id,
+                name: entry.name,
+                path: entry.path,
+                type: entry.type,
+                source: 'server',
+            });
+        } catch (syncErr) {
+            console.warn('[CIA Collab] Failed to broadcast server dataset selection:', syncErr);
+        }
 
         onClose();
     }, [isPlacing, onClose]);

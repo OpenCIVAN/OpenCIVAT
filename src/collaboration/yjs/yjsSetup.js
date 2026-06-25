@@ -1,13 +1,16 @@
 // src/collaboration/yjs/yjsSetup.js
 // Core Y.js infrastructure - document, maps, provider initialization
 //
-// v2.0 ARCHITECTURE: Y.js for PRESENCE ONLY
+// v2.1 ARCHITECTURE: Y.js for PRESENCE + REAL-TIME VISUALIZATION SYNC
 // ============================================================================
-// Y.js is used ONLY for ephemeral presence data:
+// Y.js handles ephemeral real-time data:
 // - Cursor positions
 // - VR avatars and controller poses
 // - Active users in views
 // - Text chat (via Matrix-CRDT in future)
+// - Camera state (real-time smooth sync between collaborators)
+// - Visualization settings (representation, opacity, colormap, scalar coloring)
+// - Active manipulator identity (who is currently interacting)
 //
 // PERSISTENT STATE comes from SERVER via REST API + WebSocket broadcast:
 // - Datasets → server/src/routes/files.js
@@ -43,9 +46,21 @@ export const awareness = new Awareness(ydoc);
 // Cursor presence: userId -> { position, color, name, viewId, lastUpdate }
 export const yCursors = ydoc.getMap("cursors");
 
-// Camera presence: viewId -> { camera: {...}, userId, lastUpdate }
+// Camera presence: viewId -> { camera: {...}, userId, clientId, lastUpdate }
 // Real-time camera sync for smooth collaborative viewing
 export const yCameras = ydoc.getMap("cameras");
+
+// Visualization state: viewId -> { visualization: {...}, userId, clientId, lastUpdate }
+// Real-time sync for representation, opacity, colormap, scalar coloring
+export const yVisualizationState = ydoc.getMap("visualizationState");
+
+// Manipulator state: userId -> { userId, displayName, target, action, clientId, timestamp }
+// Tracks who is currently interacting (camera, dataset, filter)
+export const yManipulatorState = ydoc.getMap("manipulatorState");
+
+// Active dataset: roomId -> { datasetId, name, path, type, source, version, updatedBy, updatedAt, clientId }
+// Syncs dataset selection to all users in the same room/session
+export const yActiveDataset = ydoc.getMap("activeDataset");
 
 // View presence: viewId -> { viewers: [userId, ...], lastUpdate }
 export const yViewPresence = ydoc.getMap("viewPresence");
@@ -117,6 +132,13 @@ export async function initializeYjsProvider() {
 
   _provider.on("status", (event) => {
     log.info(`Y.js connection status: ${event.status}`);
+    if (event.status === 'connected') {
+      console.group("[CIA Collab] Y.js connected");
+      console.log("Room:", roomId);
+      console.log("Y.js clientID (unique per tab):", ydoc.clientID);
+      console.log("WebSocket URL:", wsUrl);
+      console.groupEnd();
+    }
   });
 
   _provider.on("sync", (synced) => {
@@ -234,10 +256,84 @@ export function syncCameraToYjs(viewId, userId, cameraState) {
     yCameras.set(viewId, {
       camera: cameraState,
       userId,
+      clientId: ydoc.clientID,
       lastUpdate: Date.now(),
     });
   } catch (error) {
     log.error("Failed to sync camera to Y.js:", error);
+  }
+}
+
+/**
+ * Sync visualization settings to Y.js for real-time collaborative updates.
+ * Covers representation, opacity, colormap, scalar array selection.
+ * @param {string} viewId - View configuration ID
+ * @param {string} userId - User making the change
+ * @param {Object} vizState - Partial visualization state (only changed fields)
+ */
+export function syncVisualizationToYjs(viewId, userId, vizState) {
+  try {
+    // Merge with existing state so partial updates don't overwrite other fields
+    const existing = yVisualizationState.get(viewId)?.visualization || {};
+    yVisualizationState.set(viewId, {
+      visualization: { ...existing, ...vizState },
+      userId,
+      clientId: ydoc.clientID,
+      lastUpdate: Date.now(),
+    });
+  } catch (error) {
+    log.error("Failed to sync visualization to Y.js:", error);
+  }
+}
+
+/**
+ * Broadcast active manipulator identity for UI awareness.
+ * Call with target/action when interaction starts; call with null target to clear.
+ * @param {string} userId
+ * @param {string|null} displayName
+ * @param {string|null} target - "camera" | "dataset" | "filter" | null (clear)
+ * @param {string|null} action - "manipulating" | "loading" | "filtering" | null
+ */
+export function syncManipulatorToYjs(userId, displayName, target, action) {
+  try {
+    if (!target) {
+      yManipulatorState.delete(userId);
+    } else {
+      yManipulatorState.set(userId, {
+        userId,
+        displayName,
+        target,
+        action,
+        clientId: ydoc.clientID,
+        timestamp: Date.now(),
+      });
+    }
+  } catch (error) {
+    log.error("Failed to sync manipulator to Y.js:", error);
+  }
+}
+
+/**
+ * Broadcast the active dataset to all users in the same room.
+ * Keyed by roomId so sync is scoped to the current session only.
+ * @param {string} roomId - Session/room ID (from sessionManager.getRoomId())
+ * @param {string} userId - User making the selection
+ * @param {{ datasetId, name, path, type, source }} datasetInfo
+ */
+export function syncActiveDatasetToYjs(roomId, userId, datasetInfo) {
+  try {
+    const prev = yActiveDataset.get(roomId);
+    const version = (prev?.version || 0) + 1;
+    yActiveDataset.set(roomId, {
+      ...datasetInfo,
+      version,
+      updatedBy: userId,
+      updatedAt: Date.now(),
+      clientId: ydoc.clientID,
+    });
+    console.log('[CIA Collab] → activeDataset broadcast', datasetInfo.datasetId, 'v' + version);
+  } catch (error) {
+    log.error("Failed to sync active dataset to Y.js:", error);
   }
 }
 

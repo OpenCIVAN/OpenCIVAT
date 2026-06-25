@@ -85,6 +85,9 @@ export const config = Object.freeze({
   /** Whether to enable debug logging */
   debugEnabled: resolveValue("debugEnabled", "__DEBUG__", true),
 
+  /** Whether to show multi-window / tiled workspace layout (false = single main workspace) */
+  enableMultiView: resolveValue("enableMultiView", "__ENABLE_MULTI_VIEW__", false),
+
   /** Application version (injected at build time) */
   version: resolveValue("version", "__APP_VERSION__", "dev"),
 

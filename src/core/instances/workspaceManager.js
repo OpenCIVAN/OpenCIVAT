@@ -8,7 +8,12 @@ import {
   getDatasetManager,
   getViewConfigurationManager,
 } from "@Init/appInitializer.js";
-import { onCameraChange } from "@Collaboration/yjs/yjsObservers.js";
+import {
+  onCameraChange,
+  onVisualizationChange,
+  onManipulatorChange,
+  onActiveDatasetChange,
+} from "@Collaboration/yjs/yjsObservers.js";
 import {
   instance as log,
   logInfo,
@@ -105,6 +110,28 @@ class WorkspaceManager {
     });
     log.debug("Y.js camera sync listener registered (real-time)");
 
+    // REAL-TIME: Listen for Y.js visualization state updates
+    onVisualizationChange(({ viewId, visualization, userId }) => {
+      if (visualization) {
+        this._handleYjsVisualizationUpdate(viewId, visualization, userId);
+      }
+    });
+    log.debug("Y.js visualization sync listener registered");
+
+    // REAL-TIME: Listen for manipulator state updates → emit to UI
+    onManipulatorChange(({ action, userId, manipulator }) => {
+      window.dispatchEvent(new CustomEvent('cia:manipulator-changed', {
+        detail: { action, userId, manipulator },
+      }));
+    });
+    log.debug("Y.js manipulator listener registered");
+
+    // REAL-TIME: Listen for active dataset changes from other tabs/users
+    onActiveDatasetChange((data) => {
+      this._handleYjsActiveDatasetUpdate(data);
+    });
+    log.debug("Y.js active dataset sync listener registered");
+
     // PERSISTENCE: Listen for server view updates (fallback + durability)
     if (getViewConfigurationManager()) {
       getViewConfigurationManager()?.on("viewUpdated", (view) => {
@@ -175,6 +202,87 @@ class WorkspaceManager {
           error
         );
       }
+    }
+  }
+
+  /**
+   * Apply visualization state from Y.js to all local instances viewing the given view.
+   * Mirrors the camera sync pattern in _handleYjsCameraUpdate.
+   * @private
+   */
+  _handleYjsVisualizationUpdate(viewId, visualization, sourceUserId) {
+    for (const [instanceId, instance] of this.instances) {
+      if (instance.viewConfigId !== viewId) continue;
+      if (!instance.handler || !instance.instanceData) continue;
+
+      try {
+        if (typeof instance.handler.applySharedState === "function") {
+          instance.handler.applySharedState(
+            instance.instanceData,
+            { visualization },
+            sourceUserId || "remote"
+          );
+        }
+      } catch (error) {
+        log.error(`Failed to apply Y.js visualization to instance ${instanceId}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Load a remotely-selected dataset into the active local VTK instance.
+   * Called when another user in the same room picks a different dataset.
+   * @private
+   */
+  async _handleYjsActiveDatasetUpdate({ datasetId, name, path, type, source }) {
+    console.log('[CIA Collab] Remote dataset load started:', datasetId, name);
+
+    // Find the currently active instance
+    const activeInst = this.getActiveInstance();
+    if (!activeInst?.handler || !activeInst?.instanceData) {
+      console.warn('[CIA Collab] No active instance — cannot load remote dataset:', datasetId);
+      return;
+    }
+
+    const instanceId = activeInst.instanceData.instanceId;
+
+    // Skip if the instance is already showing this dataset (prevents redundant reload)
+    const vcm = getViewConfigurationManager();
+    const currentView = vcm?.getView(activeInst.viewConfigId);
+    if (currentView?.datasetId === datasetId) {
+      console.log('[CIA Collab] Dataset already current, ignored:', datasetId);
+      return;
+    }
+
+    const dm = getDatasetManager();
+
+    // Ensure dataset is registered locally before loading
+    if (!dm?.getDataset(datasetId)) {
+      if (source === 'builtin' && path) {
+        // Built-in datasets are loaded by URL — register from the synced path
+        dm?.addBuiltInDataset({ id: datasetId, name: name || datasetId, path, fileType: type || 'vtp' });
+        console.log('[CIA Collab] Registered remote built-in dataset:', datasetId, path);
+      } else {
+        // Uploaded/server dataset — try fetching metadata from server
+        try {
+          await dm?.fetchDatasetById?.(datasetId);
+        } catch (e) {
+          console.error('[CIA Collab] Remote dataset load failed — fetch error:', datasetId, e);
+          return;
+        }
+        if (!dm?.getDataset(datasetId)) {
+          console.error('[CIA Collab] Remote dataset load failed — not found after fetch:', datasetId);
+          return;
+        }
+      }
+    }
+
+    // Load into the active instance (reuses existing method; handles VTK pipeline swap)
+    try {
+      await this.loadDataIntoInstance(instanceId, datasetId);
+      console.log('[CIA Collab] Remote dataset load completed:', datasetId);
+    } catch (e) {
+      console.error('[CIA Collab] Remote dataset load failed — VTK error:', datasetId, e);
     }
   }
 
