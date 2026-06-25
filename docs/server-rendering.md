@@ -66,21 +66,35 @@ Dataset IDs are slugified filenames: `Bones.vtp` → `bones`, `LungVessels.vtp` 
 
 ### Option A: Standalone Python (fastest for dev)
 
+The webpack dev server proxies `/render-api` and `/render-ws` to `localhost:7001`, so run uvicorn on **port 7001** when developing locally without Docker.
+
+macOS / Linux:
 ```bash
-# 1. Install Python dependencies
 cd server/render_server
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-
-# 2. Start render server (datasets come from public/vtp_files/)
-DATASET_DIR=../../public/vtp_files uvicorn app:app --port 7000 --reload
-
-# 3. Start frontend (separate terminal)
-cd ../..
-npm run start:http
-
-# 4. Open http://localhost:8081
-#    Load Data modal → Server Datasets section shows VTP files
+DATASET_DIR=../../public/vtp_files uvicorn app:app --host 0.0.0.0 --port 7001 --reload
 ```
+
+Windows PowerShell:
+```powershell
+cd server\render_server
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+$env:DATASET_DIR="..\..\public\vtp_files"
+uvicorn app:app --host 0.0.0.0 --port 7001 --reload
+```
+
+In a separate terminal, start the frontend:
+```bash
+cd ../..
+# Ensure .env has RENDER_MODE=server
+npm run start:http
+```
+
+Open http://localhost:8081 — Load Data modal shows Server Datasets.
 
 ### Option B: Docker Compose
 
@@ -202,6 +216,42 @@ Browser                           Render Server
 | `hybrid` | Server mode with local VTK.js fallback if server is unreachable. |
 
 Switch modes by setting `RENDER_MODE` in `.env` and restarting webpack.
+
+---
+
+## GPU Rendering (Windows/NVIDIA Docker)
+
+By default the render server uses Mesa software rendering (CPU). On Windows with an NVIDIA GPU, use the GPU Docker override to enable EGL-accelerated rendering.
+
+**Prerequisite:** test GPU access:
+```bash
+docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+```
+
+**Run with GPU:**
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up render-server
+```
+
+This passes `--gpus all` to the render server container and sets `ENABLE_GPU_RENDERING=true` and `NVIDIA_VISIBLE_DEVICES=all`. VTK auto-selects EGL offscreen rendering when an NVIDIA GPU is present and Mesa falls back when it is not.
+
+**Verify GPU is active:**
+```bash
+curl http://localhost:3001/api/gpu/status
+```
+
+Expected when GPU is available:
+```json
+{
+  "gpuAvailable": true,
+  "nvidiaSmiAvailable": true,
+  "renderingBackend": "gpu",
+  "vtkVersion": "9.x.y",
+  "dockerRuntimeInfo": "NVIDIA GeForce RTX 4080, 560.00"
+}
+```
+
+See **[docs/windows-gpu-setup.md](../docs/windows-gpu-setup.md)** for full Windows + WSL2 + driver setup.
 
 ---
 

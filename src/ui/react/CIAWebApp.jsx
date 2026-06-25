@@ -322,7 +322,7 @@ export function CIAWebApp({ username, userId, projectId }) {
                               <button
                                 className="vr-app__btn vr-app__btn--vr"
                                 onClick={handleEnterVR}
-                                title="Enter VR (Quest 2 / WebXR)"
+                                title="Enter Immersive Mode (WebXR)"
                               >
                                 Enter VR
                               </button>
