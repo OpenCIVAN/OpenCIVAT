@@ -4,6 +4,10 @@
   "description": "Open Collaborative Immersive Visualization and Analytics — WebXR + VTK.js + Y.js",
   "homepage": "https://github.com/opencivan/opencivan",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "start": "webpack serve --mode development --open",
     "start:http": "USE_HTTP=true webpack serve --mode development --open",

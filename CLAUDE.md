@@ -45,12 +45,36 @@ npm run docker:up          # Start Docker services (alt to ./scripts/start.sh)
 npm run docker:up:build    # Build + start Docker services
 ```
 
+### Node Runtime
+
+```bash
+# Node 20+ required for Vitest 4; Node 22 LTS recommended for contributors.
+nvm install 22 && nvm use 22  # or: nvm install --lts
+node -v  # must be v20+ (v22.x recommended)
+```
+
+The project `.nvmrc` specifies `22`. `package.json` `engines` requires `>=20.0.0`.
+
 ### Tests
 ```bash
+# Frontend (Vitest 4 — requires Node 20+)
 npm test                   # Vitest in watch mode
 npm run test:run           # Single run (CI)
 npm run test:run -- src/path/to/file.test.jsx  # Single test file
 npm run test:coverage      # Coverage report (v8, HTML output)
+
+# Backend unit tests (no DB required)
+cd server && npm test -- --testPathPattern "syncEventService|syncPruning"
+
+# Backend integration tests (requires PostgreSQL + DR1 migration)
+TEST_DATABASE_URL="postgres://ciauser:ciadevpassword@localhost:5432/cia_analytics" \
+DEV_BYPASS_AUTH=true \
+cd server && npm test -- --testPathPattern "views-concurrency" --runInBand
+
+# Manual sync_events pruning (safe by default — won't delete unless PRUNING_ENABLED=true)
+SYNC_EVENTS_PRUNING_ENABLED=true \
+DATABASE_URL=postgres://ciauser:ciadevpassword@localhost:5432/cia_analytics \
+node server/scripts/prune-sync-events.js
 ```
 Tests live in `src/**/*.test.{js,jsx,ts,tsx}`. jsdom environment. Coverage scope: `src/ui/react/components/`. Setup file: `src/test/setup.js` (browser API mocks). Note: `idGenerator.test.js` is excluded in `vitest.config.js`.
 

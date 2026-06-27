@@ -368,6 +368,12 @@ export class ViewGroup extends EventEmitter {
         // Dirty tracking for sync
         this._isDirty = false;
         this._dirtyFields = new Set();
+
+        // Server revision counter for optimistic concurrency control (DR1)
+        this.revision = config.revision != null ? Number(config.revision) : null;
+        // Conflict state (set by ViewGroupManager when a 409 is received)
+        this.hasConflict = false;
+        this.conflict = null;
     }
 
     // =========================================================================
@@ -769,6 +775,7 @@ export class ViewGroup extends EventEmitter {
             sharedWith: data.shared_with || data.sharedWith || [],
             createdAt: data.created_at ? new Date(data.created_at).getTime() : Date.now(),
             updatedAt: data.updated_at ? new Date(data.updated_at).getTime() : Date.now(),
+            revision: data.revision != null ? Number(data.revision) : null,
         });
     }
 

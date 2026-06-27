@@ -1063,18 +1063,110 @@ export class ViewGroupManager extends BaseManager {
     }
 
     async _syncToServer(viewGroup) {
+        // Skip sync while a conflict is unresolved
+        if (viewGroup.hasConflict) {
+            this._log.warn(`ViewGroup ${viewGroup.id} has unresolved conflict; skipping sync`);
+            return;
+        }
+
         if (!viewGroup.isDirty()) return;
 
+        // Include base_revision for optimistic concurrency control
+        const payload = viewGroup.toServerPayload();
+        if (viewGroup.revision != null) {
+            payload.base_revision = viewGroup.revision;
+        }
+
         try {
-            await apiClient.put(
-                `/viewgroups/${viewGroup.id}`,
-                viewGroup.toServerPayload()
-            );
+            const response = await apiClient.put(`/viewgroups/${viewGroup.id}`, payload);
+            // Accept new revision from server
+            const newRevision = response?.revision;
+            if (newRevision != null) viewGroup.revision = Number(newRevision);
             viewGroup.clearDirty();
             this._log.debug(`Synced ViewGroup ${viewGroup.id} to server`);
         } catch (error) {
-            this._log.error(`Failed to sync ViewGroup ${viewGroup.id}:`, error);
+            if (error?.status === 409) {
+                // Stale write — surface conflict to user
+                const details = error?.details || {};
+                viewGroup.hasConflict = true;
+                viewGroup.conflict = {
+                    entityType: 'viewgroup',
+                    entityId: viewGroup.id,
+                    clientBaseRevision: viewGroup.revision,
+                    serverRevision: details.serverRevision,
+                    serverObject: details.serverObject,
+                    updatedBy: details.updatedBy || null,
+                    updatedAt: details.updatedAt || null,
+                    clientObject: payload,
+                };
+                this._emit('conflictDetected', viewGroup.conflict);
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(
+                        new CustomEvent('cia:sync-conflict', { detail: viewGroup.conflict })
+                    );
+                }
+                this._log.warn(`Conflict detected on ViewGroup ${viewGroup.id}`);
+            } else {
+                this._log.error(`Failed to sync ViewGroup ${viewGroup.id}:`, error);
+                // Keep dirty so it will be retried
+            }
         }
+    }
+
+    /**
+     * Resolve a conflict by adopting the server's current viewgroup state.
+     * @param {string} viewGroupId
+     */
+    resolveConflictUseServer(viewGroupId) {
+        const viewGroup = this._viewGroups.get(viewGroupId);
+        if (!viewGroup?.hasConflict) return;
+
+        const serverObj = viewGroup.conflict?.serverObject;
+        if (serverObj) {
+            const updated = ViewGroup.fromServerResponse(serverObj);
+            if (updated) {
+                // Preserve identity references, copy server data
+                viewGroup.name = updated.name;
+                viewGroup.color = updated.color;
+                viewGroup.layoutId = updated.layoutId;
+                viewGroup.slots = updated.slots;
+                viewGroup.canvasPosition = updated.canvasPosition;
+                viewGroup.visibility = updated.visibility;
+                viewGroup.revision = updated.revision;
+            }
+        }
+        viewGroup.hasConflict = false;
+        viewGroup.conflict = null;
+        viewGroup.clearDirty();
+        this._emit('viewGroupUpdated', { viewGroup, isRemote: true });
+        this._log.info(`Conflict resolved (use server) for ViewGroup ${viewGroupId}`);
+    }
+
+    /**
+     * Resolve a conflict by force-overwriting with the client's pending changes.
+     * @param {string} viewGroupId
+     */
+    async resolveConflictOverwrite(viewGroupId) {
+        const viewGroup = this._viewGroups.get(viewGroupId);
+        if (!viewGroup?.hasConflict) return;
+
+        const clientObj = viewGroup.conflict?.clientObject || {};
+        viewGroup.hasConflict = false;
+        viewGroup.conflict = null;
+
+        try {
+            const response = await apiClient.put(`/viewgroups/${viewGroupId}`, {
+                ...clientObj,
+                force_overwrite: true,
+            });
+            const newRevision = response?.revision;
+            if (newRevision != null) viewGroup.revision = Number(newRevision);
+            viewGroup.clearDirty();
+            this._log.info(`Conflict resolved (force overwrite) for ViewGroup ${viewGroupId}`);
+        } catch (err) {
+            this._log.error(`Force overwrite failed for ViewGroup ${viewGroupId}:`, err);
+        }
+        this._emit('viewGroupUpdated', { viewGroup });
     }
 
     // ===========================================================================

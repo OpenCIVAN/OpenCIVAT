@@ -7,6 +7,8 @@ const router = express.Router();
 const { getUser } = require("../middleware/auth");
 const thumbnailService = require("../services/thumbnailService");
 const { createLogger } = require("../utils/logger");
+const { writeSyncEvent, buildSnapshot } = require("../services/syncEventService");
+const { diffObjects } = require("../utils/jsonDiff");
 
 const log = createLogger("views");
 
@@ -282,7 +284,16 @@ router.post("/", async (req, res, next) => {
 
 /**
  * PUT /api/views/:id
- * Update a view configuration
+ * Update a view configuration.
+ *
+ * Supports optimistic concurrency control (OCC) via the optional
+ * `base_revision` body field.  When provided the server rejects stale
+ * writes with 409 Conflict and returns the current server state so the
+ * client can resolve.  When omitted the write proceeds as last-write-wins
+ * (backward-compatible behaviour).
+ *
+ * Set `force_overwrite: true` to skip the revision check after an explicit
+ * conflict-resolution decision by the user.
  */
 router.put("/:id", async (req, res, next) => {
   const { pool, wsManager } = req.app.locals;
@@ -290,19 +301,9 @@ router.put("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const user = getUser(req);
-    const updates = req.body;
-
-    // Get existing view
-    const existing = await pool.query(
-      "SELECT * FROM view_configurations WHERE id = $1",
-      [id]
-    );
-
-    if (existing.rows.length === 0) {
-      return res.status(404).json({ error: "View not found" });
-    }
-
-    const beforeState = existing.rows[0];
+    const actorUserId = user?.id || req.headers["x-user-id"] || null;
+    const { base_revision, force_overwrite, ...updates } = req.body;
+    const correlationId = req.headers["x-correlation-id"] || null;
 
     // Build dynamic update query
     const allowedFields = [
@@ -331,13 +332,11 @@ router.put("/:id", async (req, res, next) => {
     let paramIndex = 1;
 
     for (const field of allowedFields) {
-      // Map camelCase to snake_case
       const dbField = field.replace(/([A-Z])/g, "_$1").toLowerCase();
       const bodyField = field;
 
       if (updates[bodyField] !== undefined) {
         let value = updates[bodyField];
-        // JSON fields need stringification
         const jsonFields = [
           "camera",
           "filters",
@@ -364,23 +363,117 @@ router.put("/:id", async (req, res, next) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
-    // Add tracking fields
+    // Always increment revision and track who updated
+    setClauses.push(`revision = revision + 1`);
     setClauses.push(`updated_at = NOW()`);
 
-    // Add WHERE clause
+    // OCC: check base_revision unless force_overwrite is set
+    const hasRevisionCheck = base_revision != null && !force_overwrite;
+
+    // Build WHERE clause
+    let whereClause = `id = $${paramIndex++}`;
     values.push(id);
+    if (hasRevisionCheck) {
+      whereClause += ` AND revision = $${paramIndex++}`;
+      values.push(Number(base_revision));
+    }
 
-    const result = await pool.query(
-      `
-      UPDATE view_configurations
-      SET ${setClauses.join(", ")}
-      WHERE id = $${paramIndex}
-      RETURNING *
-    `,
-      values
-    );
+    // Run update inside a transaction so the sync_event write is atomic
+    const client = await pool.connect();
+    let view;
+    let syncEvent;
+    let oldStateForPatch = null;
 
-    const view = result.rows[0];
+    try {
+      await client.query("BEGIN");
+
+      // Fetch old state for patch computation (only when OCC is active — we know the current revision)
+      if (hasRevisionCheck) {
+        const oldResult = await client.query(
+          "SELECT * FROM view_configurations WHERE id = $1",
+          [id]
+        );
+        oldStateForPatch = oldResult.rows[0] || null;
+      }
+
+      const result = await client.query(
+        `UPDATE view_configurations SET ${setClauses.join(", ")} WHERE ${whereClause} RETURNING *`,
+        values
+      );
+
+      if (result.rowCount === 0) {
+        await client.query("ROLLBACK");
+        client.release();
+
+        if (hasRevisionCheck) {
+          // Conflict: fetch current state for the client
+          const current = await pool.query(
+            "SELECT * FROM view_configurations WHERE id = $1",
+            [id]
+          );
+          if (current.rows.length === 0) {
+            return res.status(404).json({ error: "View not found" });
+          }
+          const cur = current.rows[0];
+          return res.status(409).json({
+            error: "conflict",
+            entityType: "view_configuration",
+            entityId: id,
+            clientBaseRevision: Number(base_revision),
+            serverRevision: Number(cur.revision),
+            serverObject: cur,
+            updatedBy: cur.updated_by || null,
+            updatedAt: cur.updated_at,
+          });
+        }
+
+        return res.status(404).json({ error: "View not found" });
+      }
+
+      view = result.rows[0];
+
+      // Determine workspace_id for sync_events (look up via project)
+      let workspaceId = null;
+      try {
+        const ws = await client.query(
+          "SELECT id FROM workspaces WHERE project_id = $1 LIMIT 1",
+          [view.project_id]
+        );
+        workspaceId = ws.rows[0]?.id || null;
+      } catch (_) { /* non-fatal */ }
+
+      // Compute patch when we have both old and new state (OCC path only)
+      const snapshotData = buildSnapshot(view);
+      let patchData = null;
+      if (oldStateForPatch) {
+        const ops = diffObjects(buildSnapshot(oldStateForPatch), snapshotData);
+        patchData = ops.length > 0 ? ops : null;
+      }
+
+      const operation = force_overwrite ? "conflict_resolved" : "update";
+      syncEvent = await writeSyncEvent(client, {
+        workspaceId,
+        entityType: "view_configuration",
+        entityId: id,
+        operation,
+        baseRevision: base_revision != null ? Number(base_revision) : null,
+        nextRevision: Number(view.revision),
+        snapshot: snapshotData,
+        patch: patchData,
+        actorUserId,
+        correlationId,
+      });
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      client.release();
+      throw err;
+    }
+
+    client.release();
+
+    const beforeState = { id };
 
     // Audit log
     if (req.audit) {
@@ -393,19 +486,16 @@ router.put("/:id", async (req, res, next) => {
       });
     }
 
-    // Broadcast update to all clients in the project
-    // Even private views need sync for the owner across devices
+    // Broadcast update to all clients in the project (enriched payload)
     if (wsManager && view.project_id) {
-      wsManager.viewUpdated(view.project_id, view);
+      wsManager.viewUpdated(view.project_id, view, syncEvent?.id, actorUserId);
     } else if (wsManager && view.dataset_id) {
-      // Fallback: find project from file access table
       const projects = await pool.query(
         "SELECT project_id FROM file_project_access WHERE file_id = $1",
         [view.dataset_id]
       );
-
       for (const row of projects.rows) {
-        wsManager.viewUpdated(row.project_id, view);
+        wsManager.viewUpdated(row.project_id, view, syncEvent?.id, actorUserId);
       }
     }
 

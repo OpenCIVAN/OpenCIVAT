@@ -424,14 +424,22 @@ class WebSocketManager {
   }
 
   /**
-   * Broadcast annotation updated event
+   * Broadcast annotation updated event.
+   * @param {string}      projectId
+   * @param {string}      fileId
+   * @param {object}      annotation     Updated annotation row (includes revision).
+   * @param {bigint|null} syncEventId    sync_events.id for watermark tracking.
+   * @param {string|null} actorUserId    User who made the change.
    */
-  annotationUpdated(projectId, fileId, annotation) {
+  annotationUpdated(projectId, fileId, annotation, syncEventId = null, actorUserId = null) {
     this.broadcastToProject(projectId, {
       type: "annotation:updated",
       projectId,
       fileId,
       annotation,
+      revision: annotation?.revision ? Number(annotation.revision) : undefined,
+      syncEventId: syncEventId != null ? syncEventId.toString() : null,
+      actorUserId: actorUserId || null,
       timestamp: new Date().toISOString(),
     });
   }
@@ -457,18 +465,26 @@ class WebSocketManager {
       type: "view:created",
       projectId,
       view,
+      revision: view?.revision ? Number(view.revision) : undefined,
       timestamp: new Date().toISOString(),
     });
   }
 
   /**
-   * Broadcast view updated event
+   * Broadcast view updated event.
+   * @param {string} projectId
+   * @param {object} view        Full updated view row (includes revision field).
+   * @param {bigint|string|null} syncEventId  The sync_events.id for watermark tracking.
+   * @param {string|null}        actorUserId  The user who made the change (skip echo on originator).
    */
-  viewUpdated(projectId, view) {
+  viewUpdated(projectId, view, syncEventId = null, actorUserId = null) {
     this.broadcastToProject(projectId, {
       type: "view:updated",
       projectId,
       view,
+      revision: view?.revision ? Number(view.revision) : undefined,
+      syncEventId: syncEventId != null ? syncEventId.toString() : null,
+      actorUserId: actorUserId || null,
       timestamp: new Date().toISOString(),
     });
   }

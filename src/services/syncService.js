@@ -1,11 +1,27 @@
 // src/services/syncService.js
-// Handles client-server state reconciliation
+// Handles client-server state reconciliation and delta hydration
 
 import clientConfig from "@Core/config/clientConfig.js";
 import { sync as log } from "@Utils/logger.js";
+import { apiClient } from "@Services/apiClient.js";
 
-// localStorage key for sync state
+// localStorage keys
 const SYNC_STATE_KEY = "cia_sync_state";
+
+/**
+ * Build the localStorage key for a sync watermark.
+ * Scoped by both userId and workspaceId to prevent cross-user reuse on a
+ * shared browser.  When userId is null the key still differs from the old
+ * unscoped format (double-underscore prefix) so stale pre-hardening
+ * watermarks are not accidentally reused.
+ *
+ * Format: cia_sync_watermark_<userId>_<workspaceId>
+ *   or    cia_sync_watermark__<workspaceId>   (when userId unknown)
+ */
+function watermarkKey(workspaceId, userId = null) {
+  const uid = userId || "";
+  return `cia_sync_watermark_${uid}_${workspaceId}`;
+}
 
 // Divergence thresholds
 const THRESHOLDS = {
@@ -221,6 +237,205 @@ export async function performReconciliation(
   return { ...results, totalOrphansRemoved: totalOrphans, divergence };
 }
 
+// ============================================================================
+// WATERMARK MANAGEMENT (DR1 — Delta Hydration)
+// ============================================================================
+
+/**
+ * Return the last known sync_events.id for a workspace/user pair.
+ * Returns 0 if no watermark has been saved (triggers full hydration).
+ *
+ * @param {string} workspaceId
+ * @param {string|null} [userId=null]  Authenticated user id for scoping.
+ */
+export function getSyncWatermark(workspaceId, userId = null) {
+  try {
+    const raw = localStorage.getItem(watermarkKey(workspaceId, userId));
+    return raw ? parseInt(raw, 10) : 0;
+  } catch (e) {
+    log.warn("Failed to read sync watermark:", e);
+    return 0;
+  }
+}
+
+/**
+ * Persist the latest known sync_events.id for a workspace/user pair.
+ *
+ * @param {string}      workspaceId
+ * @param {number}      eventId
+ * @param {string|null} [userId=null]
+ */
+export function saveSyncWatermark(workspaceId, eventId, userId = null) {
+  try {
+    if (!workspaceId || eventId == null) return;
+    localStorage.setItem(watermarkKey(workspaceId, userId), String(eventId));
+  } catch (e) {
+    log.warn("Failed to save sync watermark:", e);
+  }
+}
+
+/**
+ * Remove the saved watermark (e.g. on server reset or workspace change).
+ *
+ * @param {string}      workspaceId
+ * @param {string|null} [userId=null]
+ */
+export function clearSyncWatermark(workspaceId, userId = null) {
+  try {
+    localStorage.removeItem(watermarkKey(workspaceId, userId));
+  } catch (e) {
+    log.warn("Failed to clear sync watermark:", e);
+  }
+}
+
+/**
+ * Fetch delta events from the server since a given watermark.
+ * Returns the raw API response shape:
+ *   { workspaceId, fromWatermark, toWatermark, events, requiresFullResync, reason? }
+ */
+export async function fetchDeltaSince(workspaceId, since) {
+  try {
+    const data = await apiClient.get(
+      `/sync/delta?workspaceId=${encodeURIComponent(workspaceId)}&since=${since}`
+    );
+    return data;
+  } catch (error) {
+    log.warn("Delta fetch failed, will use full resync:", error.message);
+    return { requiresFullResync: true, reason: "fetch_error", events: [], toWatermark: since };
+  }
+}
+
+/**
+ * Apply an ordered array of delta events to the running managers.
+ *
+ * Idempotent: events whose next_revision <= the current local revision are
+ * skipped without counting as failures.
+ *
+ * Stops at the first failure because sync_events are strictly ordered —
+ * skipping a failed event would create a permanent hole in local state.
+ *
+ * @param {object[]} events     sync_events rows from the server (ordered by id ASC)
+ * @param {object}   managers   { viewConfigurationManager, ... }
+ * @param {string|null} [_userId]  Reserved for future per-user state (unused here).
+ * @returns {{ applied: number, lastAppliedEventId: number|null, failed: boolean }}
+ */
+export async function applyDeltaEvents(events, managers = {}, _userId = null) {
+  const { viewConfigurationManager } = managers;
+  let applied = 0;
+  let lastAppliedEventId = null;
+  let failed = false;
+
+  for (const event of events) {
+    try {
+      if (event.entity_type === "view_configuration" && viewConfigurationManager) {
+        const existing = viewConfigurationManager.getView?.(event.entity_id);
+        if (existing && Number(existing.revision) >= Number(event.next_revision)) {
+          log.debug(`Delta skip (already at rev ${existing.revision}): view:${event.entity_id}`);
+          // Count as applied for watermark purposes — it's idempotent, not a failure
+          lastAppliedEventId = Number(event.id);
+          continue;
+        }
+
+        if (event.operation === "delete" || event.payload_type === "tombstone") {
+          viewConfigurationManager.removeView?.(event.entity_id);
+        } else if (event.payload_type === "patch" && event.patch) {
+          // Apply JSON Patch ops on top of current local state
+          const current = viewConfigurationManager.getView?.(event.entity_id);
+          if (current) {
+            try {
+              const { patch: applyPatch } = await import("@Utils/jsonPatch.js");
+              const currentServerFmt = viewConfigurationManager._clientToServerFormat(current);
+              const merged = applyPatch(currentServerFmt, event.patch);
+              viewConfigurationManager.handleServerBroadcast?.("view:updated", { view: merged });
+            } catch (patchErr) {
+              log.warn(`Patch apply failed for view ${event.entity_id}, stopping batch: ${patchErr.message}`);
+              failed = true;
+              break;
+            }
+          } else {
+            // No local state to patch against — treat as missing and stop
+            log.warn(`Cannot apply patch for view ${event.entity_id}: not in local state`);
+            failed = true;
+            break;
+          }
+        } else if (event.snapshot) {
+          viewConfigurationManager.handleServerBroadcast?.("view:updated", {
+            view: event.snapshot,
+          });
+        }
+        applied++;
+      }
+      // Additional entity types handled here in future DRs
+      lastAppliedEventId = Number(event.id);
+    } catch (err) {
+      log.warn(`Failed to apply delta event #${event.id}: ${err.message}. Stopping batch.`);
+      failed = true;
+      break; // stop — do not skip ahead; a gap here would corrupt local state
+    }
+  }
+
+  log.info(`Applied ${applied}/${events.length} delta events${failed ? " (stopped early on failure)" : ""}`);
+  return { applied, lastAppliedEventId, failed };
+}
+
+/**
+ * Startup hydration entrypoint.
+ *
+ * Flow:
+ *  1. Read saved watermark for workspaceId + userId.
+ *  2. If watermark > 0: request delta → apply events → advance watermark to
+ *     lastAppliedEventId (not toWatermark — never skip past a failed event).
+ *     If server returns requiresFullResync: clear watermark, fall through.
+ *  3. If watermark = 0: return { usedFullHydration: true } (caller runs full REST).
+ *
+ * @param {string}      workspaceId
+ * @param {object}      [managers={}]   { viewConfigurationManager, ... }
+ * @param {string|null} [userId=null]   Authenticated user id for watermark scoping.
+ * @returns {{ usedDelta?: boolean, usedFullHydration?: boolean, eventsApplied?: number, reason?: string }}
+ */
+export async function performStartupHydration(workspaceId, managers = {}, userId = null) {
+  const watermark = getSyncWatermark(workspaceId, userId);
+  log.info(`Startup hydration: workspaceId=${workspaceId} userId=${userId} watermark=${watermark}`);
+
+  if (watermark <= 0) {
+    log.info("No watermark — using full hydration");
+    return { usedFullHydration: true, reason: "no_watermark" };
+  }
+
+  const delta = await fetchDeltaSince(workspaceId, watermark);
+
+  if (delta.requiresFullResync) {
+    log.info(`Delta hydration requires full resync: ${delta.reason}`);
+    clearSyncWatermark(workspaceId, userId);
+    return { usedFullHydration: true, reason: delta.reason };
+  }
+
+  const { applied, lastAppliedEventId, failed } = await applyDeltaEvents(
+    delta.events || [],
+    managers,
+    userId
+  );
+
+  if (failed && applied === 0) {
+    // No events applied at all — clear watermark and fall back to full hydration
+    log.warn("All delta events failed to apply; falling back to full hydration");
+    clearSyncWatermark(workspaceId, userId);
+    return { usedFullHydration: true, reason: "apply_failed" };
+  }
+
+  // Advance watermark only as far as we successfully applied, not to toWatermark
+  if (lastAppliedEventId != null && lastAppliedEventId > watermark) {
+    saveSyncWatermark(workspaceId, lastAppliedEventId, userId);
+    log.info(`Watermark advanced: ${watermark} → ${lastAppliedEventId}`);
+  }
+
+  return { usedDelta: true, eventsApplied: applied };
+}
+
+// ============================================================================
+// DEBUG ACCESS
+// ============================================================================
+
 // Debug access
 if (typeof window !== "undefined") {
   window.CIA = window.CIA || {};
@@ -229,5 +444,12 @@ if (typeof window !== "undefined") {
     fetchServerStatus,
     clearSyncState,
     getStoredSyncState,
+    // Watermark management (workspaceId, userId) — userId is optional
+    getSyncWatermark,
+    saveSyncWatermark,
+    clearSyncWatermark,
+    fetchDeltaSince,
+    applyDeltaEvents,
+    performStartupHydration,
   };
 }

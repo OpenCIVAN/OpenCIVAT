@@ -159,11 +159,26 @@ export class AnnotationManager extends BaseManager {
       throw new Error(`Annotation ${annotationId} not found`);
     }
 
+    // Skip sync while conflict is unresolved
+    if (annotation.hasConflict) {
+      this._log.warn(`Annotation ${annotationId} has unresolved conflict; skipping update sync`);
+      return annotation;
+    }
+
+    // Build payload, including base_revision for optimistic concurrency control
+    const payload = { ...updates };
+    if (annotation.revision != null) {
+      payload.base_revision = annotation.revision;
+    }
+
     try {
-      const result = await apiClient.put(
-        `/annotations/${annotationId}`,
-        updates
-      );
+      const result = await apiClient.put(`/annotations/${annotationId}`, payload);
+
+      // Accept new revision from server response
+      const newRevision = result?.annotation?.revision ?? result?.revision;
+      if (newRevision != null) {
+        annotation.revision = Number(newRevision);
+      }
 
       // Update local copy
       Object.assign(annotation, updates);
@@ -172,9 +187,107 @@ export class AnnotationManager extends BaseManager {
       this._log.debug(`Annotation updated: ${annotationId}`);
       return annotation;
     } catch (error) {
+      if (error?.status === 409) {
+        // Stale write — another user changed this annotation; surface conflict
+        const details = error?.details || {};
+        annotation.hasConflict = true;
+        annotation.conflict = {
+          entityType: "annotation",
+          entityId: annotationId,
+          clientBaseRevision: annotation.revision,
+          serverRevision: details.serverRevision,
+          serverObject: details.serverObject,
+          updatedBy: details.updatedBy || null,
+          updatedAt: details.updatedAt || null,
+          clientObject: { ...annotation, ...updates },
+        };
+        this._emit("conflictDetected", annotation.conflict);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("cia:sync-conflict", { detail: annotation.conflict })
+          );
+        }
+        this._log.warn(`Conflict detected on annotation ${annotationId}`);
+        return annotation; // return current state; user must resolve
+      }
       this._log.error(`Failed to update annotation ${annotationId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Resolve a conflict by adopting the server's current annotation state.
+   * @param {string} annotationId
+   */
+  resolveConflictUseServer(annotationId) {
+    // Find the annotation across all datasets
+    const { annotation, dataset } = this._findAnnotation(annotationId);
+    if (!annotation?.hasConflict) return;
+
+    const serverObj = annotation.conflict?.serverObject;
+    if (serverObj) {
+      // Adopt server state, including the server's revision
+      Object.assign(annotation, {
+        text: serverObj.text,
+        content: serverObj.content,
+        position: serverObj.position,
+        normal: serverObj.normal,
+        visibility: serverObj.visibility,
+        metadata: serverObj.metadata,
+        type: serverObj.type,
+        revision: serverObj.revision != null ? Number(serverObj.revision) : annotation.revision,
+      });
+    }
+    annotation.hasConflict = false;
+    annotation.conflict = null;
+
+    if (dataset) {
+      this._emit("annotationUpdated", { datasetId: dataset.id, annotation });
+    }
+    this._log.info(`Conflict resolved (use server) for annotation ${annotationId}`);
+  }
+
+  /**
+   * Resolve a conflict by force-overwriting with the client's pending changes.
+   * @param {string} annotationId
+   */
+  async resolveConflictOverwrite(annotationId) {
+    const { annotation, dataset } = this._findAnnotation(annotationId);
+    if (!annotation?.hasConflict) return;
+
+    const clientObj = annotation.conflict?.clientObject || {};
+    annotation.hasConflict = false;
+    annotation.conflict = null;
+
+    try {
+      const result = await apiClient.put(`/annotations/${annotationId}`, {
+        ...clientObj,
+        force_overwrite: true,
+      });
+      const newRevision = result?.annotation?.revision ?? result?.revision;
+      if (newRevision != null) annotation.revision = Number(newRevision);
+      this._log.info(`Conflict resolved (force overwrite) for annotation ${annotationId}`);
+    } catch (err) {
+      this._log.error(`Force overwrite failed for annotation ${annotationId}:`, err);
+    }
+
+    if (dataset) {
+      this._emit("annotationUpdated", { datasetId: dataset.id, annotation });
+    }
+  }
+
+  /**
+   * Find an annotation by id across all loaded datasets.
+   * @private
+   */
+  _findAnnotation(annotationId) {
+    if (!this._datasetManager) return { annotation: null, dataset: null };
+    const datasets = this._datasetManager.getAllDatasets?.() || [];
+    for (const dataset of datasets) {
+      const annotation = dataset.getAnnotation?.(annotationId);
+      if (annotation) return { annotation, dataset };
+    }
+    return { annotation: null, dataset: null };
   }
 
   /**
