@@ -5,9 +5,14 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 // Mocks for heavy dependencies
 // ============================================================================
 
-vi.mock('@Utils/logger.js', () => ({
-  view: { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
-}));
+vi.mock('@Utils/logger.js', () => {
+  const mkLog = () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() });
+  return {
+    view: mkLog(), viewGroup: mkLog(), annotation: mkLog(), sync: mkLog(),
+    presence: mkLog(), app: mkLog(), wsa: mkLog(),
+    createLogger: () => mkLog(),
+  };
+});
 
 vi.mock('@Core/config/clientConfig.js', () => ({
   config: { defaultSessionId: 'project-1' },
@@ -31,22 +36,20 @@ vi.mock('@Core/instances/types/instanceTypeRegistry.js', () => ({
   instanceTypeRegistry: { get: vi.fn() },
 }));
 
-// Mock apiClient
-const mockApiClient = {
-  put: vi.fn(),
-  post: vi.fn(),
-  get: vi.fn(),
-};
-vi.mock('@Services/apiClient.js', () => ({ apiClient: mockApiClient }));
+vi.mock('@Services/apiClient.js', () => ({
+  apiClient: { put: vi.fn(), post: vi.fn(), get: vi.fn() }
+}));
 
 import { ViewConfigurationManager } from '../ViewConfigurationManager.js';
+import { apiClient as mockApiClient } from '@Services/apiClient.js';
 
 // ============================================================================
 // Helpers
 // ============================================================================
 
 function makeManager() {
-  const mgr = new ViewConfigurationManager({ syncThrottleMs: 0 });
+  // Use 1 not 0: syncThrottleMs uses || fallback so 0 would become 100ms default
+  const mgr = new ViewConfigurationManager({ syncThrottleMs: 1 });
   mgr._projectId = 'project-1';
   return mgr;
 }

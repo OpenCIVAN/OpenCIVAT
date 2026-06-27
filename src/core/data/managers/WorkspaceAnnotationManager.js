@@ -125,6 +125,66 @@ class WorkspaceAnnotationManager {
   }
 
   // =========================================================================
+  // DELTA APPLY
+  // =========================================================================
+
+  /**
+   * Apply one delta event from the sync stream to local workspace annotation state.
+   * Called by syncService.applyDeltaEvents.
+   *
+   * Workspace annotations are stored as plain snake_case objects (server format),
+   * so patch operations can be applied directly without format conversion.
+   *
+   * @param {object} event  sync_events row (payload_type, patch, snapshot)
+   * @returns {Promise<boolean>} true = applied, false = failed (stop batch)
+   */
+  async applyDeltaEvent(event) {
+    const id = event.entity_id;
+    const cat = log?.[LOG_CAT] || log;
+
+    if (event.operation === 'delete' || event.payload_type === 'tombstone') {
+      this._annotations.delete(id);
+      return true;
+    }
+
+    const existing = this.getAnnotation(id);
+
+    // Idempotency: skip if already at this revision or newer
+    if (
+      existing?.revision != null &&
+      Number(existing.revision) >= Number(event.next_revision)
+    ) {
+      return true;
+    }
+
+    if (event.payload_type === 'patch' && event.patch) {
+      if (!existing) {
+        cat?.warn?.(`Cannot apply patch for workspace annotation ${id}: not in local state`);
+        return false;
+      }
+
+      try {
+        const { patch: applyPatch } = await import('@Utils/jsonPatch.js');
+        // Annotations are already in server (snake_case) format — apply directly
+        const patched = applyPatch({ ...existing }, event.patch);
+        this.registerAnnotation({ ...patched, revision: Number(event.next_revision) });
+        return true;
+      } catch (err) {
+        cat?.warn?.(`Workspace annotation patch failed for ${id}: ${err.message}`);
+        return false;
+      }
+    }
+
+    if (event.snapshot) {
+      this.registerAnnotation(event.snapshot);
+      return true;
+    }
+
+    cat?.warn?.(`Unrecognized delta event format for workspace annotation ${id}`);
+    return false;
+  }
+
+  // =========================================================================
   // CONFLICT RESOLUTION
   // =========================================================================
 

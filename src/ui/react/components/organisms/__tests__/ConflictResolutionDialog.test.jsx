@@ -164,7 +164,7 @@ describe('ConflictResolutionDialog — generic behavior', () => {
     dispatchConflict(makeConflict());
 
     await act(async () => { fireEvent.click(screen.getByText(/keep mine \(overwrite\)/i)); });
-    await act(async () => { fireEvent.click(screen.getByText(/confirm/i)); });
+    await act(async () => { fireEvent.click(screen.getByText(/confirm: keep mine/i)); });
     expect(mgr.resolveConflictOverwrite).toHaveBeenCalledWith('view-1');
   });
 

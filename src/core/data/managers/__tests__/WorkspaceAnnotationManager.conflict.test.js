@@ -5,15 +5,22 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 // Mocks
 // ============================================================================
 
-vi.mock('@Utils/logger.js', () => ({
-  wsa: { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
-}));
+vi.mock('@Utils/logger.js', () => {
+  const mkLog = () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() });
+  return {
+    wsa: mkLog(), annotation: mkLog(), view: mkLog(), viewGroup: mkLog(),
+    sync: mkLog(), presence: mkLog(), app: mkLog(),
+    createLogger: () => mkLog(),
+  };
+});
 
-const mockApiClient = { put: vi.fn(), post: vi.fn(), get: vi.fn() };
-vi.mock('@Services/apiClient.js', () => ({ apiClient: mockApiClient }));
+vi.mock('@Services/apiClient.js', () => ({
+  apiClient: { put: vi.fn(), post: vi.fn(), get: vi.fn() }
+}));
 
 // Import AFTER mocks
 import WorkspaceAnnotationManager from '../WorkspaceAnnotationManager.js';
+import { apiClient as mockApiClient } from '@Services/apiClient.js';
 
 // ============================================================================
 // Helpers
@@ -135,7 +142,12 @@ describe('WorkspaceAnnotationManager', () => {
   });
 
   test('skips update when annotation has unresolved conflict', async () => {
-    mgr.registerAnnotation(makeAnnotation({ hasConflict: true, conflict: {} }));
+    mgr.registerAnnotation(makeAnnotation({ revision: 3 }));
+    // Set conflict state directly (registerAnnotation always resets hasConflict)
+    const stored = mgr._annotations.get('wa-1');
+    stored.hasConflict = true;
+    stored.conflict = { entityType: 'workspace_annotation', entityId: 'wa-1' };
+
     const result = await mgr.updateWorkspaceAnnotation('wa-1', { text_content: 'Blocked' });
     expect(result).toBeNull();
     expect(mockApiClient.put).not.toHaveBeenCalled();
@@ -147,20 +159,80 @@ describe('WorkspaceAnnotationManager', () => {
     await expect(mgr.updateWorkspaceAnnotation('wa-1', {})).rejects.toBeDefined();
   });
 
+  // ── applyDeltaEvent ───────────────────────────────────────────────────────
+
+  test('applyDeltaEvent snapshot registers annotation from server data', async () => {
+    const event = {
+      id: 20, entity_type: 'workspace_annotation', entity_id: 'wa-1',
+      operation: 'update', payload_type: 'snapshot', next_revision: 4,
+      snapshot: { id: 'wa-1', type: 'arrow', revision: 4, text_content: 'Snap' },
+    };
+    const ok = await mgr.applyDeltaEvent(event);
+    expect(ok).toBe(true);
+    expect(mgr.getAnnotation('wa-1').text_content).toBe('Snap');
+    expect(mgr.getAnnotation('wa-1').revision).toBe(4);
+  });
+
+  test('applyDeltaEvent patch applies changed fields', async () => {
+    mgr.registerAnnotation(makeAnnotation({ revision: 3, visibility: 'public', z_index: 0 }));
+
+    const event = {
+      id: 20, entity_type: 'workspace_annotation', entity_id: 'wa-1',
+      operation: 'update', payload_type: 'patch', next_revision: 4,
+      patch: [{ op: 'replace', path: '/visibility', value: 'private' }],
+    };
+    const ok = await mgr.applyDeltaEvent(event);
+    expect(ok).toBe(true);
+    expect(mgr.getAnnotation('wa-1').visibility).toBe('private');
+    expect(mgr.getAnnotation('wa-1').revision).toBe(4);
+  });
+
+  test('applyDeltaEvent tombstone removes annotation', async () => {
+    mgr.registerAnnotation(makeAnnotation());
+    const event = {
+      id: 20, entity_type: 'workspace_annotation', entity_id: 'wa-1',
+      operation: 'delete', payload_type: 'tombstone', next_revision: 4,
+    };
+    const ok = await mgr.applyDeltaEvent(event);
+    expect(ok).toBe(true);
+    expect(mgr.getAnnotation('wa-1')).toBeNull();
+  });
+
+  test('applyDeltaEvent patch with missing local state returns false', async () => {
+    const event = {
+      id: 20, entity_type: 'workspace_annotation', entity_id: 'wa-missing',
+      operation: 'update', payload_type: 'patch', next_revision: 4,
+      patch: [{ op: 'replace', path: '/visibility', value: 'private' }],
+    };
+    const ok = await mgr.applyDeltaEvent(event);
+    expect(ok).toBe(false);
+  });
+
+  test('applyDeltaEvent patch is idempotent when already at revision', async () => {
+    mgr.registerAnnotation(makeAnnotation({ revision: 5, visibility: 'public' }));
+    const event = {
+      id: 20, entity_type: 'workspace_annotation', entity_id: 'wa-1',
+      operation: 'update', payload_type: 'patch', next_revision: 4,
+      patch: [{ op: 'replace', path: '/visibility', value: 'private' }],
+    };
+    const ok = await mgr.applyDeltaEvent(event);
+    expect(ok).toBe(true);
+    expect(mgr.getAnnotation('wa-1').visibility).toBe('public'); // not changed
+  });
+
   // ── resolveConflictUseServer ──────────────────────────────────────────────
 
   test('resolveConflictUseServer adopts server state and clears conflict', () => {
-    mgr.registerAnnotation(makeAnnotation({
-      revision: 3,
-      hasConflict: true,
-      conflict: {
-        serverObject: { id: 'wa-1', revision: 5, text_content: 'Server text', visibility: 'public' },
-      },
-    }));
+    mgr.registerAnnotation(makeAnnotation({ revision: 3 }));
+    // Set conflict state directly (registerAnnotation always resets hasConflict)
+    const stored = mgr._annotations.get('wa-1');
+    stored.hasConflict = true;
+    stored.conflict = {
+      serverObject: { id: 'wa-1', revision: 5, text_content: 'Server text', visibility: 'public' },
+    };
 
     mgr.resolveConflictUseServer('wa-1');
 
-    const stored = mgr.getAnnotation('wa-1');
     expect(stored.hasConflict).toBe(false);
     expect(stored.conflict).toBeNull();
     expect(stored.revision).toBe(5);
@@ -176,14 +248,14 @@ describe('WorkspaceAnnotationManager', () => {
   // ── resolveConflictOverwrite ──────────────────────────────────────────────
 
   test('resolveConflictOverwrite sends force_overwrite: true', async () => {
-    mgr.registerAnnotation(makeAnnotation({
-      revision: 3,
-      hasConflict: true,
-      conflict: {
-        serverRevision: 5,
-        clientObject: { text_content: 'My changes', base_revision: 3 },
-      },
-    }));
+    mgr.registerAnnotation(makeAnnotation({ revision: 3 }));
+    // Set conflict state directly (registerAnnotation always resets hasConflict)
+    const stored = mgr._annotations.get('wa-1');
+    stored.hasConflict = true;
+    stored.conflict = {
+      serverRevision: 5,
+      clientObject: { text_content: 'My changes', base_revision: 3 },
+    };
 
     mockApiClient.put.mockResolvedValueOnce({ id: 'wa-1', revision: 6 });
 
@@ -193,6 +265,6 @@ describe('WorkspaceAnnotationManager', () => {
       '/workspace-annotations/wa-1',
       expect.objectContaining({ force_overwrite: true })
     );
-    expect(mgr.getAnnotation('wa-1').hasConflict).toBe(false);
+    expect(stored.hasConflict).toBe(false);
   });
 });

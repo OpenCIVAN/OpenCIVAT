@@ -387,14 +387,16 @@ router.put("/:id", async (req, res, next) => {
     try {
       await client.query("BEGIN");
 
-      // Fetch old state for patch computation (only when OCC is active — we know the current revision)
-      if (hasRevisionCheck) {
-        const oldResult = await client.query(
-          "SELECT * FROM view_configurations WHERE id = $1",
-          [id]
-        );
-        oldStateForPatch = oldResult.rows[0] || null;
-      }
+      // Fetch old state for patch computation.
+      // OCC writes: guaranteed correct base (revision-locked by WHERE clause).
+      // LWW writes: best-effort — fetched within the same transaction but without
+      //   revision locking. If a concurrent LWW write intervenes between SELECT and
+      //   UPDATE, the patch may reflect the wrong base; clients fall back to snapshot.
+      const oldResult = await client.query(
+        "SELECT * FROM view_configurations WHERE id = $1",
+        [id]
+      );
+      oldStateForPatch = oldResult.rows[0] || null;
 
       const result = await client.query(
         `UPDATE view_configurations SET ${setClauses.join(", ")} WHERE ${whereClause} RETURNING *`,

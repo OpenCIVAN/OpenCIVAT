@@ -7,7 +7,7 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "test": "jest",
-    "test:integration": "jest --testPathPattern=integration --testPathPattern=views-concurrency"
+    "test:integration": "node -e \"if(!process.env.TEST_DATABASE_URL){console.error('ERROR: TEST_DATABASE_URL is required. See docs/synchronization.md §14.');process.exit(1);}\" && jest --testPathPattern=\"views-concurrency|ws-broadcast\" --runInBand"
   },
   "jest": {
     "testEnvironment": "node",

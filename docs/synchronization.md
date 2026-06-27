@@ -604,33 +604,39 @@ npm run test:run
 
 Test files:
 - `src/utils/__tests__/jsonPatch.test.js` — diff/patch/canAutoMerge/canAutoMergeSafe/VIEW_SAFE_MERGE_FIELDS
-- `src/utils/__tests__/conflictStrategies.test.js` — entity strategy config, safe-merge whitelists
+- `src/utils/__tests__/conflictStrategies.test.js` — entity strategy config, safe-merge whitelists for all four entity types
 - `src/services/__tests__/syncService.watermark.test.js` — watermark scoping, gap logic, partial failure
 - `src/core/data/managers/__tests__/ViewConfigurationManager.conflict.test.js` — conflict detection, deep copy
-- `src/ui/react/components/organisms/__tests__/ConflictResolutionDialog.test.jsx` — dialog for all three entity types
+- `src/core/data/managers/__tests__/AnnotationManager.deltaApply.test.js` — patch/snapshot/tombstone, idempotency, failed-patch stops batch
+- `src/core/data/managers/__tests__/ViewGroupManager.deltaApply.test.js` — patch/snapshot/tombstone, idempotency, failed-patch stops batch
+- `src/core/data/managers/__tests__/WorkspaceAnnotationManager.conflict.test.js` — conflict + `applyDeltaEvent` patch/snapshot/tombstone
+- `src/ui/react/components/organisms/__tests__/ConflictResolutionDialog.test.jsx` — dialog for all four entity types
 
 ### Backend tests (Jest 29)
 
 Pure unit tests run without any DB:
 ```bash
-cd server && npm test -- --testPathPattern "syncEventService|syncPruning"
+cd server && npm test -- --testPathPattern "syncEventService|syncPruning|jsonDiff"
 ```
 
-Integration tests require PostgreSQL with the DR1 migration applied:
+Integration tests require PostgreSQL with the DR1 migration applied. The `test:integration` npm script enforces the `TEST_DATABASE_URL` guard — it exits with an error if the variable is not set:
 ```bash
 # 1. Start PostgreSQL
 docker-compose up -d cia-postgres
 
-# 2. Apply DR1 migration
+# 2. Apply DR1 migration (if not already applied)
 ./server/database/run-migration.sh migrations/014_dr1_sync_hardening.sql
 
 # 3. Run integration tests (views OCC + delta + WS broadcast)
+cd server
 TEST_DATABASE_URL="postgres://ciauser:ciadevpassword@localhost:5432/cia_analytics" \
 DEV_BYPASS_AUTH=true \
-cd server && npm test -- --testPathPattern "views-concurrency|ws-broadcast" --runInBand
+npm run test:integration
 ```
 
-If `TEST_DATABASE_URL` is not set, integration tests auto-skip with a clear message (not a failure).
+The `test:integration` script uses `--runInBand` for deterministic DB test ordering and matches `views-concurrency|ws-broadcast`.
+
+If `TEST_DATABASE_URL` is not set, `npm run test:integration` exits immediately with a clear error (rather than silently skipping).
 
 ### CI status
 
@@ -647,11 +653,35 @@ A future `backend-integration` CI job can be added with a Postgres service conta
 
 ---
 
-## 15. Remaining Limitations
+## 15. Client Patch Application Support
+
+All four persistent entity types now support client-side patch event application via `applyDeltaEvent(event)`:
+
+| Entity type | Patch events | Snapshot events | Tombstone events | Manager |
+|---|---|---|---|---|
+| `view_configuration` | ✅ `_clientToServerFormat` → apply → `handleServerBroadcast` | ✅ | ✅ `removeView` | `ViewConfigurationManager` |
+| `annotation` | ✅ `_annotationToServerFormat` → apply → update model | ✅ via `handleServerBroadcast` | ✅ `dataset.removeAnnotation` | `AnnotationManager` |
+| `viewgroup` | ✅ `_viewGroupToServerFormat` → apply → `_handleRemoteUpdated` | ✅ | ✅ `_handleRemoteDeleted` | `ViewGroupManager` |
+| `workspace_annotation` | ✅ apply directly (stored as snake_case plain object) | ✅ `registerAnnotation` | ✅ `_annotations.delete` | `WorkspaceAnnotationManager` |
+
+**Patch safety rules** (same for all entity types):
+- Idempotent: if local revision ≥ event's `next_revision`, skip without failing
+- Failed patch (throws) → return `false` → batch stops → watermark not advanced
+- No local state to patch against → return `false` → watermark not advanced → next startup hydration does a full REST fetch
+
+**Server-side patch generation** is now computed for **all writes** (OCC and LWW):
+- Before the UPDATE, a transactional SELECT fetches old state
+- `diffObjects(buildSnapshot(old), buildSnapshot(new))` computes the patch
+- Stored in `sync_events.patch` as JSONB
+- LWW writes: old state is best-effort (no revision lock) — patch may reflect wrong base if a concurrent write intervenes, but clients fall back to snapshot on failure
+
+---
+
+## 16. Remaining Limitations
 
 | Limitation | Status |
 |---|---|
-| Patch-only mode for LWW (non-OCC) writes — those still return full snapshot | By design — patch requires knowing old state |
+| LWW patch non-atomicity — LWW old-state SELECT has no revision lock; concurrent writes can produce a patch with wrong base | By design — clients always fall back to snapshot on patch failure |
 | Y.js late-joiner efficiency via state-vector sync | Future optimization |
 | CI does not run integration tests — manual setup required | Documented in §14 |
-| Patch-only delta for `annotations`/`viewgroups`/`workspace_annotations` on client — only `view_configuration` handles patch events | Future extension |
+| `Annotation` model uses camelCase fields; patch ops are snake_case — format conversion done in `_annotationToServerFormat` / `_applyServerFormatToAnnotation`; unmapped fields (rare) silently pass through | Monitor if new annotation DB columns are added |

@@ -1233,6 +1233,88 @@ export class ViewGroupManager extends BaseManager {
     }
 
     // ===========================================================================
+    // DELTA APPLY
+    // ===========================================================================
+
+    /**
+     * Apply one delta event from the sync stream to local ViewGroup state.
+     * Called by syncService.applyDeltaEvents.
+     *
+     * @param {object} event  sync_events row (payload_type, patch, snapshot)
+     * @returns {Promise<boolean>} true = applied, false = failed (stop batch)
+     */
+    async applyDeltaEvent(event) {
+        const id = event.entity_id;
+
+        if (event.operation === 'delete' || event.payload_type === 'tombstone') {
+            this._handleRemoteDeleted(id);
+            return true;
+        }
+
+        const existing = this.getViewGroup(id);
+
+        // Idempotency: skip if already at this revision or newer
+        if (
+            existing?.revision != null &&
+            Number(existing.revision) >= Number(event.next_revision)
+        ) {
+            return true;
+        }
+
+        if (event.payload_type === 'patch' && event.patch) {
+            if (!existing) {
+                this._log.warn(`Cannot apply viewgroup patch ${id}: not in local state`);
+                return false;
+            }
+
+            try {
+                const { patch: applyPatch } = await import('@Utils/jsonPatch.js');
+                // Convert to snake_case DB row format so patch ops match field names
+                const currentAsServer = this._viewGroupToServerFormat(existing);
+                const patched = applyPatch(currentAsServer, event.patch);
+                // fromServerResponse inside _handleRemoteUpdated handles snake_case → model
+                this._handleRemoteUpdated(patched);
+                return true;
+            } catch (err) {
+                this._log.warn(`ViewGroup patch failed for ${id}: ${err.message}`);
+                return false;
+            }
+        }
+
+        // Snapshot: DB row format matches what fromServerResponse expects
+        if (event.snapshot) {
+            this._handleRemoteUpdated(event.snapshot);
+            return true;
+        }
+
+        this._log.warn(`Unrecognized delta event format for viewgroup ${id}`);
+        return false;
+    }
+
+    /**
+     * Convert a ViewGroup instance to the snake_case DB row format used by
+     * sync_events patches and ViewGroup.fromServerResponse.
+     * @private
+     */
+    _viewGroupToServerFormat(viewGroup) {
+        return {
+            id: viewGroup.id,
+            name: viewGroup.name,
+            color: viewGroup.color,
+            layout_id: viewGroup.layoutId,
+            slots: viewGroup.slots,
+            link: viewGroup.link?.toJSON?.() || viewGroup.link || null,
+            canvas_position: viewGroup.canvasPosition,
+            owner_id: viewGroup.ownerId,
+            owner_name: viewGroup.ownerName,
+            workspace_id: viewGroup.workspaceId,
+            visibility: viewGroup.visibility,
+            shared_with: viewGroup.sharedWith || [],
+            revision: viewGroup.revision,
+        };
+    }
+
+    // ===========================================================================
     // CLEANUP
     // ===========================================================================
 

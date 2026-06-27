@@ -395,10 +395,10 @@ router.put('/:id', async (req, res, next) => {
         try {
             await client.query('BEGIN');
 
-            if (hasRevisionCheck) {
-                const oldResult = await client.query('SELECT * FROM viewgroups WHERE id = $1', [id]);
-                oldStateForPatch = oldResult.rows[0] || null;
-            }
+            // Fetch old state for patch computation.
+            // OCC writes: guaranteed correct base. LWW writes: best-effort within transaction.
+            const oldResult = await client.query('SELECT * FROM viewgroups WHERE id = $1', [id]);
+            oldStateForPatch = oldResult.rows[0] || null;
 
             const result = await client.query(
                 `UPDATE viewgroups SET ${updates.join(', ')} WHERE ${whereClause} RETURNING *`,

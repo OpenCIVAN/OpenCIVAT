@@ -320,7 +320,12 @@ export async function fetchDeltaSince(workspaceId, since) {
  * @returns {{ applied: number, lastAppliedEventId: number|null, failed: boolean }}
  */
 export async function applyDeltaEvents(events, managers = {}, _userId = null) {
-  const { viewConfigurationManager } = managers;
+  const {
+    viewConfigurationManager,
+    annotationManager,
+    viewGroupManager,
+    workspaceAnnotationManager,
+  } = managers;
   let applied = 0;
   let lastAppliedEventId = null;
   let failed = false;
@@ -331,7 +336,6 @@ export async function applyDeltaEvents(events, managers = {}, _userId = null) {
         const existing = viewConfigurationManager.getView?.(event.entity_id);
         if (existing && Number(existing.revision) >= Number(event.next_revision)) {
           log.debug(`Delta skip (already at rev ${existing.revision}): view:${event.entity_id}`);
-          // Count as applied for watermark purposes — it's idempotent, not a failure
           lastAppliedEventId = Number(event.id);
           continue;
         }
@@ -339,7 +343,6 @@ export async function applyDeltaEvents(events, managers = {}, _userId = null) {
         if (event.operation === "delete" || event.payload_type === "tombstone") {
           viewConfigurationManager.removeView?.(event.entity_id);
         } else if (event.payload_type === "patch" && event.patch) {
-          // Apply JSON Patch ops on top of current local state
           const current = viewConfigurationManager.getView?.(event.entity_id);
           if (current) {
             try {
@@ -353,7 +356,6 @@ export async function applyDeltaEvents(events, managers = {}, _userId = null) {
               break;
             }
           } else {
-            // No local state to patch against — treat as missing and stop
             log.warn(`Cannot apply patch for view ${event.entity_id}: not in local state`);
             failed = true;
             break;
@@ -364,13 +366,44 @@ export async function applyDeltaEvents(events, managers = {}, _userId = null) {
           });
         }
         applied++;
+      } else if (event.entity_type === "annotation" && annotationManager?.applyDeltaEvent) {
+        const ok = await annotationManager.applyDeltaEvent(event);
+        if (!ok) {
+          log.warn(`Annotation delta event #${event.id} failed — stopping batch`);
+          failed = true;
+          break;
+        }
+        applied++;
+      } else if (event.entity_type === "viewgroup" && viewGroupManager?.applyDeltaEvent) {
+        const ok = await viewGroupManager.applyDeltaEvent(event);
+        if (!ok) {
+          log.warn(`ViewGroup delta event #${event.id} failed — stopping batch`);
+          failed = true;
+          break;
+        }
+        applied++;
+      } else if (
+        event.entity_type === "workspace_annotation" &&
+        workspaceAnnotationManager?.applyDeltaEvent
+      ) {
+        const ok = await workspaceAnnotationManager.applyDeltaEvent(event);
+        if (!ok) {
+          log.warn(`WorkspaceAnnotation delta event #${event.id} failed — stopping batch`);
+          failed = true;
+          break;
+        }
+        applied++;
+      } else {
+        // Unknown entity type: log and skip (forward-compatible — future entity types
+        // don't break existing clients; watermark still advances).
+        log.debug(`Delta: unknown entity_type "${event.entity_type}" — skipping`);
       }
-      // Additional entity types handled here in future DRs
+
       lastAppliedEventId = Number(event.id);
     } catch (err) {
       log.warn(`Failed to apply delta event #${event.id}: ${err.message}. Stopping batch.`);
       failed = true;
-      break; // stop — do not skip ahead; a gap here would corrupt local state
+      break;
     }
   }
 
