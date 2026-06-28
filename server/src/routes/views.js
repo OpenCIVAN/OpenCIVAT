@@ -12,6 +12,19 @@ const { diffObjects } = require("../utils/jsonDiff");
 
 const log = createLogger("views");
 
+// DR2: Derive datasetRefs from the datasets JOIN columns present on a view row.
+// Built-in datasets have dataset_id = NULL on the server → returns [].
+function buildDatasetRefs(row) {
+  if (!row.dataset_id) return [];
+  return [{
+    datasetId:   row.dataset_id,
+    contentHash: row.dataset_hash       || null,
+    format:      row.dataset_file_type  || null,
+    sizeBytes:   row.dataset_file_size  ? Number(row.dataset_file_size) : null,
+    role:        'primary',
+  }];
+}
+
 // ============================================================================
 // VIEW ENDPOINTS
 // ============================================================================
@@ -38,7 +51,10 @@ router.get("/", async (req, res, next) => {
     let query = `
       SELECT v.*,
              u.email as owner_email,
-             d.filename as file_name
+             d.filename as file_name,
+             d.hash as dataset_hash,
+             d.file_type as dataset_file_type,
+             d.file_size as dataset_file_size
       FROM view_configurations v
       LEFT JOIN users u ON v.owner_user_id::uuid = u.id
       LEFT JOIN datasets d ON v.dataset_id = d.id
@@ -83,7 +99,7 @@ router.get("/", async (req, res, next) => {
     const result = await pool.query(query, values);
 
     res.json({
-      views: result.rows,
+      views: result.rows.map(row => ({ ...row, datasetRefs: buildDatasetRefs(row) })),
       count: result.rows.length,
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -107,6 +123,9 @@ router.get("/:id", async (req, res, next) => {
       SELECT v.*,
              u.email as owner_email,
              d.filename as file_name,
+             d.hash as dataset_hash,
+             d.file_type as dataset_file_type,
+             d.file_size as dataset_file_size,
              fv.version_number as file_version
       FROM view_configurations v
       LEFT JOIN users u ON v.owner_user_id::uuid = u.id
@@ -121,7 +140,8 @@ router.get("/:id", async (req, res, next) => {
       return res.status(404).json({ error: "View not found" });
     }
 
-    res.json({ view: result.rows[0] });
+    const view = result.rows[0];
+    res.json({ view: { ...view, datasetRefs: buildDatasetRefs(view) } });
   } catch (error) {
     next(error);
   }

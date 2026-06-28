@@ -956,6 +956,44 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       this._isApplyingRemoteState = false;
     }
 
+    // DR2.5: Restore durable time-series position from ViewConfiguration.
+    // Runs after camera setup. No-op when dataset has no time steps (enabled=false
+    // until configureTimeSteps() detects time data in the VTK pipeline).
+    if (instanceData.viewConfigId) {
+      const _vcm = getViewConfigurationManager();
+      const savedTime = _vcm?.getView(instanceData.viewConfigId)?.time;
+      if (savedTime?.enabled) {
+        const tsState = vtkTimeSeriesFeature.getState(instanceId);
+        if (tsState?.totalSteps > 1) {
+          if (savedTime.fps)  vtkTimeSeriesFeature.setFPS(instanceId, savedTime.fps);
+          if (savedTime.loop) vtkTimeSeriesFeature.setPlaybackMode(instanceId, savedTime.loop);
+          if (savedTime.currentStep != null) {
+            vtkTimeSeriesFeature.setTimeStep(instanceId, savedTime.currentStep);
+          }
+          if (savedTime.playbackMode === 'playing') {
+            vtkTimeSeriesFeature.play(instanceId);
+          }
+          log.debug(`Time state restored: step ${savedTime.currentStep}/${tsState.totalSteps}`);
+        }
+      }
+
+      // Register persistence callback — write time state back to ViewConfiguration on change.
+      // Throttled by ViewConfigurationManager.updateTimeState → _syncToServer (100ms default).
+      vtkTimeSeriesFeature.onTimeChange(instanceId, (changeInfo) => {
+        const vcm3 = getViewConfigurationManager();
+        if (!vcm3) return;
+        const currentTs = vtkTimeSeriesFeature.getState(instanceId);
+        vcm3.updateTimeState(instanceData.viewConfigId, {
+          enabled:      true,
+          currentStep:  changeInfo.step,
+          totalSteps:   changeInfo.total,
+          playbackMode: currentTs?.playing ? 'playing' : 'paused',
+          fps:          currentTs?.fps ?? 5,
+          loop:         currentTs?.playbackMode ?? 'loop',
+        });
+      });
+    }
+
     // Store dataset reference
     instanceData.dataset = dataset;
     instanceData.vtkData = vtkData;

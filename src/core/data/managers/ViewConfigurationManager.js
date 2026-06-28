@@ -259,6 +259,7 @@ export class ViewConfigurationManager extends BaseManager {
       shared_with: view.sharedWith,
       saved_by_user: view.savedByUser,
       camera: view.camera,
+      time: view.time || null,   // DR2.5: time-series playback state (ignored by server until DB migration)
       filters: view.filters,
       widgets: view.widgets,
       color_maps: view.colorMaps,
@@ -671,6 +672,20 @@ export class ViewConfigurationManager extends BaseManager {
 
     // Propagate to views that are linked to this one (followers)
     this._propagateCameraToLinkedViews(viewId, cameraState);
+  }
+
+  /**
+   * Update time-series playback state (DR2.5).
+   * Persists to ViewConfiguration.time and queues a server sync.
+   * Safe to call on every step change — throttled by _syncToServer (100ms).
+   */
+  updateTimeState(viewId, timeState) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view) return;
+    view.time = timeState;
+    view.updatedAt = Date.now();
+    this._syncToServer(view);
+    this._emit("timeStateChanged", { viewId, time: timeState });
   }
 
   /**
