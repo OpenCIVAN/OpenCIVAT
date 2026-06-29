@@ -4,6 +4,7 @@
 const jwt = require("jsonwebtoken");
 const jwksRsa = require("jwks-rsa");
 const { createLogger } = require("../utils/logger");
+const { getRoleForUser, hasPermission, getEffectivePermissions } = require("../utils/permissions");
 
 const log = createLogger("auth");
 
@@ -423,6 +424,144 @@ function requireRole(role) {
   };
 }
 
+/**
+ * Check if a user has access to a workspace.
+ * @param {import('pg').Pool} pool
+ * @param {string} workspaceId
+ * @param {string} userId
+ * @returns {Promise<{ allowed: boolean, role: string|null }>}
+ */
+async function checkWorkspaceAccess(pool, workspaceId, userId) {
+  if (DEV_BYPASS_AUTH) return { allowed: true, role: 'owner' };
+  try {
+    const role = await getRoleForUser(pool, { workspaceId }, userId);
+    return { allowed: role !== null, role };
+  } catch {
+    return { allowed: false, role: null };
+  }
+}
+
+/**
+ * Check if a user has access to a room (via membership or public room + project membership).
+ * @param {import('pg').Pool} pool
+ * @param {string} roomId
+ * @param {string} userId
+ * @returns {Promise<{ allowed: boolean, role: string|null, room: object|null }>}
+ */
+async function checkRoomAccess(pool, roomId, userId) {
+  if (DEV_BYPASS_AUTH) return { allowed: true, role: 'admin', room: null };
+  try {
+    const result = await pool.query(
+      `SELECT r.*, rm.role AS member_role
+       FROM rooms r
+       LEFT JOIN room_members rm ON r.id = rm.room_id AND rm.user_id = $2
+       LEFT JOIN project_members pm ON r.project_id = pm.project_id AND pm.user_id = $2
+       WHERE r.id = $1
+         AND (rm.user_id IS NOT NULL OR (r.is_public = true AND pm.user_id IS NOT NULL))`,
+      [roomId, userId]
+    );
+    if (!result.rows.length) return { allowed: false, role: null, room: null };
+    const row = result.rows[0];
+    const role = row.member_role || 'member';
+    const { member_role, ...room } = row;
+    return { allowed: true, role, room };
+  } catch {
+    return { allowed: false, role: null, room: null };
+  }
+}
+
+/**
+ * Express middleware factory: require a specific project-level permission.
+ * Reads projectId from req.params.projectId or req.body.project_id.
+ * Uses project role + JSONB override to compute effective permissions.
+ * Sets req.effectivePermissions (Set) on success.
+ * @param {string} permission  e.g. PERMISSIONS.ROOM_CREATE
+ */
+function requireProjectPermission(permission) {
+  return async (req, res, next) => {
+    if (DEV_BYPASS_AUTH) {
+      req.effectivePermissions = new Set(Object.values(
+        require('../utils/permissions').PERMISSIONS
+      ));
+      return next();
+    }
+    const pool = req.app.locals.pool;
+    const userId = getUserId(req);
+    const projectId = req.params.projectId || req.body?.project_id;
+    if (!projectId) {
+      return res.status(400).json({ error: 'Missing projectId' });
+    }
+    try {
+      const effective = await getEffectivePermissions(pool, projectId, userId);
+      if (!effective.has(permission)) {
+        return res.status(403).json({ error: 'Insufficient permissions', required: permission });
+      }
+      req.effectivePermissions = effective;
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+/**
+ * Express middleware factory: require a specific workspace permission.
+ * Reads workspaceId from req.params.id or req.params.workspaceId.
+ * Sets req.workspaceRole on success.
+ * @param {string} permission
+ */
+function requireWorkspacePermission(permission) {
+  return async (req, res, next) => {
+    if (DEV_BYPASS_AUTH) {
+      req.workspaceRole = 'owner';
+      return next();
+    }
+    const pool = req.app.locals.pool;
+    const userId = getUserId(req);
+    const workspaceId = req.params.id || req.params.workspaceId;
+    if (!workspaceId) return res.status(400).json({ error: 'Missing workspaceId' });
+    try {
+      const { allowed, role } = await checkWorkspaceAccess(pool, workspaceId, userId);
+      if (!allowed || !hasPermission(role, permission)) {
+        return res.status(403).json({ error: 'Insufficient permissions', required: permission });
+      }
+      req.workspaceRole = role;
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+/**
+ * Express middleware factory: require a specific room permission.
+ * Reads roomId from req.params.roomId.
+ * Sets req.roomRole on success.
+ * @param {string} permission
+ */
+function requireRoomPermission(permission) {
+  return async (req, res, next) => {
+    if (DEV_BYPASS_AUTH) {
+      req.roomRole = 'admin';
+      return next();
+    }
+    const pool = req.app.locals.pool;
+    const userId = getUserId(req);
+    const roomId = req.params.roomId;
+    if (!roomId) return res.status(400).json({ error: 'Missing roomId' });
+    try {
+      const { allowed, role } = await checkRoomAccess(pool, roomId, userId);
+      if (!allowed || !hasPermission(role, permission)) {
+        return res.status(403).json({ error: 'Insufficient permissions', required: permission });
+      }
+      req.roomRole = role;
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
 // Log auth mode on startup
 if (DEV_BYPASS_AUTH) {
   log.info("Development bypass mode ENABLED");
@@ -441,6 +580,12 @@ module.exports = {
   checkProjectAccess,
   checkProjectMembership,
   getUserWorkspaceIds,
+  checkWorkspaceAccess,
+  checkRoomAccess,
+  requireWorkspacePermission,
+  requireRoomPermission,
+  requireProjectPermission,
+  getEffectivePermissions,
   DEV_BYPASS_AUTH,
   verifyJwtToken,
   requireWriteAuth,

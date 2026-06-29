@@ -4,7 +4,7 @@
 
 const express = require("express");
 const router = express.Router();
-const { getUser } = require("../middleware/auth");
+const { getUser, checkProjectAccess } = require("../middleware/auth");
 const thumbnailService = require("../services/thumbnailService");
 const { createLogger } = require("../utils/logger");
 const { writeSyncEvent, buildSnapshot } = require("../services/syncEventService");
@@ -141,6 +141,24 @@ router.get("/:id", async (req, res, next) => {
     }
 
     const view = result.rows[0];
+    const user = getUser(req);
+
+    // Private views are only accessible to their owner
+    if (view.visibility === "private" && view.owner_user_id !== user?.id) {
+      return res.status(403).json({ error: "Access denied to private view" });
+    }
+
+    // Project-scoped views require project membership
+    if (view.visibility === "project" && view.project_id) {
+      const role = await pool.query(
+        `SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2`,
+        [view.project_id, user?.id]
+      );
+      if (!role.rows.length) {
+        return res.status(403).json({ error: "Not a member of this project" });
+      }
+    }
+
     res.json({ view: { ...view, datasetRefs: buildDatasetRefs(view) } });
   } catch (error) {
     next(error);
@@ -174,6 +192,14 @@ router.post("/", async (req, res, next) => {
 
     if (!fileId) {
       return res.status(400).json({ error: "fileId is required" });
+    }
+
+    // If scoped to a project, verify caller is a member
+    if (projectId) {
+      const memberRole = await checkProjectAccess(pool, projectId, user?.id);
+      if (!memberRole) {
+        return res.status(403).json({ error: "Not a member of this project" });
+      }
     }
 
     // Built-in client-side datasets (id starts with "builtin-") are not stored
@@ -324,6 +350,18 @@ router.put("/:id", async (req, res, next) => {
     const actorUserId = user?.id || req.headers["x-user-id"] || null;
     const { base_revision, force_overwrite, ...updates } = req.body;
     const correlationId = req.headers["x-correlation-id"] || null;
+
+    // Only the owner may modify a view configuration
+    const ownerCheck = await pool.query(
+      `SELECT owner_user_id FROM view_configurations WHERE id = $1`,
+      [id]
+    );
+    if (ownerCheck.rows.length === 0) {
+      return res.status(404).json({ error: "View not found" });
+    }
+    if (ownerCheck.rows[0].owner_user_id !== actorUserId) {
+      return res.status(403).json({ error: "Only the view owner may update it" });
+    }
 
     // Build dynamic update query
     const allowedFields = [
@@ -590,6 +628,11 @@ router.delete("/:id", async (req, res, next) => {
     }
 
     const view = existing.rows[0];
+
+    // Only the view owner may delete it
+    if (view.owner_user_id !== user?.id) {
+      return res.status(403).json({ error: "Only the view owner may delete it" });
+    }
 
     // Soft delete
     await pool.query(

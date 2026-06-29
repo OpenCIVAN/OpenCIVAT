@@ -21,6 +21,8 @@ export {
 // =============================================================================
 
 export { useAuth } from "./useAuth.js";
+export { usePermissions } from "./usePermissions.js";
+export { useDMRooms } from "./useDMRooms.js";
 
 // =============================================================================
 // CANVAS & VIEWPORT

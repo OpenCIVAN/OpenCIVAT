@@ -7,6 +7,8 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
+import { usePermissions } from '@UI/react/hooks/usePermissions.js';
+import { PERMISSIONS } from '@Services/permissionService.js';
 
 /**
  * Configuration constants
@@ -91,6 +93,24 @@ export function useVoiceState(rooms, voiceRoomId, activeBreakoutId, breakouts) {
         currentVoiceName,
         currentVoiceUsers,
         availableVoiceRooms,
+    };
+}
+
+/**
+ * Hook that exposes room-action permissions derived from the current workspace role.
+ * Pass the active workspaceId; returns boolean flags for each gated action.
+ *
+ * @param {string|null} workspaceId
+ * @returns {{ canCreateRoom: boolean, canDeleteRoom: boolean, canManageRoomMembers: boolean, loading: boolean }}
+ */
+export function useRoomPermissions(workspaceId) {
+    const { permissions, loading } = usePermissions(workspaceId);
+    return {
+        canCreateRoom:        permissions.canCreateRoom,
+        canDeleteRoom:        permissions.canDeleteRoom,
+        canManageRoomMembers: permissions.canManageRoomMembers,
+        canCreateBreakout:    permissions.canCreateBreakout,
+        loading,
     };
 }
 

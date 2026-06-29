@@ -4,7 +4,7 @@
 
 const express = require("express");
 const router = express.Router();
-const { getUser } = require("../middleware/auth");
+const { getUser, checkProjectAccess } = require("../middleware/auth");
 const { writeSyncEvent, buildSnapshot } = require("../services/syncEventService");
 const { diffObjects } = require("../utils/jsonDiff");
 
@@ -149,6 +149,14 @@ router.post("/", async (req, res, next) => {
       });
     }
 
+    // If scoped to a project, verify caller is a member
+    if (projectId) {
+      const memberRole = await checkProjectAccess(pool, projectId, user?.id);
+      if (!memberRole) {
+        return res.status(403).json({ error: "Not a member of this project" });
+      }
+    }
+
     // Verify file exists
     const fileCheck = await pool.query(
       "SELECT id, organization_id FROM datasets WHERE id = $1 AND status = 'active'",
@@ -256,6 +264,18 @@ router.put("/:id", async (req, res, next) => {
     const actorUserId = user?.id || req.headers["x-user-id"] || null;
     const { base_revision, force_overwrite, ...updates } = req.body;
     const correlationId = req.headers["x-correlation-id"] || null;
+
+    // Only the creator may update an annotation
+    const creatorCheck = await pool.query(
+      `SELECT created_by FROM annotations WHERE id = $1`,
+      [id]
+    );
+    if (!creatorCheck.rows.length) {
+      return res.status(404).json({ error: "Annotation not found" });
+    }
+    if (creatorCheck.rows[0].created_by !== actorUserId) {
+      return res.status(403).json({ error: "Only the annotation creator may update it" });
+    }
 
     // Build dynamic update query
     const allowedFields = [
@@ -471,6 +491,11 @@ router.delete("/:id", async (req, res, next) => {
 
     const annotation = existing.rows[0];
 
+    // Only the creator may delete an annotation
+    if (annotation.created_by !== user?.id) {
+      return res.status(403).json({ error: "Only the annotation creator may delete it" });
+    }
+
     // Soft delete
     await pool.query(
       "UPDATE annotations SET status = 'archived', updated_at = NOW() WHERE id = $1",
@@ -526,6 +551,15 @@ router.post("/batch", async (req, res, next) => {
       return res
         .status(400)
         .json({ error: "Maximum 100 annotations per batch" });
+    }
+
+    // If scoped to a project, verify caller is a member
+    if (projectId) {
+      const memberRole = await checkProjectAccess(pool, projectId, user?.id);
+      if (!memberRole) {
+        client.release();
+        return res.status(403).json({ error: "Not a member of this project" });
+      }
     }
 
     await client.query("BEGIN");

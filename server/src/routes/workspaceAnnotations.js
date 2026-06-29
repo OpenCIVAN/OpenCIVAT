@@ -5,7 +5,7 @@
 const express = require("express");
 const router = express.Router();
 const { ws: log } = require("../utils/logger");
-const { getUser } = require("../middleware/auth");
+const { getUser, checkProjectAccess } = require("../middleware/auth");
 const { writeSyncEvent, buildSnapshot } = require("../services/syncEventService");
 const { diffObjects } = require("../utils/jsonDiff");
 
@@ -152,6 +152,12 @@ router.post("/", async (req, res, next) => {
       });
     }
 
+    // Verify caller is a project member before creating annotation
+    const memberRole = await checkProjectAccess(pool, projectId, user?.id);
+    if (!memberRole) {
+      return res.status(403).json({ error: "Not a member of this project" });
+    }
+
     // Insert annotation
     const result = await pool.query(
       `
@@ -239,6 +245,11 @@ router.put("/:id", async (req, res, next) => {
     }
 
     const beforeState = existing.rows[0];
+
+    // Only the creator may update a workspace annotation
+    if (beforeState.created_by !== user?.id) {
+      return res.status(403).json({ error: "Only the annotation creator may update it" });
+    }
 
     // Build dynamic update query
     const allowedFields = [
@@ -445,6 +456,11 @@ router.delete("/:id", async (req, res, next) => {
 
     const annotation = existing.rows[0];
 
+    // Only the creator may delete a workspace annotation
+    if (annotation.created_by !== user?.id) {
+      return res.status(403).json({ error: "Only the annotation creator may delete it" });
+    }
+
     // Soft delete
     await pool.query(
       "UPDATE workspace_annotations SET status = 'deleted', updated_at = NOW(), updated_by = $2 WHERE id = $1",
@@ -528,6 +544,15 @@ router.post("/batch", async (req, res, next) => {
       return res
         .status(400)
         .json({ error: "Maximum 50 annotations per batch" });
+    }
+
+    // Verify caller is a project member before batch-creating annotations
+    if (projectId) {
+      const memberRole = await checkProjectAccess(pool, projectId, user?.id);
+      if (!memberRole) {
+        client.release();
+        return res.status(403).json({ error: "Not a member of this project" });
+      }
     }
 
     await client.query("BEGIN");

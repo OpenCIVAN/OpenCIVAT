@@ -19,6 +19,7 @@ const thumbnailService = require("./services/thumbnailService");
 const { createMatrixBridge } = require("./services/matrixBridge");
 const { createMatrixUserResolver } = require("./services/matrixUserResolver");
 const { startPruningSchedule, PRUNING_ENABLED } = require("./services/syncEventPruning");
+const { startCleanupSchedule: startWorkspaceCleanup } = require("./services/workspaceCleanupService");
 
 const app = express();
 const server = http.createServer(app);
@@ -514,6 +515,9 @@ server.listen(PORT, async () => {
   if (PRUNING_ENABLED) {
     startPruningSchedule(pool);
   }
+
+  // Start workspace expiry cleanup (disabled by default — set WORKSPACE_CLEANUP_ENABLED=true)
+  startWorkspaceCleanup(pool);
 });
 
 module.exports = { app, server, pool };

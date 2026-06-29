@@ -67,6 +67,7 @@ export function WorkspaceSelector({
     onCreate,
     label = 'Workspace',
     hideLabel = false,
+    canCreate = true,  // hide "New Workspace" when caller lacks breakout:create
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
@@ -256,17 +257,19 @@ export function WorkspaceSelector({
                 </div>
             )}
 
-            {/* Create Action */}
-            <div className="workspace-selector__actions">
-                <button
-                    className="workspace-selector__create-btn"
-                    onClick={handleCreate}
-                    type="button"
-                >
-                    <Icon name="add" size={12} />
-                    <span>New Workspace</span>
-                </button>
-            </div>
+            {/* Create Action — hidden for users who cannot create workspaces */}
+            {canCreate && (
+                <div className="workspace-selector__actions">
+                    <button
+                        className="workspace-selector__create-btn"
+                        onClick={handleCreate}
+                        type="button"
+                    >
+                        <Icon name="add" size={12} />
+                        <span>New Workspace</span>
+                    </button>
+                </div>
+            )}
         </div>,
         document.body
     );

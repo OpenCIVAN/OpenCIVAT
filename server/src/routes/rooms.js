@@ -5,7 +5,13 @@
 const express = require("express");
 const router = express.Router({ mergeParams: true }); // For :projectId from parent route
 const { createLogger } = require("../utils/logger");
-const { getUserId, checkProjectMembership } = require("../middleware/auth");
+const {
+  getUserId,
+  checkProjectMembership,
+  requireProjectPermission,
+  getEffectivePermissions,
+} = require("../middleware/auth");
+const { PERMISSIONS } = require("../utils/permissions");
 const {
   validateProjectId,
   validateRoomId,
@@ -61,6 +67,11 @@ router.get("/", async (req, res, next) => {
       FROM rooms r
       LEFT JOIN users u ON r.created_by = u.id
       WHERE r.project_id = $1
+        AND (
+          -- DM rooms are only visible to members; all other room types are visible to project members
+          r.room_type != 'dm'
+          OR EXISTS(SELECT 1 FROM room_members dm_rm WHERE dm_rm.room_id = r.id AND dm_rm.user_id = $2)
+        )
     `;
 
     const params = [projectId, userId];
@@ -117,10 +128,27 @@ router.get("/:roomId", validateRoomId, async (req, res, next) => {
 });
 
 /**
+ * GET /api/projects/:projectId/my-permissions
+ * Returns the calling user's effective permission set for this project,
+ * including any JSONB overrides from project_members.permissions.
+ */
+router.get("/my-permissions", async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const userId = getUserId(req);
+    const { pool } = req.app.locals;
+    const effective = await getEffectivePermissions(pool, projectId, userId);
+    res.json({ projectId, userId, permissions: [...effective] });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/projects/:projectId/rooms
  * Create a new breakout room
  */
-router.post("/", async (req, res, next) => {
+router.post("/", requireProjectPermission(PERMISSIONS.ROOM_CREATE), async (req, res, next) => {
   const client = await req.app.locals.pool.connect();
 
   try {
@@ -200,18 +228,29 @@ router.post("/", async (req, res, next) => {
       [room.id, userId]
     );
 
-    // Add additional participants for DM rooms
+    // Add additional participants for DM rooms (must all be project members)
     if (roomType === 'dm' && participants.length > 0) {
       for (const participantId of participants) {
-        // Skip if it's the creator (already added)
+        // Skip if it's the creator (already added as admin above)
         if (participantId === userId) continue;
 
+        // Validate each participant is a member of this project
+        const memberCheck = await client.query(
+          `SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2`,
+          [projectId, participantId]
+        );
+        if (!memberCheck.rows.length) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            error: "PARTICIPANT_NOT_PROJECT_MEMBER",
+            reason: `User ${participantId} is not a member of this project. DM rooms are project-scoped.`,
+          });
+        }
+
         await client.query(
-          `
-          INSERT INTO room_members (room_id, user_id, role)
-          VALUES ($1, $2, 'member')
-          ON CONFLICT (room_id, user_id) DO NOTHING
-        `,
+          `INSERT INTO room_members (room_id, user_id, role)
+           VALUES ($1, $2, 'member')
+           ON CONFLICT (room_id, user_id) DO NOTHING`,
           [room.id, participantId]
         );
       }
@@ -484,12 +523,16 @@ router.post("/:roomId/join", async (req, res, next) => {
       return res.status(400).json({ error: "Room is full" });
     }
 
-    // Check if room is public or user has invite
+    // Check if room is accessible: public rooms anyone can join; private rooms require membership
     if (!room.is_public) {
-      // TODO: Check for invite
-      return res
-        .status(403)
-        .json({ error: "This room requires an invitation" });
+      const memberCheck = await pool.query(
+        `SELECT 1 FROM room_members WHERE room_id = $1 AND user_id = $2`,
+        [roomId, userId]
+      );
+      if (!memberCheck.rows.length) {
+        return res.status(403).json({ error: "This room requires an invitation" });
+      }
+      // Already a member — the ON CONFLICT below will silently no-op
     }
 
     // Add user to room (ON CONFLICT handles duplicate joins)
@@ -504,9 +547,9 @@ router.post("/:roomId/join", async (req, res, next) => {
 
     log.info("User joined room:", { userId, roomId, roomName: room.name });
 
-    // Broadcast join
+    // Broadcast join — room-scoped so only room channel subscribers receive it
     if (wsManager) {
-      wsManager.broadcastToProject(projectId, {
+      wsManager.broadcastToRoom(roomId, {
         type: "room:member_joined",
         roomId,
         userId,
@@ -559,9 +602,9 @@ router.post("/:roomId/leave", async (req, res, next) => {
 
     log.info("User left room:", { userId, roomId, roomName: room.name });
 
-    // Broadcast leave
+    // Broadcast leave — room-scoped
     if (wsManager) {
-      wsManager.broadcastToProject(projectId, {
+      wsManager.broadcastToRoom(roomId, {
         type: "room:member_left",
         roomId,
         userId,

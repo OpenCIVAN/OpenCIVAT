@@ -14,6 +14,7 @@ class WebSocketManager {
     this.wss = null;
     this.clients = new Map(); // Map<userId, Set<WebSocket>>
     this.rooms = new Map(); // Map<projectId, Set<WebSocket>>
+    this.roomChannels = new Map(); // Map<roomId, Set<WebSocket>>
     this.pool = null;
   }
 
@@ -34,6 +35,7 @@ class WebSocketManager {
       wsClient.user = null;
       wsClient.isAuthenticated = false;
       wsClient.projectId = null;
+      wsClient.roomId = null;
 
       // Handle pong responses
       wsClient.on("pong", () => {
@@ -102,6 +104,14 @@ class WebSocketManager {
 
         case "leave:project":
           this._handleLeaveProject(socket);
+          break;
+
+        case "join:room":
+          await this._handleJoinRoom(socket, message.roomId);
+          break;
+
+        case "leave:room":
+          this._handleLeaveRoom(socket);
           break;
 
         default:
@@ -275,9 +285,85 @@ class WebSocketManager {
   }
 
   /**
+   * Handle joining a room channel (room-level scoping for room-specific events).
+   * Checks room membership or public room + project membership before admitting.
+   */
+  async _handleJoinRoom(socket, roomId) {
+    if (!socket.isAuthenticated || !socket.userId) {
+      this._send(socket, { type: 'room:join-error', error: 'Authentication required' });
+      return;
+    }
+    if (!roomId) {
+      this._send(socket, { type: 'room:join-error', error: 'Missing roomId' });
+      return;
+    }
+
+    const hasAccess = await this._checkRoomAccess(roomId, socket.userId);
+    if (!hasAccess) {
+      this._send(socket, { type: 'room:join-error', error: 'Access denied' });
+      return;
+    }
+
+    // Leave previous room channel if any
+    if (socket.roomId) {
+      this._handleLeaveRoom(socket);
+    }
+
+    socket.roomId = roomId;
+    if (!this.roomChannels.has(roomId)) {
+      this.roomChannels.set(roomId, new Set());
+    }
+    this.roomChannels.get(roomId).add(socket);
+
+    this._send(socket, { type: 'room:joined', roomId });
+    ws.info('User joined room channel:', socket.userId, roomId);
+  }
+
+  /**
+   * Handle leaving a room channel.
+   */
+  _handleLeaveRoom(socket) {
+    if (!socket.roomId) return;
+    const roomId = socket.roomId;
+    const channel = this.roomChannels.get(roomId);
+    if (channel) {
+      channel.delete(socket);
+      if (channel.size === 0) {
+        this.roomChannels.delete(roomId);
+      }
+    }
+    socket.roomId = null;
+    ws.info('User left room channel:', socket.userId, roomId);
+  }
+
+  /**
+   * Check if a user has access to a room via room_members or public room + project membership.
+   */
+  async _checkRoomAccess(roomId, userId) {
+    if (!this.pool) return true; // No pool in test mode — allow
+    try {
+      const result = await this.pool.query(
+        `SELECT 1 FROM room_members WHERE room_id = $1 AND user_id = $2
+         UNION
+         SELECT 1 FROM rooms r
+           JOIN project_members pm ON pm.project_id = r.project_id
+         WHERE r.id = $1 AND pm.user_id = $2 AND r.is_public = true`,
+        [roomId, userId]
+      );
+      return result.rows.length > 0;
+    } catch (error) {
+      ws.error('Failed to check room access:', error);
+      return false;
+    }
+  }
+
+  /**
    * Handle client disconnection
    */
   _handleDisconnect(socket) {
+    // Leave room channel first
+    this._handleLeaveRoom(socket);
+
     // Leave project room
     this._handleLeaveProject(socket);
 
@@ -343,6 +429,42 @@ class WebSocketManager {
         ws.send(payload);
       }
     });
+  }
+
+  /**
+   * Broadcast message to all clients subscribed to a specific room channel.
+   * Use for room-scoped events (member join/leave, room-specific state changes).
+   * @param {string} roomId - CIA room UUID
+   * @param {object} message
+   * @param {WebSocket} [exclude] - Optional socket to skip (e.g. sender)
+   */
+  broadcastToRoom(roomId, message, exclude = null) {
+    const channel = this.roomChannels.get(roomId);
+    if (!channel) return;
+    const payload = JSON.stringify(message);
+    channel.forEach((wsClient) => {
+      if (wsClient !== exclude && wsClient.readyState === WebSocket.OPEN) {
+        wsClient.send(payload);
+      }
+    });
+  }
+
+  /**
+   * Broadcast to a specific list of user IDs (for DM rooms / private notifications).
+   * @param {string[]} userIds
+   * @param {object} message
+   */
+  broadcastToUsers(userIds, message) {
+    const payload = JSON.stringify(message);
+    for (const userId of userIds) {
+      const sockets = this.clients.get(userId);
+      if (!sockets) continue;
+      sockets.forEach((wsClient) => {
+        if (wsClient.readyState === WebSocket.OPEN) {
+          wsClient.send(payload);
+        }
+      });
+    }
   }
 
   /**
