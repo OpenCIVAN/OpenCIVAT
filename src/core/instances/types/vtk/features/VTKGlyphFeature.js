@@ -24,6 +24,9 @@ import vtkSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
 import vtkCubeSource from "@kitware/vtk.js/Filters/Sources/CubeSource";
 import vtkCylinderSource from "@kitware/vtk.js/Filters/Sources/CylinderSource";
 import vtkColorTransferFunction from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction";
+import vtkPolyData from "@kitware/vtk.js/Common/DataModel/PolyData";
+import vtkPoints from "@kitware/vtk.js/Common/Core/Points";
+import vtkDataArray from "@kitware/vtk.js/Common/Core/DataArray";
 
 // =============================================================================
 // CONSTANTS
@@ -36,6 +39,7 @@ const GLYPH_TYPES = {
   arrow: {
     name: 'Arrow',
     description: 'Directional arrows',
+    requiresOrientation: true,
     createSource: () => {
       const source = vtkArrowSource.newInstance();
       source.setTipLength(0.35);
@@ -47,6 +51,7 @@ const GLYPH_TYPES = {
   cone: {
     name: 'Cone',
     description: 'Conical glyphs',
+    requiresOrientation: false,
     createSource: () => {
       const source = vtkConeSource.newInstance();
       source.setHeight(1.0);
@@ -58,6 +63,7 @@ const GLYPH_TYPES = {
   sphere: {
     name: 'Sphere',
     description: 'Spherical glyphs',
+    requiresOrientation: false,
     createSource: () => {
       const source = vtkSphereSource.newInstance();
       source.setRadius(0.5);
@@ -69,6 +75,7 @@ const GLYPH_TYPES = {
   cube: {
     name: 'Cube',
     description: 'Cubic glyphs',
+    requiresOrientation: false,
     createSource: () => {
       return vtkCubeSource.newInstance();
     },
@@ -76,11 +83,24 @@ const GLYPH_TYPES = {
   cylinder: {
     name: 'Cylinder',
     description: 'Cylindrical glyphs',
+    requiresOrientation: false,
     createSource: () => {
       const source = vtkCylinderSource.newInstance();
       source.setHeight(1.0);
       source.setRadius(0.25);
       source.setResolution(12);
+      return source;
+    },
+  },
+  dot: {
+    name: 'Dot',
+    description: 'Small point markers (no orientation needed)',
+    requiresOrientation: false,
+    createSource: () => {
+      const source = vtkSphereSource.newInstance();
+      source.setRadius(0.15);
+      source.setThetaResolution(8);
+      source.setPhiResolution(8);
       return source;
     },
   },
@@ -119,9 +139,14 @@ const DEFAULT_SETTINGS = {
   colorArray: null,
   colorMode: 'solid', // 'solid' or 'scalar'
   solidColor: [0.2, 0.4, 0.9],
-  maxGlyphs: 10000, // Performance limit
-  skipFactor: 1, // Every Nth point
+  density: 1.0, // fraction of points rendered: 1.0 = every point, 0.1 = ~10%
 };
+
+// Fraction below which density is meaningless (avoids near-zero glyph counts / div-by-huge-stride)
+const MIN_DENSITY = 0.001;
+
+// Point count above which density auto-limits, preserving the old "maxGlyphs" safety behavior
+const AUTO_DENSITY_POINT_THRESHOLD = 10000;
 
 // =============================================================================
 // VTK GLYPH FEATURE
@@ -176,6 +201,9 @@ export class VTKGlyphFeature extends FeatureInterface {
       // Available arrays
       vectorArrays: [],
       scalarArrays: [],
+      // Polydata references for density/subsampling
+      basePolydata: null, // full-resolution polydata passed to enableGlyphs; owned by the dataset pipeline, never deleted here
+      derivedPolydata: null, // strided subsample currently fed to glyphMapper input 0, or null when density === 1
     };
 
     this.instanceStates.set(instanceId, state);
@@ -211,6 +239,7 @@ export class VTKGlyphFeature extends FeatureInterface {
       scaleArray: state.scaleArray,
       colorArray: state.colorArray,
       colorMode: state.colorMode,
+      density: state.density,
       vectorArrays: state.vectorArrays,
       scalarArrays: state.scalarArrays,
     };
@@ -283,9 +312,25 @@ export class VTKGlyphFeature extends FeatureInterface {
     const glyphTypeConfig = GLYPH_TYPES[state.glyphType];
     const glyphSource = glyphTypeConfig.createSource();
 
+    // Track the full-resolution source; not owned/deleted by this feature
+    state.basePolydata = polydata;
+
+    // Auto-limit density for very large datasets unless caller specified one explicitly
+    const numPoints = polydata.getNumberOfPoints();
+    if (options.density === undefined && numPoints > AUTO_DENSITY_POINT_THRESHOLD) {
+      state.density = AUTO_DENSITY_POINT_THRESHOLD / numPoints;
+      log.warn(`Too many points (${numPoints}), auto-limiting glyph density to ${state.density.toFixed(3)}`);
+    }
+
+    // Build the mapper input: subsampled polydata when density < 1, otherwise the base polydata directly
+    const mapperInput = state.density >= 1
+      ? polydata
+      : this._buildSubsampledPolydata(polydata, state.density);
+    state.derivedPolydata = mapperInput === polydata ? null : mapperInput;
+
     // Create glyph mapper
     const glyphMapper = vtkGlyph3DMapper.newInstance();
-    glyphMapper.setInputData(polydata, 0);
+    glyphMapper.setInputData(mapperInput, 0);
     glyphMapper.setInputConnection(glyphSource.getOutputPort(), 1);
     glyphMapper.setScaleFactor(state.scaleFactor);
 
@@ -303,16 +348,6 @@ export class VTKGlyphFeature extends FeatureInterface {
     // Set scale array if specified
     if (state.scaleArray) {
       glyphMapper.setScaleArray(state.scaleArray);
-    }
-
-    // Performance: limit number of glyphs
-    const numPoints = polydata.getNumberOfPoints();
-    if (numPoints > state.maxGlyphs) {
-      const skip = Math.ceil(numPoints / state.maxGlyphs);
-      state.skipFactor = skip;
-      log.warn(`Too many points (${numPoints}), rendering every ${skip}th glyph`);
-      // Note: vtkGlyph3DMapper doesn't have built-in masking
-      // For real implementation, you'd need to subsample the input
     }
 
     // Create actor
@@ -372,7 +407,7 @@ export class VTKGlyphFeature extends FeatureInterface {
    * Internal disable
    */
   _disableGlyphs(state) {
-    const { sceneObjects, glyphActor, glyphMapper, glyphSource, colorTransferFunction } = state;
+    const { sceneObjects, glyphActor, glyphMapper, glyphSource, colorTransferFunction, derivedPolydata } = state;
     const { renderer } = sceneObjects || {};
 
     if (glyphActor && renderer) {
@@ -392,10 +427,17 @@ export class VTKGlyphFeature extends FeatureInterface {
       colorTransferFunction.delete();
     }
 
+    // Derived (subsampled) polydata is owned by this feature; basePolydata belongs to the dataset pipeline
+    if (derivedPolydata) {
+      derivedPolydata.delete();
+    }
+
     state.glyphActor = null;
     state.glyphMapper = null;
     state.glyphSource = null;
     state.colorTransferFunction = null;
+    state.derivedPolydata = null;
+    state.basePolydata = null;
     state.enabled = false;
   }
 
@@ -474,92 +516,257 @@ export class VTKGlyphFeature extends FeatureInterface {
     }
   }
 
+  /**
+   * Set color mode ('solid' or 'scalar') and, for scalar mode, which array to color by
+   */
+  setColorMode(instanceId, mode, arrayName = null) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state) return;
+
+    state.colorMode = mode;
+    if (mode === 'scalar' && arrayName) {
+      state.colorArray = arrayName;
+    }
+
+    if (!state.glyphMapper || !state.glyphActor) return;
+
+    if (mode === 'solid') {
+      state.glyphActor.getProperty().setColor(...state.solidColor);
+      state.glyphMapper.setScalarVisibility(false);
+    } else if (mode === 'scalar' && state.colorArray) {
+      state.glyphMapper.setScalarVisibility(true);
+      state.glyphMapper.setColorByArrayName(state.colorArray);
+    }
+
+    state.sceneObjects.renderWindow?.render();
+  }
+
+  /**
+   * Set glyph density (fraction of points rendered, 0 < density <= 1). Rebuilds the mapper's
+   * point-data input as a strided subsample and disposes the previous derived polydata.
+   */
+  setDensity(instanceId, density) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state) return;
+
+    state.density = Math.min(1, Math.max(MIN_DENSITY, density));
+
+    if (!state.enabled || !state.glyphMapper || !state.basePolydata) return;
+
+    const previousDerived = state.derivedPolydata;
+    const nextInput = state.density >= 1
+      ? state.basePolydata
+      : this._buildSubsampledPolydata(state.basePolydata, state.density);
+
+    state.glyphMapper.setInputData(nextInput, 0);
+    state.derivedPolydata = nextInput === state.basePolydata ? null : nextInput;
+
+    if (previousDerived && previousDerived !== nextInput) {
+      previousDerived.delete();
+    }
+
+    state.sceneObjects.renderWindow?.render();
+    log.debug(`Glyph density set to ${state.density} for ${instanceId}`);
+  }
+
+  /**
+   * Build a strided subsample of polydata (points + all point-data arrays) for glyph density control.
+   * A real derived vtk.js polydata source, not a rendering hack.
+   */
+  _buildSubsampledPolydata(polydata, density) {
+    const points = polydata.getPoints();
+    const srcXYZ = points.getData();
+    const numPoints = points.getNumberOfPoints();
+    const clamped = Math.min(1, Math.max(MIN_DENSITY, density));
+    const stride = Math.max(1, Math.round(1 / clamped));
+
+    if (stride <= 1) return polydata;
+
+    const keepCount = Math.max(1, Math.ceil(numPoints / stride));
+    const dstXYZ = new Float32Array(keepCount * 3);
+    for (let d = 0, s = 0; d < keepCount; d++, s += stride) {
+      const srcIndex = Math.min(s, numPoints - 1);
+      dstXYZ[d * 3] = srcXYZ[srcIndex * 3];
+      dstXYZ[d * 3 + 1] = srcXYZ[srcIndex * 3 + 1];
+      dstXYZ[d * 3 + 2] = srcXYZ[srcIndex * 3 + 2];
+    }
+
+    const newPoints = vtkPoints.newInstance();
+    newPoints.setData(dstXYZ, 3);
+
+    const derived = vtkPolyData.newInstance();
+    derived.setPoints(newPoints);
+
+    // Carry every point-data array along with the SAME stride so array[i] still matches point[i]
+    const srcPointData = polydata.getPointData();
+    const dstPointData = derived.getPointData();
+    for (let i = 0; i < srcPointData.getNumberOfArrays(); i++) {
+      const array = srcPointData.getArrayByIndex(i);
+      if (!array) continue;
+
+      const numComponents = array.getNumberOfComponents();
+      const srcValues = array.getData();
+      const dstValues = new srcValues.constructor(keepCount * numComponents);
+      for (let d = 0, s = 0; d < keepCount; d++, s += stride) {
+        const srcIndex = Math.min(s, numPoints - 1);
+        for (let c = 0; c < numComponents; c++) {
+          dstValues[d * numComponents + c] = srcValues[srcIndex * numComponents + c];
+        }
+      }
+
+      dstPointData.addArray(vtkDataArray.newInstance({
+        name: srcPointData.getArrayName(i) || `Array ${i}`,
+        numberOfComponents: numComponents,
+        values: dstValues,
+      }));
+    }
+
+    return derived;
+  }
+
   // ===========================================================================
-  // TOOLS INTERFACE
+  // DECLARATIVE CONFIG SYNC (for collaborative/remote state)
   // ===========================================================================
 
   /**
-   * Get tools for the toolbar
+   * Current state as a plain, normalized declarative object suitable for pushing to Y.js.
+   * Never includes runtime VTK objects or discovered array metadata (peers recompute arrays
+   * from their own polydata via scanAvailableArrays).
    */
-  getTools(instanceId) {
+  getConfigForSync(instanceId) {
     const state = this.instanceStates.get(instanceId);
-    if (!state) return [];
+    if (!state) return normalizeGlyphConfig({});
 
-    const tools = [];
+    return normalizeGlyphConfig({
+      enabled: state.enabled,
+      glyphType: state.glyphType,
+      scaleFactor: state.scaleFactor,
+      scalingMode: state.scalingMode,
+      orientationArray: state.orientationArray,
+      scaleArray: state.scaleArray,
+      colorArray: state.colorArray,
+      colorMode: state.colorMode,
+      solidColor: state.solidColor,
+      density: state.density,
+    });
+  }
 
-    // Glyph enable/disable toggle when arrays available
-    if (state.vectorArrays.length > 0 || state.scalarArrays.length > 0) {
-      tools.push({
-        id: 'glyph-toggle',
-        icon: state.enabled ? 'eye' : 'eye-off',
-        label: state.enabled ? 'Disable Glyphs' : 'Enable Glyphs',
-        description: 'Toggle glyph rendering',
-        type: 'toggle',
-        active: state.enabled,
-        onClick: () => {
-          if (state.enabled) {
-            this.disableGlyphs(instanceId);
-          } else {
-            // Would need polydata reference here - typically called from handler
-            log.debug('Enable glyphs - requires polydata');
-          }
-        },
-      });
+  /**
+   * Apply an incoming (remote/collaborative) declarative glyph config, normalizing first so
+   * malformed or missing fields never throw. Applies only the fields that changed via the
+   * existing setters when already enabled, to avoid actor churn/duplication on repeated syncs.
+   */
+  applyRemoteConfig(instanceId, polydata, rawConfig) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state) return;
+
+    const config = normalizeGlyphConfig(rawConfig);
+
+    if (!config.enabled) {
+      if (state.enabled) this.disableGlyphs(instanceId);
+      return;
     }
 
-    if (state.enabled) {
-      // Glyph type selector
-      tools.push({
-        id: 'glyph-type',
-        icon: 'shapes',
-        label: GLYPH_TYPES[state.glyphType]?.name || 'Glyph Type',
-        description: 'Change glyph shape',
-        type: 'menu',
-        options: Object.entries(GLYPH_TYPES).map(([id, config]) => ({
-          id: `glyph-${id}`,
-          label: config.name,
-          description: config.description,
-          active: state.glyphType === id,
-          onClick: () => this.setGlyphType(instanceId, id),
-        })),
-      });
+    if (!polydata) {
+      log.warn(`applyRemoteConfig: cannot enable glyphs for ${instanceId}, no polydata available`);
+      return;
+    }
 
-      // Scale factor
-      tools.push({
-        id: 'glyph-scale',
-        icon: 'maximize',
-        label: `Scale: ${state.scaleFactor.toFixed(1)}`,
-        description: 'Glyph size multiplier',
-        type: 'menu',
-        options: [
-          { id: 'scale-0.1', label: '0.1x', active: state.scaleFactor === 0.1, onClick: () => this.setScaleFactor(instanceId, 0.1) },
-          { id: 'scale-0.5', label: '0.5x', active: state.scaleFactor === 0.5, onClick: () => this.setScaleFactor(instanceId, 0.5) },
-          { id: 'scale-1', label: '1x', active: state.scaleFactor === 1.0, onClick: () => this.setScaleFactor(instanceId, 1.0) },
-          { id: 'scale-2', label: '2x', active: state.scaleFactor === 2.0, onClick: () => this.setScaleFactor(instanceId, 2.0) },
-          { id: 'scale-5', label: '5x', active: state.scaleFactor === 5.0, onClick: () => this.setScaleFactor(instanceId, 5.0) },
-        ],
-      });
+    if (!state.enabled) {
+      this.enableGlyphs(instanceId, polydata, config);
+      return;
+    }
 
-      // Orientation array selector
-      if (state.vectorArrays.length > 0) {
-        tools.push({
-          id: 'glyph-orient',
-          icon: 'compass',
-          label: state.orientationArray || 'Orient By...',
-          description: 'Array for glyph orientation',
-          type: 'menu',
-          options: state.vectorArrays.map(array => ({
-            id: `orient-${array.name}`,
-            label: array.name,
-            active: state.orientationArray === array.name,
-            onClick: () => this.setOrientationArray(instanceId, array.name),
-          })),
-        });
+    // Already enabled — apply only what changed via existing setters
+    if (config.glyphType !== state.glyphType) {
+      this.setGlyphType(instanceId, config.glyphType);
+    }
+    if (config.scaleFactor !== state.scaleFactor) {
+      this.setScaleFactor(instanceId, config.scaleFactor);
+    }
+    if (config.orientationArray !== state.orientationArray) {
+      this.setOrientationArray(instanceId, config.orientationArray);
+    }
+    if (
+      config.colorMode !== state.colorMode ||
+      config.colorArray !== state.colorArray ||
+      JSON.stringify(config.solidColor) !== JSON.stringify(state.solidColor)
+    ) {
+      if (config.colorMode === 'solid') {
+        this.setSolidColor(instanceId, config.solidColor);
+      } else {
+        this.setColorMode(instanceId, 'scalar', config.colorArray);
       }
     }
-
-    return tools;
+    if (config.density !== state.density) {
+      this.setDensity(instanceId, config.density);
+    }
   }
+}
+
+// =============================================================================
+// PURE HELPERS (exported for UI + testing without a feature instance)
+// =============================================================================
+
+/**
+ * Whether at least one vector (3-component) array is available for orientation
+ */
+export function isVectorOrientationAvailable(vectorArrays) {
+  return Array.isArray(vectorArrays) && vectorArrays.length > 0;
+}
+
+/**
+ * Whether the glyph feature has anything to render at all (vector or scalar arrays)
+ */
+export function isGlyphFeatureAvailable(vectorArrays, scalarArrays) {
+  return (
+    isVectorOrientationAvailable(vectorArrays) ||
+    (Array.isArray(scalarArrays) && scalarArrays.length > 0)
+  );
+}
+
+/**
+ * Glyph type ids that require vector orientation but have no vector array available
+ */
+export function getDisabledGlyphTypes(vectorArrays) {
+  const hasVectors = isVectorOrientationAvailable(vectorArrays);
+  return Object.entries(GLYPH_TYPES)
+    .filter(([, config]) => config.requiresOrientation && !hasVectors)
+    .map(([id]) => id);
+}
+
+/**
+ * Normalize a plain glyph config object, defaulting/clamping every field so malformed or
+ * missing (e.g. old/pre-glyph) config never crashes the caller.
+ */
+export function normalizeGlyphConfig(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+
+  const glyphType = GLYPH_TYPES[source.glyphType] ? source.glyphType : DEFAULT_SETTINGS.glyphType;
+  const scalingMode = SCALING_MODES[source.scalingMode] ? source.scalingMode : DEFAULT_SETTINGS.scalingMode;
+  const colorMode = source.colorMode === 'scalar' ? 'scalar' : 'solid';
+  const scaleFactor = Number.isFinite(source.scaleFactor) && source.scaleFactor > 0
+    ? source.scaleFactor
+    : DEFAULT_SETTINGS.scaleFactor;
+  const density = Number.isFinite(source.density)
+    ? Math.min(1, Math.max(MIN_DENSITY, source.density))
+    : DEFAULT_SETTINGS.density;
+  const solidColor = Array.isArray(source.solidColor) && source.solidColor.length === 3
+    ? source.solidColor
+    : DEFAULT_SETTINGS.solidColor;
+
+  return {
+    enabled: !!source.enabled,
+    glyphType,
+    scaleFactor,
+    scalingMode,
+    orientationArray: typeof source.orientationArray === 'string' ? source.orientationArray : null,
+    scaleArray: typeof source.scaleArray === 'string' ? source.scaleArray : null,
+    colorArray: typeof source.colorArray === 'string' ? source.colorArray : null,
+    colorMode,
+    solidColor,
+    density,
+  };
 }
 
 // Export singleton instance

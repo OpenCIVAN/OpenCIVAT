@@ -16,7 +16,11 @@ import { vtkVolumeFeature } from "@VTK/features/VTKVolumeFeature";
 import { vtkSliceFeature } from "@VTK/features/VTKSliceFeature";
 import { vtkScalarColoringFeature } from "@VTK/features/VTKScalarColoringFeature";
 import { vtkIsosurfaceFeature } from "@VTK/features/VTKIsosurfaceFeature";
-import { vtkGlyphFeature } from "@VTK/features/VTKGlyphFeature";
+import {
+  vtkGlyphFeature,
+  isGlyphFeatureAvailable,
+  getDisabledGlyphTypes,
+} from "@VTK/features/VTKGlyphFeature";
 import { vtkClippingFeature } from "@VTK/features/VTKClippingFeature";
 import { vtkThresholdFeature } from "@VTK/features/VTKThresholdFeature";
 import { vtkTimeSeriesFeature } from "@VTK/features/VTKTimeSeriesFeature";
@@ -2807,48 +2811,131 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // GLYPH RENDERING TOOLS
     // ========================================================================
     const glyphState = vtkGlyphFeature.getState(instanceId);
-    if (glyphState && (glyphState.vectorArrays?.length > 0 || glyphState.scalarArrays?.length > 0)) {
+    if (glyphState) {
       tools.push({ type: "separator" });
 
-      const glyphEnabled = glyphState.enabled;
+      const { vectorArrays = [], scalarArrays = [], enabled: glyphEnabled } = glyphState;
+      const featureAvailable = isGlyphFeatureAvailable(vectorArrays, scalarArrays);
+      const disabledGlyphTypes = getDisabledGlyphTypes(vectorArrays);
 
-      tools.push({
-        id: "glyph-menu",
-        type: "menu",
-        icon: "arrowUpRight",
-        label: glyphEnabled ? `Glyphs: ${glyphState.glyphType}` : "Glyphs",
-        description: "Vector/tensor glyph visualization",
-        disabled: !caps.hasData,
-        options: [
-          {
-            id: "glyph-toggle",
-            icon: glyphEnabled ? "eye-off" : "eye",
-            label: glyphEnabled ? "Disable Glyphs" : "Enable Glyphs",
-            active: glyphEnabled,
-            onClick: () => {
-              if (glyphEnabled) {
-                vtkGlyphFeature.disableGlyphs(instanceId);
-              } else if (instanceData.polydata) {
-                vtkGlyphFeature.enableGlyphs(instanceId, instanceData.polydata, {
-                  orientationArray: glyphState.vectorArrays?.[0]?.name,
-                });
-              }
-              this._emitToolsUpdate(instanceId);
+      // Shared helper so every glyph mutation syncs to collaborators the same way
+      // colormap/activeArray/opacity already do.
+      const syncGlyph = () => {
+        this._emitToolsUpdate(instanceId);
+        if (!this._isApplyingRemoteState) {
+          const vId = this.instances.get(instanceId)?.viewConfigId;
+          if (vId) syncVisualizationToYjs(vId, getUserId(), { glyph: vtkGlyphFeature.getConfigForSync(instanceId) });
+        }
+      };
+
+      if (!featureAvailable) {
+        tools.push({
+          id: "glyph-menu",
+          type: "menu",
+          icon: "arrowUpRight",
+          label: "Glyphs unavailable",
+          description: "No vector or scalar point-data arrays found on this dataset",
+          disabled: true,
+          options: [],
+        });
+      } else {
+        const scalarArrayNames = scalarArrays.map((a) => a.name);
+
+        tools.push({
+          id: "glyph-menu",
+          type: "menu",
+          icon: "arrowUpRight",
+          label: glyphEnabled ? `Glyphs: ${glyphState.glyphType}` : "Glyphs",
+          description: "Vector/tensor glyph visualization",
+          disabled: !caps.hasData,
+          options: [
+            {
+              id: "glyph-toggle",
+              icon: glyphEnabled ? "eye-off" : "eye",
+              label: glyphEnabled ? "Disable Glyphs" : "Enable Glyphs",
+              active: glyphEnabled,
+              onClick: () => {
+                if (glyphEnabled) {
+                  vtkGlyphFeature.disableGlyphs(instanceId);
+                } else if (instanceData.polydata) {
+                  vtkGlyphFeature.enableGlyphs(instanceId, instanceData.polydata, {
+                    orientationArray: vectorArrays?.[0]?.name,
+                  });
+                }
+                syncGlyph();
+              },
             },
-          },
-          ...(glyphEnabled ? [
-            { type: "separator" },
-            { id: "glyph-arrow", label: "Arrow", active: glyphState.glyphType === 'arrow', onClick: () => { vtkGlyphFeature.setGlyphType(instanceId, 'arrow'); this._emitToolsUpdate(instanceId); } },
-            { id: "glyph-cone", label: "Cone", active: glyphState.glyphType === 'cone', onClick: () => { vtkGlyphFeature.setGlyphType(instanceId, 'cone'); this._emitToolsUpdate(instanceId); } },
-            { id: "glyph-sphere", label: "Sphere", active: glyphState.glyphType === 'sphere', onClick: () => { vtkGlyphFeature.setGlyphType(instanceId, 'sphere'); this._emitToolsUpdate(instanceId); } },
-            { id: "glyph-cube", label: "Cube", active: glyphState.glyphType === 'cube', onClick: () => { vtkGlyphFeature.setGlyphType(instanceId, 'cube'); this._emitToolsUpdate(instanceId); } },
-            { type: "separator" },
-            { id: "scale-small", label: "Small", onClick: () => { vtkGlyphFeature.setScaleFactor(instanceId, 0.5); this._emitToolsUpdate(instanceId); } },
-            { id: "scale-medium", label: "Medium", onClick: () => { vtkGlyphFeature.setScaleFactor(instanceId, 1.0); this._emitToolsUpdate(instanceId); } },
-            { id: "scale-large", label: "Large", onClick: () => { vtkGlyphFeature.setScaleFactor(instanceId, 2.0); this._emitToolsUpdate(instanceId); } },
-          ] : []),
-        ],
-      });
+            ...(glyphEnabled ? [
+              { type: "separator" },
+              ...["arrow", "cone", "sphere", "cube", "cylinder", "dot"].map((typeId) => ({
+                id: `glyph-${typeId}`,
+                label: typeId.charAt(0).toUpperCase() + typeId.slice(1),
+                active: glyphState.glyphType === typeId,
+                disabled: disabledGlyphTypes.includes(typeId),
+                description: disabledGlyphTypes.includes(typeId)
+                  ? "Requires a 3-component vector array"
+                  : undefined,
+                onClick: () => {
+                  vtkGlyphFeature.setGlyphType(instanceId, typeId);
+                  syncGlyph();
+                },
+              })),
+              { type: "separator" },
+              ...[
+                ["scale-small", 0.5, "Small"],
+                ["scale-medium", 1.0, "Medium"],
+                ["scale-large", 2.0, "Large"],
+              ].map(([id, value, label]) => ({
+                id,
+                label,
+                active: glyphState.scaleFactor === value,
+                onClick: () => {
+                  vtkGlyphFeature.setScaleFactor(instanceId, value);
+                  syncGlyph();
+                },
+              })),
+              { type: "separator" },
+              ...[
+                ["density-100", 1.0, "100% (All Points)"],
+                ["density-50", 0.5, "50%"],
+                ["density-10", 0.1, "10%"],
+                ["density-1", 0.01, "1%"],
+              ].map(([id, value, label]) => ({
+                id,
+                label,
+                active: Math.abs((glyphState.density ?? 1) - value) < 1e-6,
+                onClick: () => {
+                  vtkGlyphFeature.setDensity(instanceId, value);
+                  syncGlyph();
+                },
+              })),
+              { type: "separator" },
+              {
+                id: "glyph-color-solid",
+                label: "Solid Color",
+                active: glyphState.colorMode === "solid",
+                onClick: () => {
+                  vtkGlyphFeature.setColorMode(instanceId, "solid");
+                  syncGlyph();
+                },
+              },
+              {
+                id: "glyph-color-scalar",
+                label: glyphState.colorArray ? `By ${glyphState.colorArray}` : "By Scalar...",
+                disabled: scalarArrayNames.length === 0,
+                description: scalarArrayNames.length === 0 ? "No scalar array available" : undefined,
+                active: glyphState.colorMode === "scalar",
+                onClick: () => {
+                  const arrayName = glyphState.colorArray || scalarArrayNames[0];
+                  if (!arrayName) return;
+                  vtkGlyphFeature.setColorMode(instanceId, "scalar", arrayName);
+                  syncGlyph();
+                },
+              },
+            ] : []),
+          ],
+        });
+      }
     }
 
     // ========================================================================
@@ -4144,6 +4231,15 @@ console.log('Tools:', tools);
             }
           } catch (e) {
             log.warn("applySharedState: failed to apply scalar coloring", e);
+          }
+        }
+
+        // Glyph rendering: full config applied via feature's own reconciliation logic
+        if (state.visualization.glyph !== undefined) {
+          try {
+            vtkGlyphFeature.applyRemoteConfig(instanceId, instanceData.polydata, state.visualization.glyph);
+          } catch (e) {
+            log.warn("applySharedState: failed to apply glyph config", e);
           }
         }
       }
