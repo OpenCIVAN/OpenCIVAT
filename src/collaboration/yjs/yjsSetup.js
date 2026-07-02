@@ -30,6 +30,7 @@ import { WebsocketProvider } from "y-websocket";
 import clientConfig from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager";
 import { authService } from "@Services/authService.js";
+import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { sync as log } from "@Utils/logger.js";
 
 // ============================================================================
@@ -158,6 +159,7 @@ export async function initializeYjsProvider() {
     if (event.status === 'connected') {
       console.group("[CIA Collab] Y.js connected");
       console.log("Room:", roomId);
+      console.log("User:", getUserId(), "(per-tab identity)");
       console.log("Y.js clientID (unique per tab):", ydoc.clientID);
       console.log("WebSocket URL:", wsUrl);
       console.groupEnd();

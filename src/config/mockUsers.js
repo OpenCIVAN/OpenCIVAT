@@ -93,6 +93,19 @@ export function getMockUserByEmail(email) {
 }
 
 /**
+ * Get a mock user by externalId (e.g. "alice", "bob") — used to resolve the
+ * dev-only `?devUser=` query param for per-tab identity in local demos.
+ * @param {string} externalId
+ * @returns {MockUser|undefined}
+ */
+export function getMockUserByExternalId(externalId) {
+  if (!externalId) return undefined;
+  return MOCK_USERS.find(
+    (u) => u.externalId.toLowerCase() === externalId.toLowerCase()
+  );
+}
+
+/**
  * Get default mock user
  * @returns {MockUser}
  */
@@ -118,35 +131,38 @@ export function getUserInitials(name) {
 export const MOCK_USER_STORAGE_KEY = "cia_dev_mock_user_id";
 
 /**
- * Get stored mock user ID (persists across page reloads)
+ * Get stored mock user ID (persists across reloads of THIS tab only).
+ * Uses sessionStorage (per-tab) rather than localStorage (shared across all
+ * tabs on the origin) so two tabs can hold distinct dev identities for the
+ * local two-tab collaboration demo.
  * @returns {string|null}
  */
 export function getStoredMockUserId() {
   try {
-    return localStorage.getItem(MOCK_USER_STORAGE_KEY);
+    return sessionStorage.getItem(MOCK_USER_STORAGE_KEY);
   } catch {
     return null;
   }
 }
 
 /**
- * Store mock user ID
+ * Store mock user ID (tab-scoped — see getStoredMockUserId).
  * @param {string} userId
  */
 export function storeMockUserId(userId) {
   try {
-    localStorage.setItem(MOCK_USER_STORAGE_KEY, userId);
+    sessionStorage.setItem(MOCK_USER_STORAGE_KEY, userId);
   } catch {
     // Ignore storage errors
   }
 }
 
 /**
- * Clear stored mock user ID
+ * Clear stored mock user ID (tab-scoped)
  */
 export function clearStoredMockUserId() {
   try {
-    localStorage.removeItem(MOCK_USER_STORAGE_KEY);
+    sessionStorage.removeItem(MOCK_USER_STORAGE_KEY);
   } catch {
     // Ignore storage errors
   }
