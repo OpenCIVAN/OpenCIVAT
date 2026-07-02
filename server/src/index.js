@@ -18,6 +18,8 @@ const { createRecordingService } = require("./services/recordingService");
 const thumbnailService = require("./services/thumbnailService");
 const { createMatrixBridge } = require("./services/matrixBridge");
 const { createMatrixUserResolver } = require("./services/matrixUserResolver");
+const { startPruningSchedule, PRUNING_ENABLED } = require("./services/syncEventPruning");
+const { startCleanupSchedule: startWorkspaceCleanup } = require("./services/workspaceCleanupService");
 
 const app = express();
 const server = http.createServer(app);
@@ -508,6 +510,14 @@ server.listen(PORT, async () => {
       log.warn(`Startup thumbnail check failed: ${err.message}`);
     }
   }, 5000); // Wait 5 seconds for everything to initialize
+
+  // Start sync_events pruning schedule if configured (disabled by default)
+  if (PRUNING_ENABLED) {
+    startPruningSchedule(pool);
+  }
+
+  // Start workspace expiry cleanup (disabled by default — set WORKSPACE_CLEANUP_ENABLED=true)
+  startWorkspaceCleanup(pool);
 });
 
 module.exports = { app, server, pool };

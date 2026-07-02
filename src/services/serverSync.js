@@ -7,6 +7,11 @@ import { ws as log } from "@Utils/logger.js";
 import { authService } from "@Services/authService.js";
 import { useComputeJobStore } from "@UI/react/store/computeJobStore.js";
 import { toast } from "@UI/react/store/toastStore.js";
+import { saveSyncWatermark } from "@Services/syncService.js";
+
+// Debounce window for delta back-fill requests.
+// Multiple incoming events with gaps in rapid succession collapse into one fetch.
+const DELTA_BACKFILL_DEBOUNCE_MS = 500;
 
 class ServerSyncService {
   constructor() {
@@ -22,6 +27,20 @@ class ServerSyncService {
     this.subsetManager = null;
     this.pendingProjectId = null;
     this._authUnsubscribe = null;
+    // DR1: workspace + user scope for watermark management
+    this._workspaceId = null;
+    this._userId = null;
+    this._lastWatermark = 0;
+    this._deltaFetchPending = false;
+    this._deltaFetchTimer = null;
+  }
+
+  /**
+   * Set the workspace scope for watermark tracking.
+   * Call this after the user joins a workspace.
+   */
+  setWorkspaceId(workspaceId) {
+    this._workspaceId = workspaceId;
   }
 
   initialize(datasetManager, viewConfigurationManager = null) {
@@ -102,9 +121,9 @@ class ServerSyncService {
     this.on("connected", () => log.debug("Server hello received"));
     this.on("auth:success", (msg) => {
       log.info(`Authenticated as ${msg.userId}`);
-      // Store the database userId in sessionManager for use by CanvasManager
-      // This is the database ID, not the Keycloak external ID
+      // Store the database userId in sessionManager and locally for watermark scoping
       sessionManager.setUserInfo(msg.userId, msg.email || null);
+      this._userId = msg.userId || null;
       if (this.pendingProjectId) {
         this._send({ type: "join:project", projectId: this.pendingProjectId });
       }
@@ -147,30 +166,60 @@ class ServerSyncService {
 
     // View events - forward to ViewConfigurationManager
     this.on("view:created", (msg) => {
-      log.info(`View created: ${msg.view.name || msg.view.id}`);
+      log.info(`View created: ${msg.view?.name || msg.view?.id}`);
+      this._advanceWatermark(msg.syncEventId);
       if (this.viewConfigurationManager) {
-        this.viewConfigurationManager.handleServerBroadcast(
-          "view:created",
-          msg
-        );
+        this.viewConfigurationManager.handleServerBroadcast("view:created", msg);
       }
     });
+
     this.on("view:updated", (msg) => {
-      log.info(`View updated: ${msg.view.id}`);
-      if (this.viewConfigurationManager) {
-        this.viewConfigurationManager.handleServerBroadcast(
-          "view:updated",
-          msg
-        );
+      const viewId = msg.view?.id;
+      log.info(`View updated: ${viewId}`);
+
+      // Skip echo of our own mutations to prevent double-apply
+      const myUserId = sessionManager.getUserId?.() || this._userId;
+      if (msg.actorUserId && myUserId && msg.actorUserId === myUserId) {
+        log.debug(`Skipping own view:updated echo for ${viewId}`);
+        this._advanceWatermark(msg.syncEventId);
+        return;
+      }
+
+      if (msg.syncEventId) {
+        const incoming = parseInt(msg.syncEventId, 10);
+
+        // Case 1: duplicate or already-applied — skip silently
+        if (this._lastWatermark > 0 && incoming <= this._lastWatermark) {
+          log.debug(`Skipping already-applied view:updated event ${incoming} (watermark=${this._lastWatermark})`);
+          return;
+        }
+
+        // Case 2: gap of any size > 1 — schedule back-fill, defer this event
+        if (this._lastWatermark > 0 && incoming > this._lastWatermark + 1) {
+          log.warn(`Event gap detected (${this._lastWatermark} → ${incoming}); scheduling delta back-fill`);
+          this._scheduleDeltaFetch();
+          return; // event will be re-applied via back-fill
+        }
+
+        // Case 3: expected next event (incoming === lastWatermark + 1 or first event)
+      }
+
+      try {
+        if (this.viewConfigurationManager) {
+          this.viewConfigurationManager.handleServerBroadcast("view:updated", msg);
+        }
+        this._advanceWatermark(msg.syncEventId);
+      } catch (err) {
+        log.warn(`Failed to apply view:updated for view ${viewId}: ${err.message}`);
+        // Do NOT advance watermark — the gap on the next event will trigger back-fill
       }
     });
+
     this.on("view:deleted", (msg) => {
       log.info(`View deleted: ${msg.viewId}`);
+      this._advanceWatermark(msg.syncEventId);
       if (this.viewConfigurationManager) {
-        this.viewConfigurationManager.handleServerBroadcast(
-          "view:deleted",
-          msg
-        );
+        this.viewConfigurationManager.handleServerBroadcast("view:deleted", msg);
       }
     });
 
@@ -495,7 +544,79 @@ class ServerSyncService {
     setTimeout(() => this.connect(), delay);
   }
 
+  // ============================================================================
+  // DR1: WATERMARK HELPERS
+  // ============================================================================
+
+  /**
+   * Advance the local watermark after successfully processing a WS event.
+   * Scoped by both workspaceId and userId to prevent cross-user reuse.
+   * @param {string|number|null} syncEventId
+   */
+  _advanceWatermark(syncEventId) {
+    if (!syncEventId || !this._workspaceId) return;
+    const id = parseInt(syncEventId, 10);
+    if (isNaN(id) || id <= this._lastWatermark) return;
+    this._lastWatermark = id;
+    saveSyncWatermark(this._workspaceId, id, this._userId);
+  }
+
+  /**
+   * Debounced entry point for triggering a delta back-fill.
+   * Multiple calls within DELTA_BACKFILL_DEBOUNCE_MS collapse into one fetch.
+   */
+  _scheduleDeltaFetch() {
+    if (this._deltaFetchTimer) clearTimeout(this._deltaFetchTimer);
+    this._deltaFetchTimer = setTimeout(() => {
+      this._deltaFetchTimer = null;
+      this._triggerDeltaFetch();
+    }, DELTA_BACKFILL_DEBOUNCE_MS);
+  }
+
+  /**
+   * Execute a delta back-fill fetch immediately.
+   * Only one fetch runs at a time (_deltaFetchPending guard).
+   * Advances watermark only to the last successfully applied event id.
+   */
+  _triggerDeltaFetch() {
+    if (this._deltaFetchPending || !this._workspaceId) return;
+    this._deltaFetchPending = true;
+
+    import("@Services/syncService.js").then(({ fetchDeltaSince, applyDeltaEvents, saveSyncWatermark: save }) => {
+      fetchDeltaSince(this._workspaceId, this._lastWatermark).then(async (delta) => {
+        this._deltaFetchPending = false;
+        if (delta.requiresFullResync) {
+          log.warn("Delta back-fill: full resync required");
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("cia:sync-full-resync-required", {
+              detail: { reason: delta.reason },
+            }));
+          }
+          return;
+        }
+        const { lastAppliedEventId } = await applyDeltaEvents(
+          delta.events || [],
+          { viewConfigurationManager: this.viewConfigurationManager },
+          this._userId
+        );
+        if (lastAppliedEventId != null && lastAppliedEventId > this._lastWatermark) {
+          this._lastWatermark = lastAppliedEventId;
+          save(this._workspaceId, lastAppliedEventId, this._userId);
+        }
+      }).catch((err) => {
+        this._deltaFetchPending = false;
+        log.warn("Delta back-fill fetch failed:", err.message);
+      });
+    }).catch(() => {
+      this._deltaFetchPending = false;
+    });
+  }
+
   disconnect() {
+    if (this._deltaFetchTimer) {
+      clearTimeout(this._deltaFetchTimer);
+      this._deltaFetchTimer = null;
+    }
     if (this.ws) {
       this.ws.close();
       this.ws = null;

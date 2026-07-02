@@ -807,11 +807,7 @@ async function checkProjectAccess(projectId, userId) {
 
   try {
     const result = await persistence.pool.query(
-      `
-      SELECT 1
-      FROM project_members
-      WHERE project_id = $1 AND user_id = $2
-    `,
+      `SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2`,
       [projectId, userId]
     );
     return result.rows.length > 0;
@@ -822,13 +818,74 @@ async function checkProjectAccess(projectId, userId) {
 }
 
 /**
+ * Check if user can access a Y.js room document.
+ *
+ * Access rules:
+ * 1. Room membership: if the roomId is a known room UUID, user must be in room_members
+ *    OR the room must be public AND user must be a project member.
+ * 2. Project membership: if projectId is provided and roomId lookup fails, fall back
+ *    to project-level check (covers pre-DR6 room names that are project UUIDs).
+ * 3. If neither roomId nor projectId resolves, deny access.
+ *
+ * @param {string} roomId      Y.js room name (typically a CIA room UUID)
+ * @param {string} userId      Authenticated user ID
+ * @param {string|null} projectId  Optional project UUID passed as URL param
+ * @returns {Promise<boolean>}
+ */
+async function checkRoomDocumentAccess(roomId, userId, projectId) {
+  if (!persistence?.pool) {
+    wsLog.warn("Room access check skipped (no DB pool)");
+    return true; // Fail open when no DB (dev without postgres)
+  }
+
+  try {
+    // Room membership check (private rooms: must be member; public rooms: project member)
+    const roomResult = await persistence.pool.query(
+      `SELECT 1 FROM room_members rm WHERE rm.room_id = $1 AND rm.user_id = $2
+       UNION
+       SELECT 1 FROM rooms r
+         JOIN project_members pm ON pm.project_id = r.project_id
+       WHERE r.id = $1 AND pm.user_id = $2 AND r.is_public = true`,
+      [roomId, userId]
+    );
+    if (roomResult.rows.length > 0) return true;
+
+    // Fallback: project-level check (covers legacy room names = project UUIDs)
+    if (projectId) {
+      const projResult = await persistence.pool.query(
+        `SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2`,
+        [projectId, userId]
+      );
+      if (projResult.rows.length > 0) return true;
+    }
+
+    return false;
+  } catch (error) {
+    wsLog.error("Failed to check room document access:", error.message);
+    return false;
+  }
+}
+
+/**
  * Handle new WebSocket connection
  */
 wss.on("connection", async (socket, req) => {
   // Parse URL and query params
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const roomName =
+  const rawRoomName =
     url.searchParams.get("room") || url.pathname.slice(1) || "default";
+
+  // DR6.5: Sanitize room name to prevent doc key injection or path traversal.
+  // Accept standard UUIDs, "project:{uuid}" prefix, or safe alphanumeric keys.
+  const UUID_RE     = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const PROJ_RE     = /^project:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const SAFE_KEY_RE = /^[a-z0-9_-]{1,128}$/i;
+  if (!UUID_RE.test(rawRoomName) && !PROJ_RE.test(rawRoomName) && !SAFE_KEY_RE.test(rawRoomName)) {
+    wsLog.warn("Y.js connection rejected — invalid room name format:", rawRoomName);
+    socket.close(1008, "Invalid room name");
+    return;
+  }
+  const roomName = rawRoomName;
 
   // Authenticate connection
   const isAuthenticated = await authenticateSocket(socket, url);
@@ -836,21 +893,31 @@ wss.on("connection", async (socket, req) => {
     return;
   }
 
-  // Extract projectId if present in room name or URL
-  // Convention: room name format is "project:{projectId}" or just projectId
-  let projectId = null;
-  if (roomName.startsWith("project:")) {
-    projectId = roomName.split(":")[1];
-  } else if (roomName.match(/^[0-9a-f-]{36}$/i)) {
-    // Looks like a UUID, treat as projectId
-    projectId = roomName;
+  // Extract projectId — prefer explicit URL param, fall back to room-name convention
+  let projectId = url.searchParams.get("projectId") || null;
+  if (!projectId) {
+    if (roomName.startsWith("project:")) {
+      projectId = roomName.split(":")[1];
+    } else if (roomName.match(/^[0-9a-f-]{36}$/i)) {
+      // Legacy: UUID room name treated as projectId (pre-DR6 behavior)
+      projectId = roomName;
+    }
   }
 
-  if (projectId) {
-    const hasAccess = await checkProjectAccess(projectId, socket.userId);
+  // DR6: Room document access check — membership required in production
+  if (!DEV_BYPASS_AUTH) {
+    const hasAccess = await checkRoomDocumentAccess(roomName, socket.userId, projectId);
     if (!hasAccess) {
-      wsLog.warn("Access denied for user to project:", socket.userId, projectId);
-      socket.close(1008, "Access denied");
+      wsLog.warn(
+        "Y.js room access denied:",
+        socket.userId,
+        "→",
+        roomName,
+        "(project:",
+        projectId,
+        ")"
+      );
+      socket.close(1008, "Access denied to room document");
       return;
     }
   }

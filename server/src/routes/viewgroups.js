@@ -9,6 +9,8 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { getUser } = require('../middleware/auth');
 const { createLogger } = require('../utils/logger');
+const { writeSyncEvent, buildSnapshot } = require('../services/syncEventService');
+const { diffObjects } = require('../utils/jsonDiff');
 
 const log = createLogger('viewgroups');
 
@@ -329,6 +331,9 @@ router.put('/:id', async (req, res, next) => {
 
     try {
         const { id } = req.params;
+        const user = getUser(req);
+        const actorUserId = user?.id || req.headers['x-user-id'] || null;
+        const correlationId = req.headers['x-correlation-id'] || null;
         const {
             name,
             layoutId,
@@ -337,10 +342,12 @@ router.put('/:id', async (req, res, next) => {
             visibility,
             slots,
             isExplicit,
+            base_revision,
+            force_overwrite,
         } = req.body;
 
         // Build update query dynamically
-        const updates = ['updated_at = NOW()'];
+        const updates = ['revision = revision + 1', 'updated_at = NOW()'];
         const values = [id];
         let paramIndex = 2;
 
@@ -373,22 +380,96 @@ router.put('/:id', async (req, res, next) => {
             values.push(isExplicit);
         }
 
-        const result = await pool.query(
-            `UPDATE viewgroups SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
-            values
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'ViewGroup not found' });
+        const hasRevisionCheck = base_revision != null && !force_overwrite;
+        let whereClause = `id = $1`;
+        if (hasRevisionCheck) {
+            whereClause += ` AND revision = $${paramIndex++}`;
+            values.push(Number(base_revision));
         }
 
-        const viewGroup = result.rows[0];
+        const client = await pool.connect();
+        let viewGroup;
+        let syncEvent;
+        let oldStateForPatch = null;
+
+        try {
+            await client.query('BEGIN');
+
+            // Fetch old state for patch computation.
+            // OCC writes: guaranteed correct base. LWW writes: best-effort within transaction.
+            const oldResult = await client.query('SELECT * FROM viewgroups WHERE id = $1', [id]);
+            oldStateForPatch = oldResult.rows[0] || null;
+
+            const result = await client.query(
+                `UPDATE viewgroups SET ${updates.join(', ')} WHERE ${whereClause} RETURNING *`,
+                values
+            );
+
+            if (result.rows.length === 0) {
+                await client.query('ROLLBACK');
+                client.release();
+
+                if (hasRevisionCheck) {
+                    const current = await pool.query(
+                        'SELECT * FROM viewgroups WHERE id = $1', [id]
+                    );
+                    if (current.rows.length === 0) {
+                        return res.status(404).json({ error: 'ViewGroup not found' });
+                    }
+                    const cur = current.rows[0];
+                    return res.status(409).json({
+                        error: 'conflict',
+                        entityType: 'viewgroup',
+                        entityId: id,
+                        clientBaseRevision: Number(base_revision),
+                        serverRevision: Number(cur.revision),
+                        serverObject: cur,
+                        updatedBy: null,
+                        updatedAt: cur.updated_at,
+                    });
+                }
+
+                return res.status(404).json({ error: 'ViewGroup not found' });
+            }
+
+            viewGroup = result.rows[0];
+
+            const snapshotData = buildSnapshot(viewGroup);
+            let patchData = null;
+            if (oldStateForPatch) {
+                const ops = diffObjects(buildSnapshot(oldStateForPatch), snapshotData);
+                patchData = ops.length > 0 ? ops : null;
+            }
+
+            const operation = force_overwrite ? 'conflict_resolved' : 'update';
+            syncEvent = await writeSyncEvent(client, {
+                workspaceId: viewGroup.workspace_id,
+                entityType: 'viewgroup',
+                entityId: id,
+                operation,
+                baseRevision: base_revision != null ? Number(base_revision) : null,
+                nextRevision: Number(viewGroup.revision),
+                snapshot: snapshotData,
+                patch: patchData,
+                actorUserId,
+                correlationId,
+            });
+
+            await client.query('COMMIT');
+        } catch (err) {
+            await client.query('ROLLBACK');
+            client.release();
+            throw err;
+        }
+
+        client.release();
 
         log.info(`Updated ViewGroup ${id}`);
 
-        // Broadcast to connected clients
+        // Broadcast to connected clients (enriched payload)
         if (wsManager && viewGroup.workspace_id) {
-            wsManager.broadcastToWorkspace(viewGroup.workspace_id, 'viewgroup:updated', {
+            wsManager.broadcastToProject(viewGroup.workspace_id, {
+                type: 'viewgroup:updated',
                 viewGroup: {
                     id: viewGroup.id,
                     workspaceId: viewGroup.workspace_id,
@@ -400,8 +481,13 @@ router.put('/:id', async (req, res, next) => {
                     ownerId: viewGroup.owner_id,
                     visibility: viewGroup.visibility,
                     isExplicit: viewGroup.is_explicit,
+                    revision: Number(viewGroup.revision),
                     updatedAt: viewGroup.updated_at,
                 },
+                syncEventId: syncEvent?.id?.toString() || null,
+                revision: Number(viewGroup.revision),
+                actorUserId,
+                timestamp: new Date().toISOString(),
             });
         }
 
@@ -416,6 +502,7 @@ router.put('/:id', async (req, res, next) => {
             ownerId: viewGroup.owner_id,
             visibility: viewGroup.visibility,
             isExplicit: viewGroup.is_explicit,
+            revision: Number(viewGroup.revision),
             updatedAt: viewGroup.updated_at,
         });
     } catch (error) {

@@ -337,18 +337,23 @@ export class DatasetManager extends BaseManager {
     // time — so it remains correct when the app is opened via ngrok, localhost, LAN IP,
     // or any other host. Storing an absolute URL here would bake in the wrong origin if
     // the app was initialized with one host but the file is fetched from another.
+    //
+    // DR2: info.format, info.size, info.contentHash are accepted from the manifest
+    // when present. All are optional — entries without them continue to work.
+    const format = info.format || 'vtp';
     const dataset = new Dataset({
       id: info.id,
-      filename: `${info.name}.vtp`,
+      filename: `${info.name}.${format}`,
       name: info.name,
-      fileType: 'vtp',
-      publicPath: info.path,   // relative, e.g. "/vtp_files/Bones.vtp"
+      fileType: format,
+      hash: info.contentHash || null,   // DR2: content hash for identity verification
+      publicPath: info.path,            // relative, e.g. "/vtp_files/Bones.vtp"
       // cacheKey set to prevent DatasetManager from trying to upload to server
       cacheKey: 'builtin',
       metadata: {
-        fileSize: 0,
+        fileSize: info.size || 0,       // DR2: numeric byte size from manifest
         description: info.description || '',
-        sizeHint: info.sizeHint || '',
+        sizeHint: info.sizeHint || '',  // UI still reads this human-readable string
         isBuiltIn: true,
         uploadedAt: Date.now(),
       },

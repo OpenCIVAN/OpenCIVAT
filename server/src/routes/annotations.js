@@ -4,7 +4,9 @@
 
 const express = require("express");
 const router = express.Router();
-const { getUser } = require("../middleware/auth");
+const { getUser, checkProjectAccess } = require("../middleware/auth");
+const { writeSyncEvent, buildSnapshot } = require("../services/syncEventService");
+const { diffObjects } = require("../utils/jsonDiff");
 
 // ============================================================================
 // ANNOTATION ENDPOINTS
@@ -147,6 +149,14 @@ router.post("/", async (req, res, next) => {
       });
     }
 
+    // If scoped to a project, verify caller is a member
+    if (projectId) {
+      const memberRole = await checkProjectAccess(pool, projectId, user?.id);
+      if (!memberRole) {
+        return res.status(403).json({ error: "Not a member of this project" });
+      }
+    }
+
     // Verify file exists
     const fileCheck = await pool.query(
       "SELECT id, organization_id FROM datasets WHERE id = $1 AND status = 'active'",
@@ -251,22 +261,23 @@ router.put("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const user = getUser(req);
-    const updates = req.body;
+    const actorUserId = user?.id || req.headers["x-user-id"] || null;
+    const { base_revision, force_overwrite, ...updates } = req.body;
+    const correlationId = req.headers["x-correlation-id"] || null;
 
-    // Get existing annotation
-    const existing = await pool.query(
-      "SELECT * FROM annotations WHERE id = $1",
+    // Only the creator may update an annotation
+    const creatorCheck = await pool.query(
+      `SELECT created_by FROM annotations WHERE id = $1`,
       [id]
     );
-
-    if (existing.rows.length === 0) {
+    if (!creatorCheck.rows.length) {
       return res.status(404).json({ error: "Annotation not found" });
     }
-
-    const beforeState = existing.rows[0];
+    if (creatorCheck.rows[0].created_by !== actorUserId) {
+      return res.status(403).json({ error: "Only the annotation creator may update it" });
+    }
 
     // Build dynamic update query
-    // Note: Database schema uses 'position' for coordinates and 'content' for properties
     const allowedFields = [
       "type",
       "position",
@@ -278,7 +289,6 @@ router.put("/:id", async (req, res, next) => {
       "locked",
     ];
 
-    // Map request field names to database column names
     const fieldMapping = {
       coordinates: "position",
       properties: "content",
@@ -290,7 +300,6 @@ router.put("/:id", async (req, res, next) => {
     let paramIndex = 1;
 
     for (const field of allowedFields) {
-      // Check for both database field name and mapped request field name
       const requestField = Object.keys(fieldMapping).find(
         (k) => fieldMapping[k] === field
       );
@@ -303,8 +312,6 @@ router.put("/:id", async (req, res, next) => {
 
       if (updateValue !== undefined) {
         let value = updateValue;
-        // JSONB fields need stringification (content, metadata)
-        // Position is DOUBLE PRECISION[3], pass array directly - don't stringify
         if (
           ["content", "metadata"].includes(field) &&
           typeof value === "object"
@@ -320,26 +327,109 @@ router.put("/:id", async (req, res, next) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
-    // Add tracking fields
+    // Increment revision and track actor
+    setClauses.push(`revision = revision + 1`);
     setClauses.push(`updated_at = NOW()`);
     setClauses.push(`updated_by = $${paramIndex++}`);
-    setClauses.push(`edited_by = $${paramIndex++}`);
-    values.push(user.id, user.email);
+    values.push(actorUserId);
 
-    // Add WHERE clause
+    const hasRevisionCheck = base_revision != null && !force_overwrite;
+    let whereClause = `id = $${paramIndex++}`;
     values.push(id);
+    if (hasRevisionCheck) {
+      whereClause += ` AND revision = $${paramIndex++}`;
+      values.push(Number(base_revision));
+    }
 
-    const result = await pool.query(
-      `
-      UPDATE annotations
-      SET ${setClauses.join(", ")}
-      WHERE id = $${paramIndex}
-      RETURNING *
-    `,
-      values
-    );
+    const client = await pool.connect();
+    let annotation;
+    let syncEvent;
+    let oldStateForPatch = null;
 
-    const annotation = result.rows[0];
+    try {
+      await client.query("BEGIN");
+
+      // Fetch old state for patch computation.
+      // OCC writes: guaranteed correct base. LWW writes: best-effort within transaction.
+      const oldResult = await client.query("SELECT * FROM annotations WHERE id = $1", [id]);
+      oldStateForPatch = oldResult.rows[0] || null;
+
+      const result = await client.query(
+        `UPDATE annotations SET ${setClauses.join(", ")} WHERE ${whereClause} RETURNING *`,
+        values
+      );
+
+      if (result.rowCount === 0) {
+        await client.query("ROLLBACK");
+        client.release();
+
+        if (hasRevisionCheck) {
+          const current = await pool.query(
+            "SELECT * FROM annotations WHERE id = $1",
+            [id]
+          );
+          if (current.rows.length === 0) {
+            return res.status(404).json({ error: "Annotation not found" });
+          }
+          const cur = current.rows[0];
+          return res.status(409).json({
+            error: "conflict",
+            entityType: "annotation",
+            entityId: id,
+            clientBaseRevision: Number(base_revision),
+            serverRevision: Number(cur.revision),
+            serverObject: cur,
+            updatedBy: cur.updated_by || null,
+            updatedAt: cur.updated_at,
+          });
+        }
+
+        return res.status(404).json({ error: "Annotation not found" });
+      }
+
+      annotation = result.rows[0];
+
+      // Resolve workspace_id via dataset → project → workspace
+      let workspaceId = null;
+      try {
+        const ws = await client.query(
+          `SELECT w.id FROM workspaces w
+           JOIN file_project_access fpa ON fpa.project_id = w.project_id
+           WHERE fpa.file_id = $1 LIMIT 1`,
+          [annotation.dataset_id]
+        );
+        workspaceId = ws.rows[0]?.id || null;
+      } catch (_) { /* non-fatal */ }
+
+      const snapshotData = buildSnapshot(annotation);
+      let patchData = null;
+      if (oldStateForPatch) {
+        const ops = diffObjects(buildSnapshot(oldStateForPatch), snapshotData);
+        patchData = ops.length > 0 ? ops : null;
+      }
+
+      const operation = force_overwrite ? "conflict_resolved" : "update";
+      syncEvent = await writeSyncEvent(client, {
+        workspaceId,
+        entityType: "annotation",
+        entityId: id,
+        operation,
+        baseRevision: base_revision != null ? Number(base_revision) : null,
+        nextRevision: Number(annotation.revision),
+        snapshot: snapshotData,
+        patch: patchData,
+        actorUserId,
+        correlationId,
+      });
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      client.release();
+      throw err;
+    }
+
+    client.release();
 
     // Audit log
     if (req.audit) {
@@ -347,23 +437,24 @@ router.put("/:id", async (req, res, next) => {
         action: "annotation:update",
         entityType: "annotation",
         entityId: id,
-        before: { type: beforeState.type, text: beforeState.text },
+        before: { id },
         after: { type: annotation.type, text: annotation.text },
       });
     }
 
-    // Broadcast update (need to find project IDs)
+    // Broadcast update
     if (wsManager) {
       const projects = await pool.query(
         "SELECT project_id FROM file_project_access WHERE file_id = $1",
         [annotation.dataset_id]
       );
-
       for (const row of projects.rows) {
         wsManager.annotationUpdated(
           row.project_id,
           annotation.dataset_id,
-          annotation
+          annotation,
+          syncEvent?.id,
+          actorUserId
         );
       }
     }
@@ -399,6 +490,11 @@ router.delete("/:id", async (req, res, next) => {
     }
 
     const annotation = existing.rows[0];
+
+    // Only the creator may delete an annotation
+    if (annotation.created_by !== user?.id) {
+      return res.status(403).json({ error: "Only the annotation creator may delete it" });
+    }
 
     // Soft delete
     await pool.query(
@@ -455,6 +551,15 @@ router.post("/batch", async (req, res, next) => {
       return res
         .status(400)
         .json({ error: "Maximum 100 annotations per batch" });
+    }
+
+    // If scoped to a project, verify caller is a member
+    if (projectId) {
+      const memberRole = await checkProjectAccess(pool, projectId, user?.id);
+      if (!memberRole) {
+        client.release();
+        return res.status(403).json({ error: "Not a member of this project" });
+      }
     }
 
     await client.query("BEGIN");

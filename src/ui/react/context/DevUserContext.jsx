@@ -19,6 +19,7 @@ import {
     MOCK_USERS,
     getDefaultMockUser,
     getMockUser,
+    getMockUserByExternalId,
     getStoredMockUserId,
     storeMockUserId,
 } from "@Config/mockUsers.js";
@@ -56,7 +57,24 @@ export function DevUserProvider({ children, forceDevMode = false }) {
     const [currentUser, setCurrentUser] = useState(() => {
         if (!isDevMode) return null;
 
-        // Try to restore from localStorage
+        // Dev-only per-tab override: ?devUser=alice / ?devUser=bob
+        // Lets two tabs on the same origin hold distinct identities without
+        // localStorage collisions (localStorage is shared across all tabs).
+        const params = new URLSearchParams(window.location.search);
+        const devUserParam = params.get("devUser");
+        if (devUserParam) {
+            const fromUrl = getMockUserByExternalId(devUserParam);
+            if (fromUrl) {
+                log.info(`DevUserContext: User set from ?devUser= param: ${fromUrl.name}`);
+                // Persist to sessionStorage (tab-scoped) so reloads keep this
+                // tab's identity without needing the query param again.
+                storeMockUserId(fromUrl.id);
+                return fromUrl;
+            }
+            log.warn(`DevUserContext: Unknown ?devUser= value "${devUserParam}"`);
+        }
+
+        // Try to restore from sessionStorage (tab-scoped)
         const storedId = getStoredMockUserId();
         if (storedId) {
             const stored = getMockUser(storedId);

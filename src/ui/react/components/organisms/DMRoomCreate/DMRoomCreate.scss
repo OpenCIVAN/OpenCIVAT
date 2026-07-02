@@ -1,0 +1,228 @@
+// DMRoomCreate.scss
+// Minimal modal styles for DM room creation.
+// Uses CIA_Web design token variables.
+
+.dm-room-create {
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  }
+
+  &__modal {
+    background: var(--color-surface, #1a1a2e);
+    border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+    border-radius: 10px;
+    width: 360px;
+    max-height: 520px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  }
+
+  &__title {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-primary, #e8eaf6);
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--color-text-secondary, #8892b0);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--color-text-primary, #e8eaf6);
+    }
+  }
+
+  &__scope-note {
+    margin: 0;
+    padding: 6px 16px 10px;
+    font-size: 11px;
+    color: var(--color-text-secondary, #8892b0);
+    line-height: 1.4;
+  }
+
+  &__search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  }
+
+  &__search-icon {
+    color: var(--color-text-secondary, #8892b0);
+    flex-shrink: 0;
+  }
+
+  &__search {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    font-size: 13px;
+    color: var(--color-text-primary, #e8eaf6);
+    font-family: inherit;
+
+    &::placeholder {
+      color: var(--color-text-secondary, #8892b0);
+    }
+  }
+
+  &__list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+    margin: 0;
+    list-style: none;
+    scrollbar-width: thin;
+  }
+
+  &__empty {
+    padding: 20px 16px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--color-text-secondary, #8892b0);
+  }
+
+  &__member {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: var(--color-text-primary, #e8eaf6);
+    transition: background 0.1s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    &--selected {
+      background: rgba(99, 102, 241, 0.15);
+
+      &:hover {
+        background: rgba(99, 102, 241, 0.22);
+      }
+    }
+  }
+
+  &__avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--color-primary, #6366f1);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__member-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__member-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__member-email {
+    font-size: 11px;
+    color: var(--color-text-secondary, #8892b0);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__check {
+    color: var(--color-primary, #6366f1);
+    flex-shrink: 0;
+  }
+
+  &__error {
+    margin: 0;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--color-error, #f87171);
+    background: rgba(248, 113, 113, 0.08);
+  }
+
+  &__footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+    justify-content: flex-end;
+  }
+
+  &__btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    transition: opacity 0.1s, background 0.1s;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &--cancel {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--color-text-primary, #e8eaf6);
+
+      &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.14);
+      }
+    }
+
+    &--confirm {
+      background: var(--color-primary, #6366f1);
+      color: #fff;
+
+      &:hover:not(:disabled) {
+        background: var(--color-primary-hover, #5457e0);
+      }
+    }
+  }
+}

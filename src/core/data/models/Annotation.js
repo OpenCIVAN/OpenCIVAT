@@ -86,6 +86,12 @@ export class Annotation {
     // User display name (for showing in UI)
     this.createdByName = config.createdByName || null;
 
+    // Server revision counter for optimistic concurrency control (DR1)
+    this.revision = config.revision != null ? Number(config.revision) : null;
+    // Conflict state (set by AnnotationManager when a 409 is received)
+    this.hasConflict = false;
+    this.conflict = null;
+
     // Validate required fields
     if (!this.datasetId) {
       throw new Error("Annotation requires a datasetId");

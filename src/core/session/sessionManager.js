@@ -13,47 +13,132 @@ class SessionManager {
   }
 
   /**
-   * Initialize session from URL or default
-   * This should be called once during application startup, before Y.js connects
+   * Initialize session from URL or default.
+   * Synchronous — preserves existing call sites.
+   * Does NOT validate room access; use initializeFromURLAsync for hardened startup.
    */
   initializeFromURL() {
-    // The room identity can come from several sources, checked in priority order:
+    this.roomId = this._resolveRoomFromURL();
+    return this.roomId;
+  }
 
-    // 1. URL path parameter (future: /rooms/project-123)
-    const pathMatch = window.location.pathname.match(/^\/rooms\/([^\/]+)/);
+  /**
+   * Resolve room identity from available sources in priority order:
+   *   1. URL path  (/rooms/{id})
+   *   2. URL query  (?room=...)
+   *   3. localStorage  (cia_last_room)
+   *   4. config default
+   *
+   * Does NOT write to localStorage — caller is responsible.
+   * @private
+   */
+  _resolveRoomFromURL() {
+    // 1. URL path
+    const pathMatch = window.location.pathname.match(/^\/rooms\/([^/]+)/);
     if (pathMatch) {
-      this.roomId = pathMatch[1];
-      this.roomName = this.roomId; // For now, ID and name are the same
-      log.info(`Session initialized from URL path: ${this.roomId}`);
-      return this.roomId;
+      this.roomName = pathMatch[1];
+      log.info(`Session resolved from URL path: ${pathMatch[1]}`);
+      return pathMatch[1];
     }
 
-    // 2. URL query parameter (?room=analytics-project)
+    // 2. URL query parameter
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get("room");
     if (roomParam) {
-      this.roomId = roomParam;
       this.roomName = roomParam;
-      log.info(`Session initialized from query param: ${this.roomId}`);
-      return this.roomId;
+      log.info(`Session resolved from query param: ${roomParam}`);
+      return roomParam;
     }
 
-    // 3. localStorage (for returning users)
+    // 3. localStorage
     const savedRoom = localStorage.getItem("cia_last_room");
     if (savedRoom) {
-      this.roomId = savedRoom;
       this.roomName = savedRoom;
-      log.info(`Session initialized from localStorage: ${this.roomId}`);
+      log.info(`Session resolved from localStorage: ${savedRoom}`);
+      return savedRoom;
+    }
+
+    // 4. Default
+    this.roomName = "Demo Project";
+    log.info(`Session resolved to default room: ${config.defaultSessionId}`);
+    return config.defaultSessionId;
+  }
+
+  /**
+   * Initialize session from URL with server-side room access validation.
+   * Validates the resolved room against the API; falls back to the project's
+   * main room if the room is inaccessible (403/404) or deleted.
+   * localStorage is updated ONLY after successful validation.
+   *
+   * Call this instead of initializeFromURL() from authenticated startup flows.
+   *
+   * @param {string|null} [projectId]  Optional project UUID for main-room fallback.
+   * @returns {Promise<string>} The validated (or fallback) room ID.
+   */
+  async initializeFromURLAsync(projectId) {
+    const resolvedRoomId = this._resolveRoomFromURL();
+
+    if (!resolvedRoomId || !projectId) {
+      this.roomId = resolvedRoomId || config.defaultSessionId;
       return this.roomId;
     }
 
-    // 4. Default room (for development/testing)
-    // Use demo project ID from config (server-compatible UUID)
-    this.roomId = config.defaultSessionId;
-    this.roomName = "Demo Project";
-    log.info(`Session initialized with default room: ${this.roomId}`);
+    try {
+      const headers = this._cachedToken
+        ? { Authorization: `Bearer ${this._cachedToken}` }
+        : {};
 
-    return this.roomId;
+      const resp = await fetch(
+        `/api/projects/${projectId}/rooms/${resolvedRoomId}`,
+        { headers }
+      );
+
+      if (!resp.ok) {
+        log.warn(
+          `Room ${resolvedRoomId} not accessible (${resp.status}), ` +
+          `falling back to main room for project ${projectId}`
+        );
+        const mainRoom = await this._fetchMainRoom(projectId);
+        this.roomId = mainRoom?.id || config.defaultSessionId;
+        this.roomName = mainRoom?.name || "Main Room";
+        // Do NOT persist the unauthorized room to localStorage
+        return this.roomId;
+      }
+
+      // Validated — safe to persist
+      this.roomId = resolvedRoomId;
+      localStorage.setItem("cia_last_room", resolvedRoomId);
+      return this.roomId;
+    } catch (err) {
+      // Network error — proceed with unvalidated room (offline-friendly)
+      log.warn("Room validation request failed (network?):", err?.message);
+      this.roomId = resolvedRoomId;
+      return this.roomId;
+    }
+  }
+
+  /**
+   * Fetch the main room for a project from the server.
+   * @private
+   * @param {string} projectId
+   * @returns {Promise<{id: string, name: string}|null>}
+   */
+  async _fetchMainRoom(projectId) {
+    try {
+      const headers = this._cachedToken
+        ? { Authorization: `Bearer ${this._cachedToken}` }
+        : {};
+      const resp = await fetch(
+        `/api/projects/${projectId}/rooms`,
+        { headers }
+      );
+      if (!resp.ok) return null;
+      const rooms = await resp.json();
+      const list = Array.isArray(rooms) ? rooms : rooms?.rooms ?? [];
+      return list.find((r) => r.is_main || r.room_type === "main") ?? null;
+    } catch {
+      return null;
+    }
   }
 
   /**

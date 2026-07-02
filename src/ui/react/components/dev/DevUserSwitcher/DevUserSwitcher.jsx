@@ -165,6 +165,10 @@ export const DevUserSwitcher = memo(function DevUserSwitcher({
                         <span className="dev-user-switcher__hint">
                             Page will reload on switch
                         </span>
+                        <span className="dev-user-switcher__hint">
+                            Two tabs with the same user share one cursor (expected). Use
+                            ?devUser=alice / ?devUser=bob for distinct tab identities.
+                        </span>
                     </div>
                 </div>
             )}

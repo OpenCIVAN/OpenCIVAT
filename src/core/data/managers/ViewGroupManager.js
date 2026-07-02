@@ -1063,18 +1063,110 @@ export class ViewGroupManager extends BaseManager {
     }
 
     async _syncToServer(viewGroup) {
+        // Skip sync while a conflict is unresolved
+        if (viewGroup.hasConflict) {
+            this._log.warn(`ViewGroup ${viewGroup.id} has unresolved conflict; skipping sync`);
+            return;
+        }
+
         if (!viewGroup.isDirty()) return;
 
+        // Include base_revision for optimistic concurrency control
+        const payload = viewGroup.toServerPayload();
+        if (viewGroup.revision != null) {
+            payload.base_revision = viewGroup.revision;
+        }
+
         try {
-            await apiClient.put(
-                `/viewgroups/${viewGroup.id}`,
-                viewGroup.toServerPayload()
-            );
+            const response = await apiClient.put(`/viewgroups/${viewGroup.id}`, payload);
+            // Accept new revision from server
+            const newRevision = response?.revision;
+            if (newRevision != null) viewGroup.revision = Number(newRevision);
             viewGroup.clearDirty();
             this._log.debug(`Synced ViewGroup ${viewGroup.id} to server`);
         } catch (error) {
-            this._log.error(`Failed to sync ViewGroup ${viewGroup.id}:`, error);
+            if (error?.status === 409) {
+                // Stale write — surface conflict to user
+                const details = error?.details || {};
+                viewGroup.hasConflict = true;
+                viewGroup.conflict = {
+                    entityType: 'viewgroup',
+                    entityId: viewGroup.id,
+                    clientBaseRevision: viewGroup.revision,
+                    serverRevision: details.serverRevision,
+                    serverObject: details.serverObject,
+                    updatedBy: details.updatedBy || null,
+                    updatedAt: details.updatedAt || null,
+                    clientObject: payload,
+                };
+                this._emit('conflictDetected', viewGroup.conflict);
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(
+                        new CustomEvent('cia:sync-conflict', { detail: viewGroup.conflict })
+                    );
+                }
+                this._log.warn(`Conflict detected on ViewGroup ${viewGroup.id}`);
+            } else {
+                this._log.error(`Failed to sync ViewGroup ${viewGroup.id}:`, error);
+                // Keep dirty so it will be retried
+            }
         }
+    }
+
+    /**
+     * Resolve a conflict by adopting the server's current viewgroup state.
+     * @param {string} viewGroupId
+     */
+    resolveConflictUseServer(viewGroupId) {
+        const viewGroup = this._viewGroups.get(viewGroupId);
+        if (!viewGroup?.hasConflict) return;
+
+        const serverObj = viewGroup.conflict?.serverObject;
+        if (serverObj) {
+            const updated = ViewGroup.fromServerResponse(serverObj);
+            if (updated) {
+                // Preserve identity references, copy server data
+                viewGroup.name = updated.name;
+                viewGroup.color = updated.color;
+                viewGroup.layoutId = updated.layoutId;
+                viewGroup.slots = updated.slots;
+                viewGroup.canvasPosition = updated.canvasPosition;
+                viewGroup.visibility = updated.visibility;
+                viewGroup.revision = updated.revision;
+            }
+        }
+        viewGroup.hasConflict = false;
+        viewGroup.conflict = null;
+        viewGroup.clearDirty();
+        this._emit('viewGroupUpdated', { viewGroup, isRemote: true });
+        this._log.info(`Conflict resolved (use server) for ViewGroup ${viewGroupId}`);
+    }
+
+    /**
+     * Resolve a conflict by force-overwriting with the client's pending changes.
+     * @param {string} viewGroupId
+     */
+    async resolveConflictOverwrite(viewGroupId) {
+        const viewGroup = this._viewGroups.get(viewGroupId);
+        if (!viewGroup?.hasConflict) return;
+
+        const clientObj = viewGroup.conflict?.clientObject || {};
+        viewGroup.hasConflict = false;
+        viewGroup.conflict = null;
+
+        try {
+            const response = await apiClient.put(`/viewgroups/${viewGroupId}`, {
+                ...clientObj,
+                force_overwrite: true,
+            });
+            const newRevision = response?.revision;
+            if (newRevision != null) viewGroup.revision = Number(newRevision);
+            viewGroup.clearDirty();
+            this._log.info(`Conflict resolved (force overwrite) for ViewGroup ${viewGroupId}`);
+        } catch (err) {
+            this._log.error(`Force overwrite failed for ViewGroup ${viewGroupId}:`, err);
+        }
+        this._emit('viewGroupUpdated', { viewGroup });
     }
 
     // ===========================================================================
@@ -1138,6 +1230,88 @@ export class ViewGroupManager extends BaseManager {
             this._removeLinkObserver(targetGroupId, groupId);
             this._emit('viewGroupUnlinked', { groupId, targetGroupId, isRemote: true });
         }
+    }
+
+    // ===========================================================================
+    // DELTA APPLY
+    // ===========================================================================
+
+    /**
+     * Apply one delta event from the sync stream to local ViewGroup state.
+     * Called by syncService.applyDeltaEvents.
+     *
+     * @param {object} event  sync_events row (payload_type, patch, snapshot)
+     * @returns {Promise<boolean>} true = applied, false = failed (stop batch)
+     */
+    async applyDeltaEvent(event) {
+        const id = event.entity_id;
+
+        if (event.operation === 'delete' || event.payload_type === 'tombstone') {
+            this._handleRemoteDeleted(id);
+            return true;
+        }
+
+        const existing = this.getViewGroup(id);
+
+        // Idempotency: skip if already at this revision or newer
+        if (
+            existing?.revision != null &&
+            Number(existing.revision) >= Number(event.next_revision)
+        ) {
+            return true;
+        }
+
+        if (event.payload_type === 'patch' && event.patch) {
+            if (!existing) {
+                this._log.warn(`Cannot apply viewgroup patch ${id}: not in local state`);
+                return false;
+            }
+
+            try {
+                const { patch: applyPatch } = await import('@Utils/jsonPatch.js');
+                // Convert to snake_case DB row format so patch ops match field names
+                const currentAsServer = this._viewGroupToServerFormat(existing);
+                const patched = applyPatch(currentAsServer, event.patch);
+                // fromServerResponse inside _handleRemoteUpdated handles snake_case → model
+                this._handleRemoteUpdated(patched);
+                return true;
+            } catch (err) {
+                this._log.warn(`ViewGroup patch failed for ${id}: ${err.message}`);
+                return false;
+            }
+        }
+
+        // Snapshot: DB row format matches what fromServerResponse expects
+        if (event.snapshot) {
+            this._handleRemoteUpdated(event.snapshot);
+            return true;
+        }
+
+        this._log.warn(`Unrecognized delta event format for viewgroup ${id}`);
+        return false;
+    }
+
+    /**
+     * Convert a ViewGroup instance to the snake_case DB row format used by
+     * sync_events patches and ViewGroup.fromServerResponse.
+     * @private
+     */
+    _viewGroupToServerFormat(viewGroup) {
+        return {
+            id: viewGroup.id,
+            name: viewGroup.name,
+            color: viewGroup.color,
+            layout_id: viewGroup.layoutId,
+            slots: viewGroup.slots,
+            link: viewGroup.link?.toJSON?.() || viewGroup.link || null,
+            canvas_position: viewGroup.canvasPosition,
+            owner_id: viewGroup.ownerId,
+            owner_name: viewGroup.ownerName,
+            workspace_id: viewGroup.workspaceId,
+            visibility: viewGroup.visibility,
+            shared_with: viewGroup.sharedWith || [],
+            revision: viewGroup.revision,
+        };
     }
 
     // ===========================================================================

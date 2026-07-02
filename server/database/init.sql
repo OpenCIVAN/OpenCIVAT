@@ -302,6 +302,7 @@ CREATE TABLE viewgroups (
     visibility VARCHAR(20) DEFAULT 'group' CHECK (visibility IN ('private', 'group', 'public')),
     shared_with JSONB DEFAULT '[]',
     is_explicit BOOLEAN DEFAULT TRUE,
+    revision BIGINT NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -349,6 +350,7 @@ CREATE TABLE view_configurations (
     active_instance_count INTEGER DEFAULT 0,
     last_active_timestamp TIMESTAMPTZ DEFAULT NOW(),
     server_version INTEGER DEFAULT 1,
+    revision BIGINT NOT NULL DEFAULT 1,
     view_group_id UUID REFERENCES viewgroups(id) ON DELETE SET NULL,
     created_by VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -458,6 +460,7 @@ CREATE TABLE annotations (
     visibility_group UUID[],
     status VARCHAR(50) DEFAULT 'active',
     migrated_from UUID REFERENCES annotations(id),
+    revision BIGINT NOT NULL DEFAULT 1,
     user_id VARCHAR(255),
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -485,6 +488,7 @@ CREATE TABLE workspace_annotations (
     status VARCHAR(50) DEFAULT 'active',
     locked BOOLEAN DEFAULT FALSE,
     z_index INTEGER DEFAULT 0,
+    revision BIGINT NOT NULL DEFAULT 1,
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_by UUID REFERENCES users(id),
@@ -500,6 +504,25 @@ CREATE TABLE workspace_annotation_snapshots (
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(workspace_annotation_id, version_number)
+);
+
+-- ============================================================================
+-- SYNC EVENT LOG (DR1: Dual-Channel Sync Hardening)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS sync_events (
+    id               BIGSERIAL    PRIMARY KEY,
+    workspace_id     UUID         REFERENCES workspaces(id) ON DELETE CASCADE,
+    entity_type      VARCHAR(50)  NOT NULL,
+    entity_id        UUID         NOT NULL,
+    operation        VARCHAR(30)  NOT NULL,
+    base_revision    BIGINT,
+    next_revision    BIGINT       NOT NULL,
+    patch            JSONB,
+    snapshot         JSONB,
+    actor_user_id    UUID         REFERENCES users(id) ON DELETE SET NULL,
+    correlation_id   UUID,
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
 -- ============================================================================
@@ -1059,6 +1082,9 @@ CREATE INDEX idx_workspace_ann_project ON workspace_annotations(project_id);
 CREATE INDEX idx_workspace_ann_view ON workspace_annotations(view_id);
 CREATE INDEX idx_workspace_ann_status ON workspace_annotations(status);
 CREATE INDEX idx_workspace_ann_linked_datasets ON workspace_annotations USING GIN(linked_datasets);
+CREATE INDEX idx_sync_events_workspace ON sync_events(workspace_id, id);
+CREATE INDEX idx_sync_events_entity ON sync_events(entity_type, entity_id, id);
+CREATE INDEX idx_sync_events_created_at ON sync_events(created_at);
 CREATE INDEX idx_views_project ON view_configurations(project_id);
 CREATE INDEX idx_views_dataset ON view_configurations(dataset_id);
 CREATE INDEX idx_views_owner ON view_configurations(owner_user_id);

@@ -238,6 +238,7 @@ export class ViewConfigurationManager extends BaseManager {
       trashedAt: serverView.trashed_at,
       trashedBy: serverView.trashed_by,
       serverVersion: serverView.server_version || 1,
+      revision: serverView.revision != null ? Number(serverView.revision) : 1,
       createdAt: serverView.created_at,
       updatedAt: serverView.updated_at,
     };
@@ -258,6 +259,7 @@ export class ViewConfigurationManager extends BaseManager {
       shared_with: view.sharedWith,
       saved_by_user: view.savedByUser,
       camera: view.camera,
+      time: view.time || null,   // DR2.5: time-series playback state (ignored by server until DB migration)
       filters: view.filters,
       widgets: view.widgets,
       color_maps: view.colorMaps,
@@ -670,6 +672,20 @@ export class ViewConfigurationManager extends BaseManager {
 
     // Propagate to views that are linked to this one (followers)
     this._propagateCameraToLinkedViews(viewId, cameraState);
+  }
+
+  /**
+   * Update time-series playback state (DR2.5).
+   * Persists to ViewConfiguration.time and queues a server sync.
+   * Safe to call on every step change — throttled by _syncToServer (100ms).
+   */
+  updateTimeState(viewId, timeState) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view) return;
+    view.time = timeState;
+    view.updatedAt = Date.now();
+    this._syncToServer(view);
+    this._emit("timeStateChanged", { viewId, time: timeState });
   }
 
   /**
@@ -1458,6 +1474,12 @@ export class ViewConfigurationManager extends BaseManager {
    * v2.0: Server is source of truth, not Y.js
    */
   _syncToServer(view) {
+    // Skip sync for views that have an unresolved conflict — user must resolve first
+    if (view.hasConflict) {
+      log.warn(`Skipping server sync for view ${view.id}: unresolved conflict`);
+      return;
+    }
+
     // Cancel any pending sync for this view
     if (this._pendingSyncs.has(view.id)) {
       clearTimeout(this._pendingSyncs.get(view.id));
@@ -1469,25 +1491,134 @@ export class ViewConfigurationManager extends BaseManager {
 
       try {
         const updateData = this._clientToServerFormat(view);
+
+        // Include the base revision for optimistic concurrency control.
+        // The server will reject stale writes with 409 Conflict.
+        if (view.revision != null) {
+          updateData.base_revision = view.revision;
+        }
+
         const { view: serverView } = await apiClient.put(
           `/views/${view.id}`,
           updateData
         );
 
-        // Update server version from response
+        // Accept the new revision from the server
+        if (serverView?.revision != null) {
+          view.revision = Number(serverView.revision);
+        }
         if (serverView?.server_version) {
           view.serverVersion = serverView.server_version;
         }
         view.lastSyncedToServer = Date.now();
         view.pendingServerSync = false;
       } catch (error) {
-        log.error(`Failed to sync view ${view.id} to server:`, error);
-        view.pendingServerSync = true;
+        if (error?.status === 409 || error?.statusCode === 409) {
+          // Conflict: another user changed this view since our last fetch
+          const details = error?.details || error?.data || {};
+          view.hasConflict = true;
+          view.pendingServerSync = false;
+          view.conflict = {
+            entityType: "view_configuration",
+            entityId: view.id,
+            clientBaseRevision: view.revision,
+            serverRevision: details.serverRevision,
+            serverObject: details.serverObject,
+            updatedBy: details.updatedBy || null,
+            updatedAt: details.updatedAt || null,
+            // Deep copy via server format (serialisable data only, snake_case)
+            // so that subsequent local mutations do not corrupt the conflict snapshot.
+            clientObject: JSON.parse(JSON.stringify(this._clientToServerFormat(view))),
+          };
+          this._emit("conflictDetected", view.conflict);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("cia:sync-conflict", { detail: view.conflict })
+            );
+          }
+          log.warn(`Conflict detected on view ${view.id}:`, view.conflict);
+        } else {
+          log.error(`Failed to sync view ${view.id} to server:`, error);
+          view.pendingServerSync = true;
+        }
       }
     }, this._syncThrottleMs);
 
     this._pendingSyncs.set(view.id, timeout);
     view.pendingServerSync = true;
+  }
+
+  /**
+   * Resolve a conflict by adopting the server's current version.
+   * Clears local optimistic changes for this view.
+   */
+  resolveConflictUseServer(viewId) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view?.hasConflict) return;
+
+    const serverObj = view.conflict?.serverObject;
+    if (serverObj) {
+      const updated = this._serverToClientFormat(serverObj);
+      Object.assign(view, updated);
+    }
+    view.hasConflict = false;
+    view.conflict = null;
+    view.pendingServerSync = false;
+    this._emit("viewUpdated", view);
+    log.info(`Conflict resolved (use server) for view ${viewId}`);
+  }
+
+  /**
+   * Resolve a conflict by force-overwriting with the client's version.
+   * The server skips the revision check on this write.
+   */
+  async resolveConflictOverwrite(viewId) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view?.hasConflict) return;
+
+    view.hasConflict = false;
+    view.conflict = null;
+
+    try {
+      const updateData = this._clientToServerFormat(view);
+      updateData.force_overwrite = true;
+
+      const { view: serverView } = await apiClient.put(
+        `/views/${view.id}`,
+        updateData
+      );
+
+      if (serverView?.revision != null) {
+        view.revision = Number(serverView.revision);
+      }
+      view.pendingServerSync = false;
+      log.info(`Conflict resolved (force overwrite) for view ${viewId}`);
+    } catch (error) {
+      log.error(`Force overwrite failed for view ${viewId}:`, error);
+      view.pendingServerSync = true;
+    }
+  }
+
+  /**
+   * Resolve a conflict by saving the client's version as a new duplicate view.
+   * The original view reverts to the server state.
+   */
+  async resolveConflictSaveAsCopy(viewId) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view?.hasConflict) return;
+
+    try {
+      // Duplicate with a modified name so the user can distinguish the copy
+      await apiClient.post(`/views/${viewId}/duplicate`, {
+        name: `${view.name || "View"} (my changes)`,
+      });
+
+      // Revert original to server state
+      this.resolveConflictUseServer(viewId);
+      log.info(`Conflict resolved (save as copy) for view ${viewId}`);
+    } catch (error) {
+      log.error(`Save-as-copy failed for view ${viewId}:`, error);
+    }
   }
 
   _syncPresenceToYjs(viewId, presence) {

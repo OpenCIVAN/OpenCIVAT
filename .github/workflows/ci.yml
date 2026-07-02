@@ -1,0 +1,81 @@
+name: CI
+
+# Runs on every push to main/develop and on all pull requests.
+# This workflow validates frontend unit tests and backend unit tests.
+#
+# What this CI does NOT include (intentionally):
+#   - Backend integration tests (require PostgreSQL + DR1 migration — see docs §14)
+#   - WebSocket broadcast integration tests (same DB requirement)
+#   - Docker GPU build (requires NVIDIA runtime)
+#   - Apple Vision Pro / WebXR device testing
+#   - LiveKit, MinIO, Keycloak, or Redis services
+#
+# To run integration tests locally:
+#   TEST_DATABASE_URL="postgres://ciauser:ciadevpassword@localhost:5432/cia_analytics" \
+#   DEV_BYPASS_AUTH=true \
+#   cd server && npm test -- --testPathPattern "views-concurrency|ws-broadcast" --runInBand
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Frontend unit tests — Vitest 4, Node 22 LTS
+  # Requires Node 20+; uses Node 22 LTS per .nvmrc and package.json engines.
+  # ──────────────────────────────────────────────────────────────────────────
+  frontend-tests:
+    name: Frontend unit tests (Vitest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: npm run test:run
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Backend unit tests — Jest 29, no database required
+  # Only runs pure unit tests (syncEventService, syncPruning).
+  # Integration tests (OCC, delta, WS broadcast) are manual — see docs §14.
+  # ──────────────────────────────────────────────────────────────────────────
+  backend-unit-tests:
+    name: Backend unit tests (Jest, no DB)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server dependencies
+        run: npm ci
+
+      - name: Run backend unit tests
+        run: npm test -- --testPathPattern "syncEventService|syncPruning"

@@ -12,9 +12,19 @@
 // 8. PRESETS for reusable property configurations
 // 9. PRESENCE tracking for viewer awareness
 //
+// DR2 LAYER CONTRACT (DO NOT VIOLATE):
+//   Layer 2 (ViewConfiguration) MUST NOT contain:
+//     - Raw dataset bytes or MinIO credentials
+//     - Browser object URLs as durable identifiers
+//     - Live VTK.js objects (actors, mappers, renderers, WebGL handles)
+//     - GPU buffers or DOM references
+//   Layer 2 MUST reference Layer 1 (Dataset) via stable datasetId + contentHash only.
+//   Layer 3 (VTKInstanceHandler) is reconstructed from Layer 1 + Layer 2 and remains ephemeral.
+//
 // FUTURE: WorkspaceLayout will have its own annotation layer for cross-view notes
 
 import { AnnotationDisplayConfig } from "@Core/data/models/Annotation.js";
+import { SCHEMA_VERSION, migrateDatasetIdToRef } from "@Core/data/models/ViewConfigurationSchema.js";
 
 // Ephemeral ID generator for view-local items (filters, widgets, snapshots)
 // These don't need server IDs as they're stored within the view config JSON
@@ -283,6 +293,61 @@ export class ViewConfiguration {
     this.datasetId = config.datasetId;
     this.name = config.name || "Untitled View";
     this.description = config.description || "";
+
+    // =========================================================================
+    // DR2: SCHEMA VERSIONING
+    // Bump SCHEMA_VERSION in ViewConfigurationSchema.js when adding
+    // non-backward-compatible fields. Normalizers handle migration.
+    // =========================================================================
+    this.schemaVersion = config.schemaVersion || SCHEMA_VERSION;
+
+    // =========================================================================
+    // DR2: CONTENT-ADDRESSED DATASET REFS (Layer 1 identity contract)
+    // Each entry: { datasetId, contentHash, format, sizeBytes, role }
+    // Migrated from legacy datasetId when datasetRefs is absent.
+    // contentHash enables hash-based reproducibility checks (see DatasetIdentityService).
+    // =========================================================================
+    this.datasetRefs =
+      Array.isArray(config.datasetRefs) && config.datasetRefs.length > 0
+        ? config.datasetRefs
+        : config.datasetId
+        ? [migrateDatasetIdToRef(config.datasetId)]
+        : [];
+
+    // =========================================================================
+    // DR2: TIME-SERIES PLAYBACK STATE (durable Layer 2 state)
+    // Shape when present:
+    //   { enabled, currentStep, totalSteps, playbackMode, direction, loop,
+    //     fps, interpolation, authorUserId, committedAt }
+    // VTKTimeSeriesFeature (Layer 3) reads this on reconstruction to restore
+    // playback position. Transient per-frame ticks remain ephemeral in Layer 3.
+    // =========================================================================
+    this.time = config.time || null;
+
+    // =========================================================================
+    // DR2: MULTI-DATASET COMPOSITION LAYERS
+    // Each entry: { datasetId, role, visible, opacity, order, scalarArrayName,
+    //               colorMapId, filters, transform, label }
+    // All entries reference Layer 1 datasets by stable datasetId.
+    // VTK runtime actors/pipelines remain Layer 3 only.
+    // =========================================================================
+    this.composition = config.composition || [];
+
+    // =========================================================================
+    // DR2: RENDER COMPATIBILITY REQUIREMENTS (declarative, not runtime objects)
+    // Shape: { requiresWebGL2, requiresWebXR, requiresLocalRender,
+    //          minSchemaVersion, requiredScalarArrays }
+    // Read by ClientCapabilityProfile.compareRenderCapabilities().
+    // =========================================================================
+    this.compatibility = config.compatibility || {};
+
+    // =========================================================================
+    // DR2: PER-VIEW RENDER MODE
+    // 'local'  — client renders with local VTK.js pipeline
+    // 'remote' — server renders and streams frames (Apple Vision Pro thin-client)
+    // 'auto'   — choose based on client capability and RemoteRenderClient status
+    // =========================================================================
+    this.renderMode = config.renderMode || "auto";
 
     // =========================================================================
     // OWNERSHIP & SHARING
@@ -1040,6 +1105,14 @@ export class ViewConfiguration {
       datasetId: this.datasetId,
       name: this.name,
       description: this.description,
+
+      // DR2 fields
+      schemaVersion: this.schemaVersion,
+      datasetRefs:   this.datasetRefs,
+      time:          this.time,
+      composition:   this.composition,
+      compatibility: this.compatibility,
+      renderMode:    this.renderMode,
 
       ownerUserId: this.ownerUserId,
       ownerUserName: this.ownerUserName,

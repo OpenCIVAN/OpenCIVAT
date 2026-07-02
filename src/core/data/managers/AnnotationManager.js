@@ -159,11 +159,26 @@ export class AnnotationManager extends BaseManager {
       throw new Error(`Annotation ${annotationId} not found`);
     }
 
+    // Skip sync while conflict is unresolved
+    if (annotation.hasConflict) {
+      this._log.warn(`Annotation ${annotationId} has unresolved conflict; skipping update sync`);
+      return annotation;
+    }
+
+    // Build payload, including base_revision for optimistic concurrency control
+    const payload = { ...updates };
+    if (annotation.revision != null) {
+      payload.base_revision = annotation.revision;
+    }
+
     try {
-      const result = await apiClient.put(
-        `/annotations/${annotationId}`,
-        updates
-      );
+      const result = await apiClient.put(`/annotations/${annotationId}`, payload);
+
+      // Accept new revision from server response
+      const newRevision = result?.annotation?.revision ?? result?.revision;
+      if (newRevision != null) {
+        annotation.revision = Number(newRevision);
+      }
 
       // Update local copy
       Object.assign(annotation, updates);
@@ -172,9 +187,175 @@ export class AnnotationManager extends BaseManager {
       this._log.debug(`Annotation updated: ${annotationId}`);
       return annotation;
     } catch (error) {
+      if (error?.status === 409) {
+        // Stale write — another user changed this annotation; surface conflict
+        const details = error?.details || {};
+        annotation.hasConflict = true;
+        annotation.conflict = {
+          entityType: "annotation",
+          entityId: annotationId,
+          clientBaseRevision: annotation.revision,
+          serverRevision: details.serverRevision,
+          serverObject: details.serverObject,
+          updatedBy: details.updatedBy || null,
+          updatedAt: details.updatedAt || null,
+          clientObject: { ...annotation, ...updates },
+        };
+        this._emit("conflictDetected", annotation.conflict);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("cia:sync-conflict", { detail: annotation.conflict })
+          );
+        }
+        this._log.warn(`Conflict detected on annotation ${annotationId}`);
+        return annotation; // return current state; user must resolve
+      }
       this._log.error(`Failed to update annotation ${annotationId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Resolve a conflict by adopting the server's current annotation state.
+   * @param {string} annotationId
+   */
+  resolveConflictUseServer(annotationId) {
+    // Find the annotation across all datasets
+    const { annotation, dataset } = this._findAnnotation(annotationId);
+    if (!annotation?.hasConflict) return;
+
+    const serverObj = annotation.conflict?.serverObject;
+    if (serverObj) {
+      // Adopt server state, including the server's revision
+      Object.assign(annotation, {
+        text: serverObj.text,
+        content: serverObj.content,
+        position: serverObj.position,
+        normal: serverObj.normal,
+        visibility: serverObj.visibility,
+        metadata: serverObj.metadata,
+        type: serverObj.type,
+        revision: serverObj.revision != null ? Number(serverObj.revision) : annotation.revision,
+      });
+    }
+    annotation.hasConflict = false;
+    annotation.conflict = null;
+
+    if (dataset) {
+      this._emit("annotationUpdated", { datasetId: dataset.id, annotation });
+    }
+    this._log.info(`Conflict resolved (use server) for annotation ${annotationId}`);
+  }
+
+  /**
+   * Resolve a conflict by force-overwriting with the client's pending changes.
+   * @param {string} annotationId
+   */
+  async resolveConflictOverwrite(annotationId) {
+    const { annotation, dataset } = this._findAnnotation(annotationId);
+    if (!annotation?.hasConflict) return;
+
+    const clientObj = annotation.conflict?.clientObject || {};
+    annotation.hasConflict = false;
+    annotation.conflict = null;
+
+    try {
+      const result = await apiClient.put(`/annotations/${annotationId}`, {
+        ...clientObj,
+        force_overwrite: true,
+      });
+      const newRevision = result?.annotation?.revision ?? result?.revision;
+      if (newRevision != null) annotation.revision = Number(newRevision);
+      this._log.info(`Conflict resolved (force overwrite) for annotation ${annotationId}`);
+    } catch (err) {
+      this._log.error(`Force overwrite failed for annotation ${annotationId}:`, err);
+    }
+
+    if (dataset) {
+      this._emit("annotationUpdated", { datasetId: dataset.id, annotation });
+    }
+  }
+
+  /**
+   * Apply one delta event from the sync stream to local annotation state.
+   * Called by syncService.applyDeltaEvents.
+   *
+   * @param {object} event  sync_events row (with payload_type, patch, snapshot)
+   * @returns {Promise<boolean>} true = applied (advance watermark), false = failed (stop batch)
+   */
+  async applyDeltaEvent(event) {
+    const annotationId = event.entity_id;
+
+    // Tombstone: remove from local state
+    if (event.operation === "delete" || event.payload_type === "tombstone") {
+      const { annotation, dataset } = this._findAnnotation(annotationId);
+      if (annotation && dataset) {
+        dataset.removeAnnotation(annotationId);
+        this._emit("annotationRemoved", { datasetId: dataset.id, annotationId });
+      }
+      return true;
+    }
+
+    const { annotation, dataset } = this._findAnnotation(annotationId);
+
+    // Idempotency: skip if already at this revision or newer
+    if (
+      annotation?.revision != null &&
+      Number(annotation.revision) >= Number(event.next_revision)
+    ) {
+      return true;
+    }
+
+    if (event.payload_type === "patch" && event.patch) {
+      if (!annotation || !dataset) {
+        this._log.warn(
+          `Cannot apply annotation patch ${annotationId}: not in local state`
+        );
+        return false;
+      }
+
+      try {
+        const { patch: applyPatch } = await import("@Utils/jsonPatch.js");
+        const currentAsServer = _annotationToServerFormat(annotation, dataset.id);
+        const patched = applyPatch(currentAsServer, event.patch);
+        _applyServerFormatToAnnotation(annotation, patched);
+        annotation.revision = Number(event.next_revision);
+        this._emit("annotationUpdated", { datasetId: dataset.id, annotation });
+        return true;
+      } catch (err) {
+        this._log.warn(
+          `Annotation patch failed for ${annotationId}: ${err.message}`
+        );
+        return false;
+      }
+    }
+
+    // Snapshot: route through existing handleServerBroadcast path.
+    // _handleRemoteAnnotationUpdated expects annotationData.fileId (not dataset_id).
+    if (event.snapshot) {
+      const snap = event.snapshot;
+      this.handleServerBroadcast("annotation:updated", {
+        annotation: { ...snap, fileId: snap.dataset_id },
+      });
+      return true;
+    }
+
+    this._log.warn(`Unrecognized delta event format for annotation ${annotationId}`);
+    return false;
+  }
+
+  /**
+   * Find an annotation by id across all loaded datasets.
+   * @private
+   */
+  _findAnnotation(annotationId) {
+    if (!this._datasetManager) return { annotation: null, dataset: null };
+    const datasets = this._datasetManager.getAllDatasets?.() || [];
+    for (const dataset of datasets) {
+      const annotation = dataset.getAnnotation?.(annotationId);
+      if (annotation) return { annotation, dataset };
+    }
+    return { annotation: null, dataset: null };
   }
 
   /**
@@ -236,6 +417,60 @@ export class AnnotationManager extends BaseManager {
   // ==================== CLEANUP ====================
   // NOTE: dispose() is inherited from BaseManager - no need to override
   // unless we have AnnotationManager-specific cleanup
+}
+
+// ============================================================================
+// FORMAT HELPERS (module-level — no `this` dependency)
+// ============================================================================
+
+/**
+ * Convert a camelCase Annotation model to the snake_case format used by the
+ * server's DB rows and sync_events patches.
+ */
+function _annotationToServerFormat(annotation, datasetId) {
+  return {
+    id: annotation.id,
+    dataset_id: datasetId,
+    position: annotation.position,
+    normal: annotation.normal,
+    text: annotation.text,
+    type: annotation.type,
+    created_by: annotation.createdBy,
+    created_at: annotation.createdAt,
+    modified_by: annotation.modifiedBy,
+    modified_at: annotation.modifiedAt,
+    tags: annotation.tags,
+    visibility: annotation.visibility,
+    shared_with: annotation.sharedWith,
+    metadata: annotation.metadata,
+    ownership: annotation.ownership,
+    group_id: annotation.groupId,
+    group_name: annotation.groupName,
+    contributors: annotation.contributors,
+    creation_context: annotation.creationContext,
+    revision: annotation.revision,
+  };
+}
+
+/**
+ * Merge patched snake_case fields back into a camelCase Annotation model.
+ * Only updates fields that are present in serverFmt (patch is sparse).
+ */
+function _applyServerFormatToAnnotation(annotation, serverFmt) {
+  if (serverFmt.text !== undefined) annotation.text = serverFmt.text;
+  if (serverFmt.position !== undefined) annotation.position = serverFmt.position;
+  if (serverFmt.normal !== undefined) annotation.normal = serverFmt.normal;
+  if (serverFmt.type !== undefined) annotation.type = serverFmt.type;
+  if (serverFmt.visibility !== undefined) annotation.visibility = serverFmt.visibility;
+  if (serverFmt.tags !== undefined) annotation.tags = serverFmt.tags;
+  if (serverFmt.shared_with !== undefined) annotation.sharedWith = serverFmt.shared_with;
+  if (serverFmt.metadata !== undefined) annotation.metadata = serverFmt.metadata;
+  if (serverFmt.ownership !== undefined) annotation.ownership = serverFmt.ownership;
+  if (serverFmt.group_id !== undefined) annotation.groupId = serverFmt.group_id;
+  if (serverFmt.group_name !== undefined) annotation.groupName = serverFmt.group_name;
+  if (serverFmt.contributors !== undefined) annotation.contributors = serverFmt.contributors;
+  if (serverFmt.creation_context !== undefined)
+    annotation.creationContext = serverFmt.creation_context;
 }
 
 // Export singleton instance (will be initialized in appInitializer)

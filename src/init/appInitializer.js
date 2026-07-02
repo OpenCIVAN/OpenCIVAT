@@ -736,6 +736,15 @@ function setupDebugHelpers() {
   window.CIA.workspaceManager = workspaceManager;
   window.CIA.sessionManager = sessionManager;
   window.CIA.canvasManager = canvasManager;
+  // Expose for conflict resolution dialog (DR1 — generalized conflict handling)
+  window.CIA.annotationManager = annotationManager;
+  // Module singletons — expose via dynamic import (they initialize at module load time)
+  import("@Core/data/managers/ViewGroupManager.js").then(({ viewGroupManager }) => {
+    window.CIA.viewGroupManager = viewGroupManager;
+  });
+  import("@Core/data/managers/WorkspaceAnnotationManager.js").then(({ workspaceAnnotationManager }) => {
+    window.CIA.workspaceAnnotationManager = workspaceAnnotationManager;
+  });
 
   // For debugging only - expose the internal storage provider
   // This violates encapsulation but is useful for development

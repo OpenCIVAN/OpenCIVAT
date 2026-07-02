@@ -4,48 +4,69 @@
     "name": "Bones",
     "path": "/vtp_files/Bones.vtp",
     "description": "Bone structure",
-    "sizeHint": "26 MB"
+    "sizeHint": "26 MB",
+    "format": "vtp",
+    "size": 27272740,
+    "contentHash": "c1d3e2a88c5bc9ea30616030db1c2d46db0b98f33b2da877256035a56473bca3"
   },
   {
     "id": "builtin-lung-vessels",
     "name": "Lung Vessels",
     "path": "/vtp_files/LungVessels.vtp",
     "description": "Pulmonary vessel tree",
-    "sizeHint": "27 MB"
+    "sizeHint": "27 MB",
+    "format": "vtp",
+    "size": 28826464,
+    "contentHash": "a14ca75254c6729dc6c2240d1f1353ab5c922d1a528a7a5be0033fc5cb30c2e0"
   },
   {
     "id": "builtin-lungs",
     "name": "Lungs",
     "path": "/vtp_files/Lungs.vtp",
     "description": "Lung surface mesh",
-    "sizeHint": "10 MB"
+    "sizeHint": "10 MB",
+    "format": "vtp",
+    "size": 10750132,
+    "contentHash": "82c785fdf2222329b761d33c3d6ac3355af152d5f12567de51365a05d3619fe7"
   },
   {
     "id": "builtin-skull",
     "name": "Skull",
     "path": "/vtp_files/Skull.vtp",
     "description": "Skull geometry",
-    "sizeHint": "19 MB"
+    "sizeHint": "19 MB",
+    "format": "vtp",
+    "size": 19988316,
+    "contentHash": "d6486a677aa1906156e3fc33b3a448b12724ca2fcc45d99445fb29bbf3847605"
   },
   {
     "id": "builtin-ventricles",
     "name": "Ventricles",
     "path": "/vtp_files/Ventricles.vtp",
     "description": "Cardiac ventricles",
-    "sizeHint": "16 MB"
+    "sizeHint": "16 MB",
+    "format": "vtp",
+    "size": 16487240,
+    "contentHash": "569701fd7541aae0c0ea20d729fba8155aefb557d56eeb78c85aba3ea662309f"
   },
   {
     "id": "builtin-disk",
     "name": "Disk Sample",
     "path": "/vtp_files/diskout.vtp",
     "description": "Small test dataset",
-    "sizeHint": "472 KB"
+    "sizeHint": "472 KB",
+    "format": "vtp",
+    "size": 483237,
+    "contentHash": "cc169f7cfa11b4be05470595605d2f15632b8d8ffc693aa97f11100ad2482d85"
   },
   {
     "id": "builtin-earth",
     "name": "Earth",
     "path": "/vtp_files/earth.vtp",
     "description": "Earth surface",
-    "sizeHint": "1.2 MB"
+    "sizeHint": "1.2 MB",
+    "format": "vtp",
+    "size": 1233227,
+    "contentHash": "003a55ec43fd199f3ebddd9d541f30569559b4eba6da6dd09091789031e0d2f4"
   }
 ]

@@ -330,3 +330,12 @@
     gap: $spacing-xs;
     flex-shrink: 0;
 }
+
+// =============================================================================
+// DR2: RENDER CONSISTENCY BADGE
+// =============================================================================
+
+.instance-card__consistency {
+    margin-left: auto;
+    flex-shrink: 0;
+}

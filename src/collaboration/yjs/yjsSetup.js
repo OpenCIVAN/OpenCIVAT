@@ -30,6 +30,7 @@ import { WebsocketProvider } from "y-websocket";
 import clientConfig from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager";
 import { authService } from "@Services/authService.js";
+import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { sync as log } from "@Utils/logger.js";
 
 // ============================================================================
@@ -81,10 +82,20 @@ export const yText = ydoc.getArray("chatMessages");
 
 let _provider = null;
 
-async function waitForAccessToken(timeoutMs = 15000) {
-  // Token waiting disabled - all users connect without tokens
-  // Collaboration sync works directly without JWT validation in dev mode
-  return null;
+async function waitForAccessToken() {
+  // In dev bypass mode, no token is needed.
+  const isDevMode =
+    clientConfig.devBypassAuth === true || clientConfig.devBypassAuth === "true";
+  if (isDevMode) return null;
+
+  try {
+    // authService.getAccessToken() auto-refreshes if needed.
+    const token = await authService.getAccessToken?.();
+    return token || null;
+  } catch {
+    log.debug("Could not get access token — proceeding without (dev or offline?)");
+    return null;
+  }
 }
 
 /**
@@ -111,16 +122,29 @@ export async function initializeYjsProvider() {
   // All connections allowed in development - token not required for collaboration
   log.info("Y.js connecting in collaboration mode (no token required)");
 
+  const isDevMode =
+    clientConfig.devBypassAuth === true || clientConfig.devBypassAuth === "true";
+
   const params = {};
+
   if (token) {
+    // Pass JWT so server can validate room membership in production
     params.token = token;
   }
-  if (clientConfig.devBypassAuth) {
+
+  if (isDevMode) {
+    // DEV_BYPASS_AUTH: identify user by id/name via URL params
     const user = authService.getUser?.();
     if (user?.id) {
       params.userId = user.id;
       params.username = user.name;
     }
+  }
+
+  // Pass projectId so the Y.js server can perform project/room membership checks
+  const projectId = sessionManager.projectId || clientConfig.defaultProjectId || null;
+  if (projectId) {
+    params.projectId = projectId;
   }
 
   _provider = new WebsocketProvider(wsUrl, roomId, ydoc, {
@@ -135,6 +159,7 @@ export async function initializeYjsProvider() {
     if (event.status === 'connected') {
       console.group("[CIA Collab] Y.js connected");
       console.log("Room:", roomId);
+      console.log("User:", getUserId(), "(per-tab identity)");
       console.log("Y.js clientID (unique per tab):", ydoc.clientID);
       console.log("WebSocket URL:", wsUrl);
       console.groupEnd();

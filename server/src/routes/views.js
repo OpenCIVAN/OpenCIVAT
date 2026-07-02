@@ -4,11 +4,26 @@
 
 const express = require("express");
 const router = express.Router();
-const { getUser } = require("../middleware/auth");
+const { getUser, checkProjectAccess } = require("../middleware/auth");
 const thumbnailService = require("../services/thumbnailService");
 const { createLogger } = require("../utils/logger");
+const { writeSyncEvent, buildSnapshot } = require("../services/syncEventService");
+const { diffObjects } = require("../utils/jsonDiff");
 
 const log = createLogger("views");
+
+// DR2: Derive datasetRefs from the datasets JOIN columns present on a view row.
+// Built-in datasets have dataset_id = NULL on the server → returns [].
+function buildDatasetRefs(row) {
+  if (!row.dataset_id) return [];
+  return [{
+    datasetId:   row.dataset_id,
+    contentHash: row.dataset_hash       || null,
+    format:      row.dataset_file_type  || null,
+    sizeBytes:   row.dataset_file_size  ? Number(row.dataset_file_size) : null,
+    role:        'primary',
+  }];
+}
 
 // ============================================================================
 // VIEW ENDPOINTS
@@ -36,7 +51,10 @@ router.get("/", async (req, res, next) => {
     let query = `
       SELECT v.*,
              u.email as owner_email,
-             d.filename as file_name
+             d.filename as file_name,
+             d.hash as dataset_hash,
+             d.file_type as dataset_file_type,
+             d.file_size as dataset_file_size
       FROM view_configurations v
       LEFT JOIN users u ON v.owner_user_id::uuid = u.id
       LEFT JOIN datasets d ON v.dataset_id = d.id
@@ -81,7 +99,7 @@ router.get("/", async (req, res, next) => {
     const result = await pool.query(query, values);
 
     res.json({
-      views: result.rows,
+      views: result.rows.map(row => ({ ...row, datasetRefs: buildDatasetRefs(row) })),
       count: result.rows.length,
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -105,6 +123,9 @@ router.get("/:id", async (req, res, next) => {
       SELECT v.*,
              u.email as owner_email,
              d.filename as file_name,
+             d.hash as dataset_hash,
+             d.file_type as dataset_file_type,
+             d.file_size as dataset_file_size,
              fv.version_number as file_version
       FROM view_configurations v
       LEFT JOIN users u ON v.owner_user_id::uuid = u.id
@@ -119,7 +140,26 @@ router.get("/:id", async (req, res, next) => {
       return res.status(404).json({ error: "View not found" });
     }
 
-    res.json({ view: result.rows[0] });
+    const view = result.rows[0];
+    const user = getUser(req);
+
+    // Private views are only accessible to their owner
+    if (view.visibility === "private" && view.owner_user_id !== user?.id) {
+      return res.status(403).json({ error: "Access denied to private view" });
+    }
+
+    // Project-scoped views require project membership
+    if (view.visibility === "project" && view.project_id) {
+      const role = await pool.query(
+        `SELECT 1 FROM project_members WHERE project_id = $1 AND user_id = $2`,
+        [view.project_id, user?.id]
+      );
+      if (!role.rows.length) {
+        return res.status(403).json({ error: "Not a member of this project" });
+      }
+    }
+
+    res.json({ view: { ...view, datasetRefs: buildDatasetRefs(view) } });
   } catch (error) {
     next(error);
   }
@@ -152,6 +192,14 @@ router.post("/", async (req, res, next) => {
 
     if (!fileId) {
       return res.status(400).json({ error: "fileId is required" });
+    }
+
+    // If scoped to a project, verify caller is a member
+    if (projectId) {
+      const memberRole = await checkProjectAccess(pool, projectId, user?.id);
+      if (!memberRole) {
+        return res.status(403).json({ error: "Not a member of this project" });
+      }
     }
 
     // Built-in client-side datasets (id starts with "builtin-") are not stored
@@ -282,7 +330,16 @@ router.post("/", async (req, res, next) => {
 
 /**
  * PUT /api/views/:id
- * Update a view configuration
+ * Update a view configuration.
+ *
+ * Supports optimistic concurrency control (OCC) via the optional
+ * `base_revision` body field.  When provided the server rejects stale
+ * writes with 409 Conflict and returns the current server state so the
+ * client can resolve.  When omitted the write proceeds as last-write-wins
+ * (backward-compatible behaviour).
+ *
+ * Set `force_overwrite: true` to skip the revision check after an explicit
+ * conflict-resolution decision by the user.
  */
 router.put("/:id", async (req, res, next) => {
   const { pool, wsManager } = req.app.locals;
@@ -290,19 +347,21 @@ router.put("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const user = getUser(req);
-    const updates = req.body;
+    const actorUserId = user?.id || req.headers["x-user-id"] || null;
+    const { base_revision, force_overwrite, ...updates } = req.body;
+    const correlationId = req.headers["x-correlation-id"] || null;
 
-    // Get existing view
-    const existing = await pool.query(
-      "SELECT * FROM view_configurations WHERE id = $1",
+    // Only the owner may modify a view configuration
+    const ownerCheck = await pool.query(
+      `SELECT owner_user_id FROM view_configurations WHERE id = $1`,
       [id]
     );
-
-    if (existing.rows.length === 0) {
+    if (ownerCheck.rows.length === 0) {
       return res.status(404).json({ error: "View not found" });
     }
-
-    const beforeState = existing.rows[0];
+    if (ownerCheck.rows[0].owner_user_id !== actorUserId) {
+      return res.status(403).json({ error: "Only the view owner may update it" });
+    }
 
     // Build dynamic update query
     const allowedFields = [
@@ -331,13 +390,11 @@ router.put("/:id", async (req, res, next) => {
     let paramIndex = 1;
 
     for (const field of allowedFields) {
-      // Map camelCase to snake_case
       const dbField = field.replace(/([A-Z])/g, "_$1").toLowerCase();
       const bodyField = field;
 
       if (updates[bodyField] !== undefined) {
         let value = updates[bodyField];
-        // JSON fields need stringification
         const jsonFields = [
           "camera",
           "filters",
@@ -364,23 +421,119 @@ router.put("/:id", async (req, res, next) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
-    // Add tracking fields
+    // Always increment revision and track who updated
+    setClauses.push(`revision = revision + 1`);
     setClauses.push(`updated_at = NOW()`);
 
-    // Add WHERE clause
+    // OCC: check base_revision unless force_overwrite is set
+    const hasRevisionCheck = base_revision != null && !force_overwrite;
+
+    // Build WHERE clause
+    let whereClause = `id = $${paramIndex++}`;
     values.push(id);
+    if (hasRevisionCheck) {
+      whereClause += ` AND revision = $${paramIndex++}`;
+      values.push(Number(base_revision));
+    }
 
-    const result = await pool.query(
-      `
-      UPDATE view_configurations
-      SET ${setClauses.join(", ")}
-      WHERE id = $${paramIndex}
-      RETURNING *
-    `,
-      values
-    );
+    // Run update inside a transaction so the sync_event write is atomic
+    const client = await pool.connect();
+    let view;
+    let syncEvent;
+    let oldStateForPatch = null;
 
-    const view = result.rows[0];
+    try {
+      await client.query("BEGIN");
+
+      // Fetch old state for patch computation.
+      // OCC writes: guaranteed correct base (revision-locked by WHERE clause).
+      // LWW writes: best-effort — fetched within the same transaction but without
+      //   revision locking. If a concurrent LWW write intervenes between SELECT and
+      //   UPDATE, the patch may reflect the wrong base; clients fall back to snapshot.
+      const oldResult = await client.query(
+        "SELECT * FROM view_configurations WHERE id = $1",
+        [id]
+      );
+      oldStateForPatch = oldResult.rows[0] || null;
+
+      const result = await client.query(
+        `UPDATE view_configurations SET ${setClauses.join(", ")} WHERE ${whereClause} RETURNING *`,
+        values
+      );
+
+      if (result.rowCount === 0) {
+        await client.query("ROLLBACK");
+        client.release();
+
+        if (hasRevisionCheck) {
+          // Conflict: fetch current state for the client
+          const current = await pool.query(
+            "SELECT * FROM view_configurations WHERE id = $1",
+            [id]
+          );
+          if (current.rows.length === 0) {
+            return res.status(404).json({ error: "View not found" });
+          }
+          const cur = current.rows[0];
+          return res.status(409).json({
+            error: "conflict",
+            entityType: "view_configuration",
+            entityId: id,
+            clientBaseRevision: Number(base_revision),
+            serverRevision: Number(cur.revision),
+            serverObject: cur,
+            updatedBy: cur.updated_by || null,
+            updatedAt: cur.updated_at,
+          });
+        }
+
+        return res.status(404).json({ error: "View not found" });
+      }
+
+      view = result.rows[0];
+
+      // Determine workspace_id for sync_events (look up via project)
+      let workspaceId = null;
+      try {
+        const ws = await client.query(
+          "SELECT id FROM workspaces WHERE project_id = $1 LIMIT 1",
+          [view.project_id]
+        );
+        workspaceId = ws.rows[0]?.id || null;
+      } catch (_) { /* non-fatal */ }
+
+      // Compute patch when we have both old and new state (OCC path only)
+      const snapshotData = buildSnapshot(view);
+      let patchData = null;
+      if (oldStateForPatch) {
+        const ops = diffObjects(buildSnapshot(oldStateForPatch), snapshotData);
+        patchData = ops.length > 0 ? ops : null;
+      }
+
+      const operation = force_overwrite ? "conflict_resolved" : "update";
+      syncEvent = await writeSyncEvent(client, {
+        workspaceId,
+        entityType: "view_configuration",
+        entityId: id,
+        operation,
+        baseRevision: base_revision != null ? Number(base_revision) : null,
+        nextRevision: Number(view.revision),
+        snapshot: snapshotData,
+        patch: patchData,
+        actorUserId,
+        correlationId,
+      });
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      client.release();
+      throw err;
+    }
+
+    client.release();
+
+    const beforeState = { id };
 
     // Audit log
     if (req.audit) {
@@ -393,19 +546,16 @@ router.put("/:id", async (req, res, next) => {
       });
     }
 
-    // Broadcast update to all clients in the project
-    // Even private views need sync for the owner across devices
+    // Broadcast update to all clients in the project (enriched payload)
     if (wsManager && view.project_id) {
-      wsManager.viewUpdated(view.project_id, view);
+      wsManager.viewUpdated(view.project_id, view, syncEvent?.id, actorUserId);
     } else if (wsManager && view.dataset_id) {
-      // Fallback: find project from file access table
       const projects = await pool.query(
         "SELECT project_id FROM file_project_access WHERE file_id = $1",
         [view.dataset_id]
       );
-
       for (const row of projects.rows) {
-        wsManager.viewUpdated(row.project_id, view);
+        wsManager.viewUpdated(row.project_id, view, syncEvent?.id, actorUserId);
       }
     }
 
@@ -478,6 +628,11 @@ router.delete("/:id", async (req, res, next) => {
     }
 
     const view = existing.rows[0];
+
+    // Only the view owner may delete it
+    if (view.owner_user_id !== user?.id) {
+      return res.status(403).json({ error: "Only the view owner may delete it" });
+    }
 
     // Soft delete
     await pool.query(

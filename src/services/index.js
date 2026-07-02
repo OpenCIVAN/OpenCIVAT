@@ -33,6 +33,7 @@ export { viewLinkingService, LINKING_EVENTS } from "./ViewLinkingService.js";
 // ============================================================================
 
 export { authService } from "./authService.js";
+export { permissionService, PERMISSIONS } from "./permissionService.js";
 
 // ============================================================================
 // VOICE COMMUNICATION

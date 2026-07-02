@@ -33,6 +33,7 @@ import {
     ModeBadge,
     SyncStatusIndicator,
 } from '@UI/react/components/atoms/LinkBadges';
+import { RenderConsistencyBadge } from '@UI/react/components/molecules/RenderConsistencyBadge';
 import './InstanceCard.scss';
 
 // =============================================================================
@@ -171,6 +172,9 @@ export const InstanceCard = memo(function InstanceCard({
 
     // Styling
     className = '',
+
+    // DR2: Show render consistency badge (HEADER variant only, opt-in)
+    showConsistency = false,
 }) {
     // =========================================================================
     // STATE
@@ -423,6 +427,21 @@ export const InstanceCard = memo(function InstanceCard({
         );
     };
 
+    const renderConsistencyBadge = () => {
+        if (!showConsistency || variant !== VARIANTS.HEADER) return null;
+        const vcm = getViewConfigurationManager?.();
+        const dm  = getDatasetManager?.();
+        const vc  = vcm?.getView?.(viewId || view?.id);
+        if (!vc || !dm) return null;
+        return (
+            <RenderConsistencyBadge
+                viewConfig={vc}
+                datasetManager={dm}
+                className="instance-card__consistency"
+            />
+        );
+    };
+
     // =========================================================================
     // MAIN RENDER
     // =========================================================================
@@ -461,6 +480,9 @@ export const InstanceCard = memo(function InstanceCard({
 
                 {/* Link badges */}
                 {renderLinkBadges()}
+
+                {/* DR2: Render consistency badge (opt-in via showConsistency prop) */}
+                {renderConsistencyBadge()}
 
                 {/* Settings button */}
                 {renderSettingsButton()}
