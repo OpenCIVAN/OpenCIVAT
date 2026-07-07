@@ -47,6 +47,7 @@ class VRManager extends BaseManager {
     this._xrLayer = null;
     this._isolatedViewId = null;
     this._inputSources = new Map(); // XRInputSource -> controller data
+    this._selectPressed = new Map(); // XRInputSource -> boolean (for gripless sources)
     this._hands = { left: null, right: null };
     this._mode = "inactive";
     this._xrSession = null;
@@ -345,6 +346,7 @@ class VRManager extends BaseManager {
 
     // Clear input sources
     this._inputSources.clear();
+    this._selectPressed.clear();
     this._hands = { left: null, right: null };
 
     // Clear WebXR state
@@ -453,6 +455,30 @@ class VRManager extends BaseManager {
             handedness: data.handedness,
             gripPose,
             gamepad: source.gamepad,
+          });
+        }
+      } else if (source.targetRaySpace && !source.hand) {
+        // Gripless sources (Vision Pro transient-pointer: gaze + pinch).
+        // The target ray pose stands in for the grip pose.
+        const targetRayPose = frame.getPose(
+          source.targetRaySpace,
+          this._referenceSpace
+        );
+        if (targetRayPose) {
+          data.gripPose = targetRayPose;
+          poses[data.handedness] = {
+            gripPose: targetRayPose,
+            targetRayPose,
+            gamepad: source.gamepad || null,
+            handedness: data.handedness,
+            targetRayMode: source.targetRayMode,
+          };
+
+          this._emit("controllerUpdate", {
+            source,
+            handedness: data.handedness,
+            gripPose: targetRayPose,
+            gamepad: source.gamepad || null,
           });
         }
       }
@@ -580,6 +606,7 @@ class VRManager extends BaseManager {
     if (!data) return;
 
     this._inputSources.delete(source);
+    this._selectPressed.delete(source);
 
     if (data.isHand) {
       this._hands[data.handedness] = null;
@@ -616,6 +643,9 @@ class VRManager extends BaseManager {
    */
   _handleSelectStart(event) {
     const data = this._inputSources.get(event.inputSource);
+    // Track select state per source so gripless inputs (Vision Pro
+    // transient-pointer) expose a trigger-equivalent without a gamepad.
+    this._selectPressed.set(event.inputSource, true);
     this._emit("selectStart", {
       source: event.inputSource,
       handedness: data?.handedness,
@@ -629,6 +659,7 @@ class VRManager extends BaseManager {
    */
   _handleSelectEnd(event) {
     const data = this._inputSources.get(event.inputSource);
+    this._selectPressed.set(event.inputSource, false);
     this._emit("selectEnd", {
       source: event.inputSource,
       handedness: data?.handedness,
@@ -685,6 +716,17 @@ class VRManager extends BaseManager {
   }
 
   /**
+   * Whether a source's select action is currently pressed.
+   * Gripless sources (Vision Pro transient-pointer) have no gamepad, so
+   * selectstart/selectend tracking is their only trigger signal.
+   * @param {XRInputSource} source
+   * @returns {boolean}
+   */
+  isSelectPressed(source) {
+    return this._selectPressed.get(source) === true;
+  }
+
+  /**
    * Get controller by handedness
    * @param {string} handedness - 'left' | 'right'
    * @returns {XRInputSource|null}
@@ -720,27 +762,18 @@ class VRManager extends BaseManager {
   // ===========================================================================
 
   /**
-   * Enter isolation mode - pull single view to room-scale
-   * User can walk around the 3D model
+   * Enter isolation mode - the active view's model is pulled to room scale
+   * for walk-around inspection. The scene transform itself (vrScale/vrOrigin)
+   * is applied by VRExplorationManager.enterIsolation(); this method tracks
+   * the mode state and notifies listeners.
    *
-   * @param {string} viewId - The ViewConfiguration ID to isolate
+   * @param {string} viewId - The ViewConfiguration ID being isolated
    */
   enterIsolationMode(viewId) {
-    log.debug(
-      `VRManager.enterIsolationMode(${viewId}) - STUB: Not fully implemented`
-    );
-
     if (this._mode !== "grid") {
       log.warn("Must be in VR grid mode to enter isolation");
       return;
     }
-
-    // TODO: Full implementation
-    // 1. Scale up selected view to room size
-    // 2. Hide other views (fade out)
-    // 3. Enable room-scale tracking
-    // 4. Show "return to grid" UI
-    // 5. Position model at comfortable viewing distance
 
     this._mode = "isolated";
     this._isolatedViewId = viewId;
@@ -752,20 +785,14 @@ class VRManager extends BaseManager {
   }
 
   /**
-   * Exit isolation mode - return to grid view
+   * Exit isolation mode - scale/origin restoration is handled by
+   * VRExplorationManager.exitIsolation(); this tracks the mode state.
    */
   exitIsolationMode() {
-    log.debug("VRManager.exitIsolationMode() - STUB: Not fully implemented");
-
     if (this._mode !== "isolated") {
       log.warn("Not in isolation mode");
       return;
     }
-
-    // TODO: Full implementation
-    // 1. Scale down view
-    // 2. Restore grid layout (fade in)
-    // 3. Return to grid tracking mode
 
     const previousViewId = this._isolatedViewId;
     this._mode = "grid";

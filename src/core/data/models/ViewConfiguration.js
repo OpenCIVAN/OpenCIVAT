@@ -406,6 +406,17 @@ export class ViewConfiguration {
     // ViewConfiguration stores them but doesn't understand their structure.
 
     this.camera = config.camera || null; // Handler provides default
+    // Shared per-view rendering state that doesn't have its own dedicated
+    // container yet: opacity, representation, pointSize, lineWidth, colormap,
+    // activeArray/activeArrayType, transform {position,rotation,scale}, slice
+    // {orientation,position}, windowLevel {window,level}, glyph, threshold,
+    // slicePlane (VTKSliceFeature.getConfigForSync — volumetric slice viewer:
+    // enabled/sliceMode/sliceIndex/windowWidth/windowLevel/interpolate),
+    // clipBox (VTKClippingFeature.getConfigForSync — interactive clipping
+    // plane: enabled/inverted/planePreset/plane{origin,normal}). Merged
+    // shallowly per top-level key by updateVisualization(); handler
+    // interprets contents.
+    this.visualization = config.visualization || null;
     this.filters = config.filters || [];
     this.widgets = config.widgets || [];
     this.colorMaps = config.colorMaps || null; // Handler provides default
@@ -882,6 +893,18 @@ export class ViewConfiguration {
     this.updatedAt = Date.now();
   }
 
+  /**
+   * Shallow-merge a visualization patch (opacity, representation, transform, etc).
+   * Nested objects (transform, slice, windowLevel) are replaced wholesale by the
+   * caller-provided value, not deep-merged — callers must send the full nested
+   * shape they want applied.
+   */
+  updateVisualization(patch) {
+    this.visualization = { ...this.visualization, ...patch };
+    this.lastActiveTimestamp = Date.now();
+    this.updatedAt = Date.now();
+  }
+
   addFilter(filter) {
     const id = filter.id || this._generateId();
     this.filters.push({ ...filter, id });
@@ -1129,6 +1152,7 @@ export class ViewConfiguration {
       following: this.following,
 
       camera: this.camera,
+      visualization: this.visualization,
       filters: this.filters,
       widgets: this.widgets,
       colorMaps: this.colorMaps,

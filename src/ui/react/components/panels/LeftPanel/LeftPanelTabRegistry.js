@@ -24,7 +24,12 @@ import { LayoutPanelContent } from "./tabs/LayoutTab";
 import { NavigatorTab as NavigatorPanelContent } from "./tabs/NavigatorTab";
 import { AnnotationsPanelContent } from "./tabs/AnnotationsTab";
 import { BookmarksFiltersPanelContent } from "./tabs/BookmarksFiltersTab";
-import { CursorsPanelContent } from "./tabs/CursorsTab";
+// NOTE: CursorsTab is intentionally NOT registered — it rendered hardcoded
+// SAMPLE_USERS (fake presence), misleading in demos. Real presence + follow
+// live in the RightPanel People tab (useRoomPresence + followService); the
+// tab's cia:follow-user / cia:camera-sync-mode event contracts are honored
+// by followService, so the component can be revived later if wanted.
+// import { CursorsPanelContent } from "./tabs/CursorsTab";
 // NOTE: CanvasMapTab has been migrated to CanvasMapPanel (PanelShell floating panel)
 // import { CanvasMapPanel } from '@UI/react/components/panels/CanvasMapPanel';
 
@@ -46,10 +51,9 @@ registerLeftPanelTab("navigator", NavigatorPanelContent);
 registerLeftPanelTab("annotations", AnnotationsPanelContent);
 registerLeftPanelTab("bookmarks", BookmarksFiltersPanelContent);
 
-// PRESENCE
-registerLeftPanelTab("cursors", CursorsPanelContent);
+// PRESENCE — handled by the RightPanel People tab (see note on CursorsTab above)
 
 // Log registration status in development
 if (process.env.NODE_ENV === "development") {
-  console.log("[LeftPanel] All 9 tab components registered (CanvasMap migrated to PanelShell)");
+  console.log("[LeftPanel] 8 tab components registered (CursorsTab retired; CanvasMap migrated to PanelShell)");
 }

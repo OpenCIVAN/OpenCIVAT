@@ -22,6 +22,7 @@ import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry.js";
 import { config } from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
+import cameraSharePolicy from "@Core/session/cameraSharePolicy.js";
 import { apiClient } from "@Services/apiClient.js";
 import { BaseManager } from "@Core/data/managers/BaseManager.js";
 
@@ -218,6 +219,7 @@ export class ViewConfigurationManager extends BaseManager {
       sharedWith: serverView.shared_with || [],
       savedByUser: serverView.saved_by_user,
       camera: serverView.camera,
+      visualization: serverView.visualization,
       filters: serverView.filters || [],
       widgets: serverView.widgets || [],
       colorMaps: serverView.color_maps,
@@ -259,7 +261,8 @@ export class ViewConfigurationManager extends BaseManager {
       shared_with: view.sharedWith,
       saved_by_user: view.savedByUser,
       camera: view.camera,
-      time: view.time || null,   // DR2.5: time-series playback state (ignored by server until DB migration)
+      visualization: view.visualization || null,
+      time: view.time || null,   // DR2.5: time-series playback state
       filters: view.filters,
       widgets: view.widgets,
       color_maps: view.colorMaps,
@@ -665,6 +668,14 @@ export class ViewConfigurationManager extends BaseManager {
     if (!view) return;
 
     view.updateCamera(cameraState);
+
+    // Personal-camera mode: keep the change local — no server persistence and
+    // no propagation to collaborators/linked views (see cameraSharePolicy).
+    if (!cameraSharePolicy.isCameraShared()) {
+      this._emit("cameraChanged", { viewId, camera: cameraState });
+      return;
+    }
+
     this._syncToServer(view);
 
     // Emit camera changed event for this view
@@ -672,6 +683,22 @@ export class ViewConfigurationManager extends BaseManager {
 
     // Propagate to views that are linked to this one (followers)
     this._propagateCameraToLinkedViews(viewId, cameraState);
+  }
+
+  /**
+   * Update shared visualization state (opacity, representation, transform,
+   * colormap, slice, windowLevel, pointSize, lineWidth, activeArray, glyph).
+   * Persists to ViewConfiguration.visualization and queues a server sync.
+   * Safe to call on every change — throttled by _syncToServer (100ms).
+   */
+  updateVisualization(viewId, patch) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view) return;
+
+    view.updateVisualization(patch);
+    this._syncToServer(view);
+
+    this._emit("visualizationChanged", { viewId, visualization: patch });
   }
 
   /**
@@ -1576,6 +1603,7 @@ export class ViewConfigurationManager extends BaseManager {
     const view = this._viewConfigs.get(viewId);
     if (!view?.hasConflict) return;
 
+    const conflictBackup = view.conflict;
     view.hasConflict = false;
     view.conflict = null;
 
@@ -1594,8 +1622,13 @@ export class ViewConfigurationManager extends BaseManager {
       view.pendingServerSync = false;
       log.info(`Conflict resolved (force overwrite) for view ${viewId}`);
     } catch (error) {
+      // Restore the conflict so the dialog can offer another resolution path,
+      // and propagate so the caller (ConflictResolutionDialog) can surface it.
       log.error(`Force overwrite failed for view ${viewId}:`, error);
+      view.hasConflict = true;
+      view.conflict = conflictBackup;
       view.pendingServerSync = true;
+      throw error;
     }
   }
 
@@ -1617,7 +1650,10 @@ export class ViewConfigurationManager extends BaseManager {
       this.resolveConflictUseServer(viewId);
       log.info(`Conflict resolved (save as copy) for view ${viewId}`);
     } catch (error) {
+      // Conflict state is untouched (duplicate failed before any resolution),
+      // so re-throw for the dialog to report and keep its options open.
       log.error(`Save-as-copy failed for view ${viewId}:`, error);
+      throw error;
     }
   }
 

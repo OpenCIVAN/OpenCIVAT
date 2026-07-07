@@ -20,6 +20,7 @@ export { VRManager, vrManager } from "./VRManager.js";
 export { VRSceneRenderer } from "./VRSceneRenderer.js";
 export { VRControllerRenderer } from "./VRControllerRenderer.js";
 export { VRGridLayout, vrGridLayout } from "./VRGridLayout.js";
+export { VRMultiViewGrid, vrMultiViewGrid, computeGridPlacements } from "./VRMultiViewGrid.js";
 export { VRCursorSync, vrCursorSync } from "./VRCursorSync.js";
 export { vrExplorationManager } from "./VRExplorationManager.js";
 

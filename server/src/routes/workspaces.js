@@ -11,6 +11,10 @@ const {
 } = require("../middleware/auth");
 const { PERMISSIONS, hasRemainingAdmin } = require("../utils/permissions");
 const { writeSyncEvent } = require("../services/syncEventService");
+const {
+  parseReplayParams,
+  fetchReplayPage,
+} = require("../services/replayEventService");
 
 // ============================================================================
 // WORKSPACE ENDPOINTS
@@ -160,6 +164,54 @@ router.get("/:id", requireWorkspacePermission(PERMISSIONS.WORKSPACE_READ), async
     next(error);
   }
 });
+
+/**
+ * GET /api/workspaces/:id/replay-events
+ * Session replay source: paged, chronologically-ordered sync_events for a
+ * workspace. Read-only — never writes or broadcasts.
+ *
+ * Query params:
+ *   cursor       bigint   Last-seen event id; results start AFTER it (0/absent → beginning).
+ *   limit        int      Page size (default 200, max 500).
+ *   from, to     ISO ts   Inclusive time-range bounds (optional).
+ *   entityTypes  csv      Filter to given entity_type values (optional).
+ *
+ * Response:
+ *   { workspaceId, events, nextCursor, hasMore, count }
+ *
+ * Auth: WORKSPACE_READ (DEV_BYPASS_AUTH-aware via requireWorkspacePermission).
+ */
+router.get(
+  "/:id/replay-events",
+  requireWorkspacePermission(PERMISSIONS.WORKSPACE_READ),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const { pool } = req.app.locals;
+
+      const parsed = parseReplayParams(req.query);
+      if (!parsed.ok) {
+        return res.status(400).json({ error: parsed.error });
+      }
+
+      const { events, nextCursor, hasMore } = await fetchReplayPage(
+        pool,
+        id,
+        parsed.params
+      );
+
+      res.json({
+        workspaceId: id,
+        events,
+        nextCursor,
+        hasMore,
+        count: events.length,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 /**
  * POST /api/workspaces

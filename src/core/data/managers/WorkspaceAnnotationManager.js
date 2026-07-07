@@ -219,6 +219,7 @@ class WorkspaceAnnotationManager {
     if (!annotation?.hasConflict) return;
 
     const clientObj = annotation.conflict?.clientObject || {};
+    const conflictBackup = annotation.conflict;
     annotation.hasConflict = false;
     annotation.conflict = null;
 
@@ -234,8 +235,12 @@ class WorkspaceAnnotationManager {
       const cat = log?.[LOG_CAT] || log;
       cat?.info?.(`Conflict resolved (force overwrite) for workspace annotation ${id}`);
     } catch (err) {
+      // Restore conflict state and propagate so the dialog can report failure.
       const cat = log?.[LOG_CAT] || log;
       cat?.error?.(`Force overwrite failed for workspace annotation ${id}:`, err);
+      annotation.hasConflict = true;
+      annotation.conflict = conflictBackup;
+      throw err;
     }
   }
 }

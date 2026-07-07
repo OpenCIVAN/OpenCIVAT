@@ -63,6 +63,32 @@ const DEFAULT_SETTINGS = {
   interpolate: true,
 };
 
+/**
+ * Valid slicing-mode values (mirrors the SliceMode enum above)
+ */
+const VALID_SLICE_MODES = Object.values(SliceMode);
+
+/**
+ * Normalize a declarative slice config (from Y.js / ViewConfiguration sync)
+ * so malformed or missing fields never throw.
+ */
+export function normalizeSliceConfig(raw = {}) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+
+  const sliceMode = VALID_SLICE_MODES.includes(source.sliceMode)
+    ? source.sliceMode
+    : DEFAULT_SETTINGS.sliceMode;
+
+  return {
+    enabled: source.enabled === true,
+    sliceMode,
+    sliceIndex: Number.isFinite(source.sliceIndex) ? source.sliceIndex : DEFAULT_SETTINGS.sliceIndex,
+    windowWidth: Number.isFinite(source.windowWidth) ? source.windowWidth : DEFAULT_SETTINGS.windowWidth,
+    windowLevel: Number.isFinite(source.windowLevel) ? source.windowLevel : DEFAULT_SETTINGS.windowLevel,
+    interpolate: source.interpolate !== false,
+  };
+}
+
 // =============================================================================
 // VTK SLICE FEATURE
 // =============================================================================
@@ -424,6 +450,86 @@ export class VTKSliceFeature extends FeatureInterface {
    */
   getWindowLevelPresets() {
     return WINDOW_LEVEL_PRESETS;
+  }
+
+  // ===========================================================================
+  // COLLABORATIVE SYNC
+  // ===========================================================================
+
+  /**
+   * Declarative config for collaborative sync — parameters only, never the
+   * live imageData/mapper/actor. sliceRange/extent are peer-local (derived
+   * from each client's own imageData), so they are intentionally excluded.
+   */
+  getConfigForSync(instanceId) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state) return normalizeSliceConfig({});
+
+    return normalizeSliceConfig({
+      enabled: state.enabled,
+      sliceMode: state.sliceMode,
+      sliceIndex: state.sliceIndex,
+      windowWidth: state.windowWidth,
+      windowLevel: state.windowLevel,
+      interpolate: state.interpolate,
+    });
+  }
+
+  /**
+   * Apply an incoming (remote/collaborative) declarative slice config.
+   * Reuses the existing setters so local rendering stays consistent, and
+   * normalizes first so malformed fields never throw.
+   */
+  applyRemoteConfig(instanceId, imageData, rawConfig) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state) return;
+
+    const config = normalizeSliceConfig(rawConfig);
+
+    if (!config.enabled) {
+      if (state.enabled) this.disableSliceViewing(instanceId);
+      return;
+    }
+
+    if (!state.enabled) {
+      if (!imageData) {
+        log.warn(`applyRemoteConfig: cannot enable slice viewing for ${instanceId}, no imageData available`);
+        return;
+      }
+      this.enableSliceViewing(instanceId, imageData).then(() => {
+        this._applyRemoteSliceParams(instanceId, config);
+      });
+      return;
+    }
+
+    this._applyRemoteSliceParams(instanceId, config);
+  }
+
+  /**
+   * Apply the mutable slice params (mode/index/window/level/interpolation)
+   * once the feature is confirmed enabled. Split out so applyRemoteConfig
+   * can reuse it both synchronously (already enabled) and after the async
+   * enableSliceViewing() resolves.
+   */
+  _applyRemoteSliceParams(instanceId, config) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state || !state.enabled) return;
+
+    if (config.sliceMode !== state.sliceMode) {
+      this.setSliceMode(instanceId, config.sliceMode);
+    }
+
+    if (config.sliceIndex !== state.sliceIndex) {
+      this.setSlice(instanceId, config.sliceIndex);
+    }
+
+    if (config.windowWidth !== state.windowWidth || config.windowLevel !== state.windowLevel) {
+      this.setWindowLevel(instanceId, config.windowWidth, config.windowLevel);
+    }
+
+    if (config.interpolate !== state.interpolate) {
+      this.toggleInterpolation(instanceId);
+    }
   }
 
   // ===========================================================================

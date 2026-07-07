@@ -81,6 +81,21 @@ export class VRToolInterface {
   }
 
   /**
+   * Undo the tool's most recent placement (marker, measurement, …).
+   *
+   * Menu-driven undo routes through here so it does the same thing the
+   * controller's A-button does, keeping a single undo path. Returns a tool
+   * action object (e.g. { type: 'annotation-removed', data }) for the manager
+   * to process, or null if there is nothing to undo.
+   *
+   * @returns {Object|null}
+   */
+  undoLast() {
+    // Override in subclass
+    return null;
+  }
+
+  /**
    * Get controller button hints for UI
    * @returns {Object} Hints for left and right controllers
    */

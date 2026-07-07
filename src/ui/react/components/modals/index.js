@@ -34,6 +34,7 @@ export { InviteMemberModal } from './InviteMemberModal';
 export { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 export { MergeConflictPicker } from './MergeConflictPicker';
 export { NewProjectModal } from './NewProjectModal';
+export { SnapshotPickerModal } from './SnapshotPickerModal';
 export { ProfileModal } from './ProfileModal';
 export { RecordingConsentModal } from './RecordingConsentModal';
 export { ShareViewModal } from './ShareViewModal';

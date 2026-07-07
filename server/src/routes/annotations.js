@@ -183,42 +183,73 @@ router.post("/", async (req, res, next) => {
     // Note: Database schema uses 'position' for coordinates and 'content' for properties
     // Position is DOUBLE PRECISION[3] (PostgreSQL array), pass array directly - no JSON.stringify
     const positionValue = coordinates || position || null;
-    console.log("[DEBUG] [SERVER] Inserting annotation:", {
-      fileId,
-      fileVersionId,
-      type,
-      positionValue,
-      positionType: typeof positionValue,
-      positionIsArray: Array.isArray(positionValue),
-    });
 
-    const result = await pool.query(
-      `
-      INSERT INTO annotations (
-        dataset_id, file_version_id, branch_id, type,
-        position, normal, text,
-        content, metadata, visibility,
-        created_by
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      RETURNING *
-    `,
-      [
-        fileId,
-        fileVersionId,
-        branchId || null,
-        type,
-        positionValue,
-        normal || null,
-        text || null,
-        properties ? JSON.stringify(properties) : null,
-        metadata ? JSON.stringify(metadata) : "{}",
-        visibility,
-        user.id,
-      ]
-    );
+    let annotation;
+    let syncEvent = null;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
 
-    const annotation = result.rows[0];
+      const result = await client.query(
+        `
+        INSERT INTO annotations (
+          dataset_id, file_version_id, branch_id, type,
+          position, normal, text,
+          content, metadata, visibility,
+          created_by
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING *
+      `,
+        [
+          fileId,
+          fileVersionId,
+          branchId || null,
+          type,
+          positionValue,
+          normal || null,
+          text || null,
+          properties ? JSON.stringify(properties) : null,
+          metadata ? JSON.stringify(metadata) : "{}",
+          visibility,
+          user.id,
+        ]
+      );
+
+      annotation = result.rows[0];
+
+      // Resolve workspace_id via dataset → project → workspace
+      let workspaceId = null;
+      try {
+        const ws = await client.query(
+          `SELECT w.id FROM workspaces w
+           JOIN file_project_access fpa ON fpa.project_id = w.project_id
+           WHERE fpa.file_id = $1 LIMIT 1`,
+          [fileId]
+        );
+        workspaceId = ws.rows[0]?.id || null;
+      } catch (_) { /* non-fatal */ }
+
+      syncEvent = await writeSyncEvent(client, {
+        workspaceId,
+        entityType: "annotation",
+        entityId: annotation.id,
+        operation: "create",
+        baseRevision: null,
+        nextRevision: Number(annotation.revision),
+        snapshot: buildSnapshot(annotation),
+        patch: null,
+        actorUserId: user.id,
+        correlationId: null,
+      });
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      client.release();
+      throw err;
+    }
+    client.release();
 
     // Audit log
     if (req.audit) {
@@ -234,7 +265,13 @@ router.post("/", async (req, res, next) => {
 
     // Broadcast to project
     if (projectId && wsManager) {
-      wsManager.annotationCreated(projectId, fileId, annotation);
+      wsManager.annotationCreated(
+        projectId,
+        fileId,
+        annotation,
+        syncEvent?.id,
+        user.id
+      );
     }
 
     res.status(201).json({
@@ -242,11 +279,6 @@ router.post("/", async (req, res, next) => {
       annotation,
     });
   } catch (error) {
-    console.error(
-      "[DEBUG] [SERVER] Annotation creation failed:",
-      error.message
-    );
-    console.error("[DEBUG] [SERVER] Stack trace:", error);
     next(error);
   }
 });
@@ -496,11 +528,46 @@ router.delete("/:id", async (req, res, next) => {
       return res.status(403).json({ error: "Only the annotation creator may delete it" });
     }
 
-    // Soft delete
-    await pool.query(
-      "UPDATE annotations SET status = 'archived', updated_at = NOW() WHERE id = $1",
-      [id]
-    );
+    // Soft delete + sync event in one transaction so delta hydration sees deletes
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        "UPDATE annotations SET status = 'archived', updated_at = NOW() WHERE id = $1",
+        [id]
+      );
+
+      let workspaceId = null;
+      try {
+        const ws = await client.query(
+          `SELECT w.id FROM workspaces w
+           JOIN file_project_access fpa ON fpa.project_id = w.project_id
+           WHERE fpa.file_id = $1 LIMIT 1`,
+          [annotation.dataset_id]
+        );
+        workspaceId = ws.rows[0]?.id || null;
+      } catch (_) { /* non-fatal */ }
+
+      await writeSyncEvent(client, {
+        workspaceId,
+        entityType: "annotation",
+        entityId: id,
+        operation: "delete",
+        baseRevision: Number(annotation.revision) || null,
+        nextRevision: Number(annotation.revision) || 1,
+        snapshot: null,
+        patch: null,
+        actorUserId: user?.id || null,
+        correlationId: null,
+      });
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      client.release();
+      throw err;
+    }
+    client.release();
 
     // Audit log
     if (req.audit) {

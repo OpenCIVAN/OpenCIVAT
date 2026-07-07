@@ -99,6 +99,16 @@ When Vision Pro's browser supports `immersive-vr`:
 - The app enters spatial view using visionOS's spatial rendering.
 - Camera/view updates from Vision Pro spatial input are sent to the render server.
 
+**Input model:** visionOS Safari exposes `transient-pointer` input sources
+(gaze + pinch) instead of tracked controllers. These have a target ray but no
+grip space and usually no gamepad. CIA Web handles them with a target-ray
+fallback in both input paths (`VRManager._updateInputPoses`,
+`VRExplorationManager._gatherInputState`): the pinch select gesture maps to the
+trigger via `selectstart`/`selectend` tracking, and `handedness: "none"` sources
+act as the right hand so all VR tools (annotate, measure, probe) work with
+gaze + pinch. Pinch-select places annotations; they persist to the shared
+annotation store and appear for all participants.
+
 If `immersive-vr` is not supported (older visionOS or browser restriction):
 - The button is hidden.
 - The 2D browser workspace still works fully.

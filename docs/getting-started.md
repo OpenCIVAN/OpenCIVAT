@@ -25,7 +25,7 @@ Step-by-step run instructions for every workflow. A new developer should be able
 
 | Tool | Version | Required for |
 |------|---------|-------------|
-| Node.js | ≥ 18 | Frontend, API server |
+| Node.js | ≥ 20 (22 LTS recommended, see `.nvmrc`) | Frontend, API server. Node 18 breaks Vitest (`ERR_REQUIRE_ESM`) |
 | npm | ≥ 9 | Bundled with Node.js |
 | Python | 3.11+ | Local render server |
 | Docker Desktop | ≥ 24 | Full Docker stack |
@@ -59,7 +59,7 @@ Expected result:
 - Click a dataset → 3D mesh loads in the viewport
 - No server connection required
 
-> `npm run start:http` uses HTTP (port 8081). Use `npm start` for HTTPS — it requires SSL certificates at `certs/key.pem` and `certs/cert.pem`. For most local testing, HTTP is simpler.
+> `npm run start:http` uses HTTP (port 8081). Use `npm start` for HTTPS — it requires SSL certificates at `certs/key.pem` and `certs/cert.pem`; generate them with `./scripts/generate-certs.sh` (uses mkcert if installed, otherwise openssl). For most local testing HTTP is simpler, but **WebXR (including Vision Pro Safari) requires HTTPS**.
 
 ---
 

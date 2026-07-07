@@ -368,6 +368,8 @@ router.put("/:id", async (req, res, next) => {
       "name",
       "description",
       "camera",
+      "visualization",
+      "time",
       "filters",
       "widgets",
       "color_maps",
@@ -397,6 +399,8 @@ router.put("/:id", async (req, res, next) => {
         let value = updates[bodyField];
         const jsonFields = [
           "camera",
+          "visualization",
+          "time",
           "filters",
           "widgets",
           "colorMaps",

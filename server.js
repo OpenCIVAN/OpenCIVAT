@@ -85,7 +85,12 @@ if (process.env.MATRIX_FEDERATION_ENABLED === 'true' && persistence) {
           // Add the message to the Y.js chatMessages array
           const chatArray = room.doc.getArray('chatMessages');
 
-          // Create message object matching Y.js chat format
+          // Create message object matching Y.js chat format.
+          // IMPORTANT: metadata.federation_source must be set to 'matrix' here — this is
+          // the exact field matrixBridge.syncToMatrix() checks to suppress echo (relaying
+          // a Matrix-origin message back to Matrix). It also tells Room.persistChatMessage
+          // (below) to skip re-persisting, since this message was already stored in
+          // chat_messages by matrixBridge._handleIncomingMatrixMessage().
           const yjsMessage = {
             id: messageData.messageId,
             userName: messageData.username,
@@ -93,8 +98,10 @@ if (process.env.MATRIX_FEDERATION_ENABLED === 'true' && persistence) {
             timestamp: messageData.timestamp.toISOString(),
             messageType: 'text',
             metadata: {
-              ...messageData.federation,
               isFederated: true,
+              federation_source: 'matrix',
+              matrix_event_id: messageData.federation?.eventId,
+              matrix_sender: messageData.federation?.sender,
             },
           };
 
@@ -102,6 +109,42 @@ if (process.env.MATRIX_FEDERATION_ENABLED === 'true' && persistence) {
           chatArray.push([yjsMessage]);
 
           matrixLog.info('Broadcast Matrix message to Y.js clients:', messageData.roomId);
+        };
+
+        // Set up callback for federated membership changes (Matrix user joined/left a
+        // bridged room). Surfaced as a system-style chat entry so clients see federated
+        // presence without needing a separate wire protocol.
+        matrixBridge.onMembershipChange = (change) => {
+          const room = rooms.get(change.roomId);
+          if (!room) {
+            matrixLog.debug('Membership change for unknown room:', change.roomId);
+            return;
+          }
+
+          const chatArray = room.doc.getArray('chatMessages');
+
+          const verb = change.type === 'member_joined' ? 'joined' : 'left';
+          const systemMessage = {
+            id: `matrix-membership-${change.userId}-${Date.now()}`,
+            userName: 'system',
+            text: `${change.displayName || change.userId} ${verb} via Matrix federation`,
+            timestamp: new Date().toISOString(),
+            messageType: 'system',
+            metadata: {
+              isFederated: true,
+              federationEvent: change.type,
+              matrixUserId: change.userId,
+              matrixRoomId: change.matrixRoomId,
+            },
+          };
+
+          chatArray.push([systemMessage]);
+
+          matrixLog.info('Broadcast Matrix membership change to Y.js clients:', {
+            roomId: change.roomId,
+            type: change.type,
+            userId: change.userId,
+          });
         };
 
         matrixLog.info('Matrix federation enabled for Y.js chat');
@@ -326,6 +369,27 @@ class Room {
         metadata,
         id: messageId,
       } = message;
+
+      // Messages that originated from Matrix (inbound federation) are already stored
+      // in chat_messages by matrixBridge._handleIncomingMatrixMessage() before being
+      // pushed into this Y.js array — skip re-persisting to avoid a duplicate row and
+      // (more importantly) avoid re-triggering syncToMatrix's echo-suppression logic
+      // being bypassed by a fresh insert with no matrix_event_id linkage.
+      if (metadata?.federation_source === "matrix") {
+        wsLog.debug(
+          "Skipping persistence for already-stored Matrix-federated message:",
+          messageId
+        );
+        return;
+      }
+
+      // Federated membership notices (Matrix user joined/left) are ephemeral presence
+      // info, not chat content — don't write them to the chat_messages audit trail or
+      // sync them back to Matrix.
+      if (messageType === "system") {
+        wsLog.debug("Skipping persistence for system/presence message:", messageId);
+        return;
+      }
 
       await persistence.storeChatMessage(
         this.roomId,

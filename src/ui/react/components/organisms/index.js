@@ -43,6 +43,9 @@ export { ViewContextBlock, ViewHubFlyout, VIEW_TYPE_ICONS } from './ViewContextB
 // VoiceControlsPanel - Voice command controls panel
 export { VoiceControlsPanel } from './VoiceControlsPanel';
 
+// SessionReplayPanel - Collaborative sync-event replay timeline
+export { SessionReplayPanel } from './SessionReplayPanel';
+
 // =============================================================================
 // MODE TOGGLE ORGANISMS (moved from controls/)
 // =============================================================================
@@ -178,3 +181,7 @@ export {
     TabbedCanvasView,
     FullCanvasHeader,
 } from './TabbedCanvasView';
+
+// ConflictResolutionDialog - Generic persistent-entity sync conflict dialog
+// Listens for 'cia:sync-conflict' window events dispatched by data managers.
+export { ConflictResolutionDialog } from './ConflictResolutionDialog';

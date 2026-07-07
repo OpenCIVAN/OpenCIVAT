@@ -30,8 +30,13 @@ export class VRControllerRenderer {
       right: null,
     };
 
-    // Pointer ray actors
+    // Pointer ray actors (+ their line sources — VTK actors are frozen, so
+    // the source must be tracked separately, not attached to the actor)
     this._pointerRays = {
+      left: null,
+      right: null,
+    };
+    this._raySources = {
       left: null,
       right: null,
     };
@@ -54,6 +59,14 @@ export class VRControllerRenderer {
     this._rayLength = 5.0; // meters in VR
     this._rayWidth = 0.002;
 
+    // Gaze reticle (Vision Pro transient-pointer): gripless gaze+pinch input
+    // gives no persistent hand ray, so a small dot at the raycast hit is the
+    // only "where will my pinch land" feedback. options.raycast is an injected
+    // picker (handler.raycastVR-bound); without it the reticle stays off.
+    this._raycast = options.raycast || null;
+    this._reticle = null;
+    this._reticleSource = null;
+
     // Initialize controllers
     this._initializeControllers();
   }
@@ -69,8 +82,9 @@ export class VRControllerRenderer {
       this._renderer.addActor(controllerActor);
 
       // Create pointer ray actor
-      const rayActor = this._createPointerRayActor(hand);
+      const { actor: rayActor, lineSource } = this._createPointerRayActor(hand);
       this._pointerRays[hand] = rayActor;
+      this._raySources[hand] = lineSource;
       this._renderer.addActor(rayActor);
 
       // Initially hide
@@ -151,10 +165,10 @@ export class VRControllerRenderer {
     actor.getProperty().setOpacity(0.6);
     actor.getProperty().setLineWidth(2);
 
-    // Store reference to update line endpoints
-    actor._lineSource = lineSource;
-
-    return actor;
+    // NOTE: VTK actors are frozen (Object.freeze), so the line source is
+    // returned alongside the actor rather than attached to it — attaching
+    // used to throw and broke this whole constructor.
+    return { actor, lineSource };
   }
 
   /**
@@ -192,7 +206,7 @@ export class VRControllerRenderer {
         // Update pointer ray
         if (controller.targetRay) {
           rayActor.setVisibility(true);
-          this._updatePointerRay(rayActor, controller.targetRay);
+          this._updatePointerRay(rayActor, this._raySources[hand], controller.targetRay);
         } else {
           rayActor.setVisibility(false);
         }
@@ -205,6 +219,69 @@ export class VRControllerRenderer {
 
     // Update hand tracking if available
     this._updateHandTracking(inputState.hands);
+
+    // Gaze reticle for transient-pointer (Vision Pro) input
+    this._updateReticle(inputState);
+  }
+
+  /**
+   * Show a small dot where the transient-pointer's gaze ray hits the data;
+   * hidden for regular tracked-pointer controllers (their persistent ray is
+   * feedback enough) and on miss.
+   */
+  _updateReticle(inputState) {
+    const ctrl =
+      inputState.controllers?.right || inputState.controllers?.left;
+
+    const isTransient = ctrl?.targetRayMode === "transient-pointer";
+    if (!isTransient || !ctrl?.targetRay || !this._raycast) {
+      this._reticle?.setVisibility(false);
+      return;
+    }
+
+    let hit = null;
+    try {
+      hit = this._raycast(ctrl.targetRay);
+    } catch {
+      // picking must never break the frame loop
+    }
+
+    if (!hit?.position) {
+      this._reticle?.setVisibility(false);
+      return;
+    }
+
+    this._ensureReticle();
+    // raycast picks against the scene renderer, so the hit is already in
+    // scene/data space — no vrToScenePosition transform.
+    this._reticle.setPosition(hit.position.x, hit.position.y, hit.position.z);
+    const s = 0.01 / this._vrScale; // ~1cm apparent size regardless of zoom
+    this._reticle.setScale(s, s, s);
+    this._reticle.setVisibility(true);
+  }
+
+  _ensureReticle() {
+    if (this._reticle) return;
+
+    this._reticleSource = vtkSphereSource.newInstance({
+      radius: 1.0, // scaled per-frame
+      phiResolution: 12,
+      thetaResolution: 12,
+    });
+
+    const mapper = vtkMapper.newInstance();
+    mapper.setInputConnection(this._reticleSource.getOutputPort());
+
+    const actor = vtkActor.newInstance();
+    actor.setMapper(mapper);
+    actor.getProperty().setColor(1.0, 1.0, 1.0);
+    actor.getProperty().setOpacity(0.85);
+    actor.getProperty().setLighting(false);
+    actor.setPickable(false);
+    actor.setVisibility(false);
+
+    this._renderer.addActor(actor);
+    this._reticle = actor;
   }
 
   /**
@@ -262,7 +339,8 @@ export class VRControllerRenderer {
   /**
    * Update pointer ray position and direction
    */
-  _updatePointerRay(rayActor, targetRay) {
+  _updatePointerRay(rayActor, lineSource, targetRay) {
+    if (!lineSource) return;
     const origin = targetRay.position;
     const sceneOrigin = this._vrToScenePosition(origin);
 
@@ -285,8 +363,8 @@ export class VRControllerRenderer {
       ];
 
       // Update line source
-      rayActor._lineSource.setPoint1(...sceneOrigin);
-      rayActor._lineSource.setPoint2(...endPoint);
+      lineSource.setPoint1(...sceneOrigin);
+      lineSource.setPoint2(...endPoint);
     }
 
     rayActor.setPosition(0, 0, 0); // Reset position since we set absolute points
@@ -400,8 +478,16 @@ export class VRControllerRenderer {
       }
     }
 
+    // Remove gaze reticle
+    if (this._reticle) {
+      this._renderer.removeActor(this._reticle);
+      this._reticle = null;
+      this._reticleSource = null;
+    }
+
     this._controllers = { left: null, right: null };
     this._pointerRays = { left: null, right: null };
+    this._raySources = { left: null, right: null };
     this._handActors = { left: [], right: [] };
 
     log.debug("VR controller renderer disposed");

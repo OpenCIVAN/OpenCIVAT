@@ -21,6 +21,8 @@ import {
     useCloseConfirmation,
     usePopoverState,
 } from './WorkspaceBar.logic';
+import { getViewConfigurationManager } from '@Init/appInitializer.js';
+import { toast } from '@UI/react/store/toastStore.js';
 import './WorkspaceBar.scss';
 
 const WorkspaceBar = memo(function WorkspaceBar({
@@ -86,6 +88,37 @@ const WorkspaceBar = memo(function WorkspaceBar({
         onSelectWorkspace?.(workspaceId);
         closeAllPopovers();
     }, [onSelectWorkspace, closeAllPopovers]);
+
+    // "Save session": snapshot every active view's state under one shared
+    // name. A session snapshot is a consistent set of per-view snapshots —
+    // annotations/workspace layout already persist independently. Restore per
+    // view via ViewsSubtab "Load state" → SnapshotPickerModal.
+    const handleSaveSession = useCallback(() => {
+        try {
+            const viewManager = getViewConfigurationManager();
+            const views = viewManager?.getActiveViews?.() || [];
+            if (views.length === 0) {
+                toast.info('No open views to save');
+                return;
+            }
+            const name = `Session ${new Date().toLocaleString([], {
+                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+            })}`;
+            let saved = 0;
+            for (const view of views) {
+                if (viewManager.createSnapshot(view.id, {
+                    name,
+                    description: 'Session snapshot from workspace bar',
+                })) {
+                    saved += 1;
+                }
+            }
+            toast.success(`Session saved — ${saved} view${saved === 1 ? '' : 's'} snapshotted as "${name}"`);
+        } catch (err) {
+            console.error('Save session failed:', err);
+            toast.error(`Failed to save session: ${err?.message || 'unknown error'}`);
+        }
+    }, []);
 
     const handleRename = useCallback((workspaceId, name) => {
         onRenameWorkspace?.(workspaceId, name);
@@ -180,6 +213,13 @@ const WorkspaceBar = memo(function WorkspaceBar({
 
                 {/* Mode Toggle + Tab Controls */}
                 <div className="workspace-bar__mode-group">
+                    <IconButton
+                        icon="camera"
+                        label="Save session"
+                        tooltip="Save session — snapshot every open view's state (restore via a view's 'Load state')"
+                        size="sm"
+                        onClick={handleSaveSession}
+                    />
                     <ModeToggle
                         canvasMode={canvasMode}
                         onModeChange={onModeChange}

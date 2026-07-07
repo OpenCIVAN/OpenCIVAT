@@ -128,6 +128,25 @@ export class VRMeasureTool extends VRToolInterface {
     return hints;
   }
 
+  /**
+   * Undo the last measurement action (shared by the B-button cancel flow and
+   * the spatial menu's Undo button). If a measurement is mid-placement, cancel
+   * it; otherwise pop the most recently completed one.
+   * @returns {Object|null} a tool action, or null if there is nothing to undo
+   */
+  undoLast() {
+    if (this._measurementState === 'placing-end' && this._activeMeasurement) {
+      this._activeMeasurement = null;
+      this._measurementState = 'placing-start';
+      return { type: 'measurement-cancelled' };
+    }
+    if (this._measurements.length > 0) {
+      const removed = this._measurements.pop();
+      return { type: 'measurement-removed', data: removed };
+    }
+    return null;
+  }
+
   _calculateDistance(p1, p2) {
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;

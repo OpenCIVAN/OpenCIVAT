@@ -59,11 +59,12 @@ async function logAudit(
 }
 
 /**
- * Get user email from request headers (placeholder for now)
+ * Get user email: the authenticate middleware populates req.user from the
+ * verified Keycloak JWT (or dev-bypass headers). Header fallback kept for
+ * routes reached without the middleware in dev setups.
  */
 function getUserEmail(req) {
-  // TODO: Replace with actual JWT token parsing
-  return req.get("x-user-email") || "demo@cia-web.local";
+  return req.user?.email || req.get("x-user-email") || "demo@cia-web.local";
 }
 
 // ============================================================================
@@ -204,19 +205,14 @@ router.post("/:id/canvases", async (req, res, next) => {
       flow_direction,
     } = req.body;
 
-    console.log(
-      "[DEBUG] Creating canvas for project:",
-      projectId,
-      "user:",
-      userId
-    );
+    log.debug("Creating canvas for project:", projectId, "user:", userId);
 
     // Ensure ownership has the correct ownerId for personal canvases
     // Client may send undefined ownerId, so we use the authenticated user's ID
     let finalOwnership = ownership || { type: "personal" };
     if (finalOwnership.type === "personal" && !finalOwnership.ownerId) {
       finalOwnership = { ...finalOwnership, ownerId: userId };
-      console.log("[DEBUG] Set ownerId to authenticated user:", userId);
+      log.debug("Set ownerId to authenticated user:", userId);
     }
 
     await client.query("BEGIN");
@@ -248,24 +244,24 @@ router.post("/:id/canvases", async (req, res, next) => {
 
       if (wsResult.rows.length > 0) {
         workspaceId = wsResult.rows[0].id;
-        console.log("[DEBUG] Found existing workspace:", workspaceId);
+        log.debug("Found existing workspace:", workspaceId);
       } else {
         // Create a default workspace
-        console.log("[DEBUG] Creating new workspace for user:", userId);
+        log.debug("Creating new workspace for user:", userId);
         const newWs = await client.query(
           `INSERT INTO workspaces (name, owner_id, created_by)
            VALUES ($1, $2, $2) RETURNING id`,
           ["Default Workspace", userId]
         );
         workspaceId = newWs.rows[0].id;
-        console.log("[DEBUG] Created workspace:", workspaceId);
+        log.debug("Created workspace:", workspaceId);
       }
     }
 
     // Create the canvas (handle both old and new schema)
     let result;
     try {
-      console.log("[DEBUG] Inserting canvas with new schema");
+      log.debug("Inserting canvas with new schema");
       // Try with new schema (layout_mode, flow_direction)
       result = await client.query(
         `INSERT INTO canvases (
@@ -285,16 +281,16 @@ router.post("/:id/canvases", async (req, res, next) => {
           userId,
         ]
       );
-      console.log("[DEBUG] Canvas created:", result.rows[0]?.id);
+      log.debug("Canvas created:", result.rows[0]?.id);
     } catch (insertError) {
-      console.log("[DEBUG] Insert error:", insertError.message);
+      log.debug("Insert error:", insertError.message);
       // Fallback for old schema (without layout_mode, flow_direction)
       if (
         insertError.message.includes("layout_mode") ||
         insertError.message.includes("flow_direction") ||
         insertError.message.includes("column")
       ) {
-        console.log("[DEBUG] Falling back to old schema");
+        log.debug("Falling back to old schema");
         result = await client.query(
           `INSERT INTO canvases (workspace_id, project_id, name, dimensions, ownership, created_by)
            VALUES ($1, $2, $3, $4, $5, $6)

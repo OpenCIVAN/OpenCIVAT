@@ -40,6 +40,7 @@ function createTestApp(pool, options = {}) {
   const annotationsRouter = require('../../routes/annotations');
   const viewgroupsRouter = require('../../routes/viewgroups');
   const syncRouter = require('../../routes/sync');
+  const workspacesRouter = require('../../routes/workspaces');
 
   // Auth middleware (reads x-user-id header in dev bypass mode)
   const { authenticate, optionalAuth } = require('../../middleware/auth');
@@ -48,6 +49,7 @@ function createTestApp(pool, options = {}) {
   app.use('/api/annotations', authenticate, annotationsRouter);
   app.use('/api/viewgroups', authenticate, viewgroupsRouter);
   app.use('/api/sync', authenticate, syncRouter);
+  app.use('/api/workspaces', authenticate, workspacesRouter);
 
   // Restore env
   if (devBypassAuth) {

@@ -533,14 +533,21 @@ class WebSocketManager {
   }
 
   /**
-   * Broadcast annotation created event
+   * Broadcast annotation created event.
+   * @param {string}      projectId
+   * @param {string}      fileId
+   * @param {object}      annotation     Created annotation row.
+   * @param {bigint|null} syncEventId    sync_events.id for watermark tracking.
+   * @param {string|null} actorUserId    User who created it (lets the sender skip its own echo).
    */
-  annotationCreated(projectId, fileId, annotation) {
+  annotationCreated(projectId, fileId, annotation, syncEventId = null, actorUserId = null) {
     this.broadcastToProject(projectId, {
       type: "annotation:created",
       projectId,
       fileId,
       annotation,
+      syncEventId: syncEventId != null ? syncEventId.toString() : null,
+      actorUserId: actorUserId || null,
       timestamp: new Date().toISOString(),
     });
   }

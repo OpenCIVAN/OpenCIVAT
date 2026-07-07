@@ -28,10 +28,15 @@ Y.js shared objects managed by `src/collaboration/yjs/yjsSetup.js`:
 |---|---|
 | `yCursors` | `userId → {position, color, name, viewId, lastUpdate}` |
 | `yCameras` | `viewId → {camera, userId, clientId, lastUpdate}` |
+| `yVisualizationState` | `viewId → {visualization, userId, clientId, lastUpdate}` — representation, opacity, colormap, activeArray, transform, slice, windowLevel, glyph config, threshold config |
+| `yManipulatorState` | `viewId → {userId, kind, lastUpdate}` — who is interacting with what |
+| `yActiveDataset` | `roomId → {datasetId, version}` — shared dataset selection |
 | `yViewPresence` | `viewId → {viewers, lastUpdate}` |
 | `yAvatars` | `userId → {position, rotation, headPose, …}` |
 | `yVRControllers` | `${userId}_${hand} → {position, rotation, …}` |
 | `yText` | Chat messages (Array) |
+
+Visualization settings ride the presence channel for real-time propagation *and* are written to the ViewConfiguration via REST for durability (`pushSharedVisualizationUpdate` in `src/services/visualizationSyncService.js`). Glyph and threshold filter settings sync as declarative configs (array names, modes, ranges) — never computed data; each client recomputes locally via `applyRemoteConfig` in the corresponding feature module.
 
 Y.js snapshots are persisted to PostgreSQL through `server/src/services/yjsPersistence.js`. This is separate from the persistent sync channel.
 
@@ -197,6 +202,19 @@ export const VIEW_SAFE_MERGE_FIELDS = new Set([
 Fields **not** in this set (`filters`, `widgets`, `color_maps`, `links`, `snapshots`, `applied_presets`, `dataset_id`, `file_version_id`, etc.) are treated as potentially dependent on the render pipeline and always require explicit user resolution.
 
 `canAutoMergeSafe(patchA, patchB, VIEW_SAFE_MERGE_FIELDS)` is exported from `src/utils/jsonPatch.js`.
+
+### 6.2.1 Annotations — live broadcast wiring
+
+Annotation create/update/delete broadcasts (`annotation:*`) are forwarded by
+`serverSync.js` to `AnnotationManager.handleServerBroadcast()` and re-dispatched
+as `ws:annotation:*` window CustomEvents consumed by `useAnnotations` (list
+refresh) — so remote annotations appear live in both the panel and the 3D view.
+The create/delete routes write `sync_events` rows in the same transaction, so
+reconnecting clients recover missed annotation changes via delta hydration.
+Creates carry `actorUserId` so the originating client skips its own echo;
+`_handleRemoteAnnotationCreated` is additionally idempotent by annotation id.
+VR-placed annotations and measurements (`VRExplorationManager._handleToolAction`)
+enter through the same path.
 
 ### 6.3 Annotations — interactive conflict resolution
 

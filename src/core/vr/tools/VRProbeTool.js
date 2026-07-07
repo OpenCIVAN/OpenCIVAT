@@ -1,5 +1,9 @@
 // src/core/vr/tools/VRProbeTool.js
 // Data probe tool for VR - inspect data values at positions
+//
+// SCOPE: intentionally session-local. Probing is transient inspection — probe
+// results are neither persisted nor broadcast to collaborators (unlike
+// annotations/measurements, which persist, or clip/slice planes, which sync).
 
 import { VRToolInterface } from './VRToolInterface.js';
 import { vr as log } from '@Utils/logger.js';

@@ -65,6 +65,8 @@ import './MemberRow.scss';
  * @property {(userId: string) => void} [onMessage] - Message action handler
  * @property {(userId: string) => void} [onGoToView] - Go to view handler
  * @property {(userId: string, visible: boolean) => void} [onToggleCursor] - Toggle cursor visibility
+ * @property {(userId: string) => void} [onFollow] - Follow/unfollow this user's viewpoint
+ * @property {boolean} [isFollowed=false] - Whether the local user is following this user
  * @property {(userId: string, e: React.MouseEvent) => void} [onMoreMenu] - More menu handler
  * @property {(userId: string) => void} [onJoinVR] - Join VR session handler
  * @property {(userId: string) => void} [onRequestInvite] - Request VR invite handler
@@ -90,6 +92,8 @@ export const MemberRow = memo(function MemberRow({
     onMessage,
     onGoToView,
     onToggleCursor,
+    onFollow,
+    isFollowed = false,
     onMoreMenu,
     onJoinVR,
     onRequestInvite,
@@ -134,6 +138,11 @@ export const MemberRow = memo(function MemberRow({
         e.stopPropagation();
         onToggleCursor?.(id, !cursorVisible);
     }, [id, cursorVisible, onToggleCursor]);
+
+    const handleFollow = useCallback((e) => {
+        e.stopPropagation();
+        onFollow?.(id);
+    }, [id, onFollow]);
 
     const handleMoreClick = useCallback((e) => {
         e.stopPropagation();
@@ -277,6 +286,16 @@ export const MemberRow = memo(function MemberRow({
                             tooltip={cursorVisible ? 'Hide Cursor' : 'Show Cursor'}
                             size="xs"
                             variant="ghost"
+                            className="member-row__action"
+                        />
+                    )}
+                    {onFollow && (
+                        <IconButton
+                            icon="video"
+                            onClick={handleFollow}
+                            tooltip={isFollowed ? 'Stop Following' : 'Follow View'}
+                            size="xs"
+                            variant={isFollowed ? 'primary' : 'ghost'}
                             className="member-row__action"
                         />
                     )}

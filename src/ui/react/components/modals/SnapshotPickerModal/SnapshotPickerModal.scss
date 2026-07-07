@@ -1,0 +1,59 @@
+.snapshot-picker-modal {
+    &__list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-height: 320px;
+        overflow-y: auto;
+    }
+
+    &__item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: var(--color-surface-secondary, rgba(0, 0, 0, 0.04));
+    }
+
+    &__name {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    &__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 1px 6px;
+        border-radius: 999px;
+        font-size: 10px;
+        background: var(--color-primary-soft, rgba(74, 125, 255, 0.12));
+        color: var(--color-primary, #4a7dff);
+
+        &--auto {
+            background: var(--color-surface-tertiary, rgba(0, 0, 0, 0.08));
+            color: var(--color-text-secondary, #666);
+        }
+    }
+
+    &__meta {
+        font-size: 11px;
+        color: var(--color-text-secondary, #666);
+        margin-top: 2px;
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+}

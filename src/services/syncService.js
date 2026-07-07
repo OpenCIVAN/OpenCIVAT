@@ -4,6 +4,7 @@
 import clientConfig from "@Core/config/clientConfig.js";
 import { sync as log } from "@Utils/logger.js";
 import { apiClient } from "@Services/apiClient.js";
+import { toast } from "@UI/react/store/toastStore";
 
 // localStorage keys
 const SYNC_STATE_KEY = "cia_sync_state";
@@ -440,6 +441,22 @@ export async function performStartupHydration(workspaceId, managers = {}, userId
   if (delta.requiresFullResync) {
     log.info(`Delta hydration requires full resync: ${delta.reason}`);
     clearSyncWatermark(workspaceId, userId);
+
+    // WATERMARK_EXPIRED means the server pruned events before this client
+    // could catch up — some remote changes may have been missed silently by
+    // the delta path. Tell the user we're re-syncing from scratch so a full
+    // hydration (about to run in the caller) doesn't look like nothing happened.
+    if (delta.reason === "WATERMARK_EXPIRED") {
+      try {
+        toast.warning(
+          "Your session was out of sync for too long — re-syncing this workspace from the server.",
+          { duration: 6000 }
+        );
+      } catch (_) {
+        // Toast store unavailable (e.g. non-browser context) — non-fatal.
+      }
+    }
+
     return { usedFullHydration: true, reason: delta.reason };
   }
 

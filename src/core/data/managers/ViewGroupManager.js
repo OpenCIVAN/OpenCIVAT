@@ -1151,6 +1151,7 @@ export class ViewGroupManager extends BaseManager {
         if (!viewGroup?.hasConflict) return;
 
         const clientObj = viewGroup.conflict?.clientObject || {};
+        const conflictBackup = viewGroup.conflict;
         viewGroup.hasConflict = false;
         viewGroup.conflict = null;
 
@@ -1164,7 +1165,11 @@ export class ViewGroupManager extends BaseManager {
             viewGroup.clearDirty();
             this._log.info(`Conflict resolved (force overwrite) for ViewGroup ${viewGroupId}`);
         } catch (err) {
+            // Restore conflict state and propagate so the dialog can report failure.
             this._log.error(`Force overwrite failed for ViewGroup ${viewGroupId}:`, err);
+            viewGroup.hasConflict = true;
+            viewGroup.conflict = conflictBackup;
+            throw err;
         }
         this._emit('viewGroupUpdated', { viewGroup });
     }

@@ -71,28 +71,54 @@ export class AnnotationManager extends BaseManager {
 
   _handleRemoteAnnotationCreated(msg) {
     const { fileId, annotation: annotationData } = msg;
-    const dataset = this._datasetManager.getDataset(fileId);
+    const datasetId = fileId || annotationData?.dataset_id;
+    const dataset = this._datasetManager.getDataset(datasetId);
     if (!dataset) {
-      this._log.debug(`Dataset ${fileId} not found for remote annotation`);
+      this._log.debug(`Dataset ${datasetId} not found for remote annotation`);
       return;
     }
 
-    const annotation = Annotation.fromJSON(annotationData);
+    // Idempotent: the creating client already has it (broadcast echoes to sender)
+    if (annotationData?.id && dataset.getAnnotation(annotationData.id)) {
+      this._log.debug(`Annotation ${annotationData.id} already present, skipping`);
+      return;
+    }
+
+    // Server broadcasts raw DB rows (snake_case); map to the model's fields
+    const annotation = new Annotation({
+      id: annotationData.id,
+      datasetId,
+      position: annotationData.position || [0, 0, 0],
+      type: annotationData.type || "point",
+      createdBy: annotationData.created_by || annotationData.createdBy,
+      createdAt: annotationData.created_at || annotationData.createdAt,
+    });
+    _applyServerFormatToAnnotation(annotation, annotationData);
+    if (annotationData.revision != null) {
+      annotation.revision = Number(annotationData.revision);
+    }
     dataset.addAnnotation(annotation);
-    this._emit("annotationAdded", { datasetId: fileId, annotation });
+    this._emit("annotationAdded", { datasetId, annotation });
     this._log.debug(`Remote annotation added: ${annotation.id}`);
   }
 
   _handleRemoteAnnotationUpdated(msg) {
     const { annotation: annotationData } = msg;
-    const dataset = this._datasetManager.getDataset(annotationData.fileId);
+    // Live broadcasts carry the dataset id as msg.fileId; the delta-hydration
+    // path injects it as annotation.fileId; raw rows carry dataset_id.
+    const datasetId =
+      msg.fileId || annotationData?.fileId || annotationData?.dataset_id;
+    const dataset = this._datasetManager.getDataset(datasetId);
     if (!dataset) return;
 
     const annotation = dataset.getAnnotation(annotationData.id);
     if (annotation) {
-      Object.assign(annotation, annotationData);
+      _applyServerFormatToAnnotation(annotation, annotationData);
+      if (annotationData.revision != null) {
+        annotation.revision = Number(annotationData.revision);
+      }
       this._emit("annotationUpdated", {
-        datasetId: annotationData.fileId,
+        datasetId,
         annotation,
       });
     }
@@ -256,6 +282,7 @@ export class AnnotationManager extends BaseManager {
     if (!annotation?.hasConflict) return;
 
     const clientObj = annotation.conflict?.clientObject || {};
+    const conflictBackup = annotation.conflict;
     annotation.hasConflict = false;
     annotation.conflict = null;
 
@@ -268,7 +295,11 @@ export class AnnotationManager extends BaseManager {
       if (newRevision != null) annotation.revision = Number(newRevision);
       this._log.info(`Conflict resolved (force overwrite) for annotation ${annotationId}`);
     } catch (err) {
+      // Restore conflict state and propagate so the dialog can report failure.
       this._log.error(`Force overwrite failed for annotation ${annotationId}:`, err);
+      annotation.hasConflict = true;
+      annotation.conflict = conflictBackup;
+      throw err;
     }
 
     if (dataset) {

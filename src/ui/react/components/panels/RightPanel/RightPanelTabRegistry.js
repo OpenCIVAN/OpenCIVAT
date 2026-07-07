@@ -24,6 +24,7 @@ import { ActivityPanelContent } from "./tabs/ActivityTab";
 import { NotesPanelContent } from "./tabs/NotesTab";
 import { RecordingsPanelContent } from "./tabs/RecordingsTab";
 import { SettingsPanelContent } from "./tabs/SettingsTab";
+import { SessionReplayPanel } from "@UI/react/components/organisms/SessionReplayPanel";
 
 // =============================================================================
 // REGISTER ALL TAB COMPONENTS
@@ -41,11 +42,12 @@ registerRightPanelTab("activity", ActivityPanelContent);
 // DOCUMENTATION
 registerRightPanelTab("notes", NotesPanelContent);
 registerRightPanelTab("recording", RecordingsPanelContent);
+registerRightPanelTab("replay", SessionReplayPanel);
 
 // SETTINGS
 registerRightPanelTab("settings", SettingsPanelContent);
 
 // Log registration status in development
 if (process.env.NODE_ENV === "development") {
-  console.log("[RightPanel] All 8 tab components registered");
+  console.log("[RightPanel] All 9 tab components registered");
 }

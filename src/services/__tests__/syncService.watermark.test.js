@@ -18,6 +18,13 @@ vi.mock('@Utils/logger.js', () => ({
   sync: { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() },
 }));
 
+const toastMock = vi.hoisted(() => ({
+  success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn(),
+}));
+vi.mock('@UI/react/store/toastStore', () => ({
+  toast: toastMock,
+}));
+
 import {
   getSyncWatermark,
   saveSyncWatermark,
@@ -219,6 +226,25 @@ describe('performStartupHydration', () => {
     expect(result.usedFullHydration).toBe(true);
     expect(result.reason).toBe('watermark_compacted');
     expect(getSyncWatermark(WS_ID, USER_A)).toBe(0); // cleared
+    // Non-WATERMARK_EXPIRED reasons don't need to interrupt the user with a toast.
+    expect(toastMock.warning).not.toHaveBeenCalled();
+  });
+
+  test('WATERMARK_EXPIRED → clears watermark, falls back, and warns the user', async () => {
+    saveSyncWatermark(WS_ID, 5, USER_A);
+    apiClient.get.mockResolvedValueOnce({
+      requiresFullResync: true,
+      reason: 'WATERMARK_EXPIRED',
+      events: [],
+    });
+    const result = await performStartupHydration(WS_ID, {}, USER_A);
+    expect(result.usedFullHydration).toBe(true);
+    expect(result.reason).toBe('WATERMARK_EXPIRED');
+    expect(getSyncWatermark(WS_ID, USER_A)).toBe(0); // cleared
+    expect(toastMock.warning).toHaveBeenCalledWith(
+      expect.stringMatching(/out of sync|re-sync/i),
+      expect.objectContaining({ duration: expect.any(Number) })
+    );
   });
 
   test('advances watermark to lastAppliedEventId, not toWatermark', async () => {

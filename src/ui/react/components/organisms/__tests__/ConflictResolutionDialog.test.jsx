@@ -18,7 +18,19 @@ vi.mock('@UI/react/components/atoms/Button', () => ({
 vi.mock('@Utils/jsonPatch.js', () => ({
   diff: vi.fn(() => []),
   canAutoMergeSafe: vi.fn(() => true),
+  merge: vi.fn((base) => base),
   VIEW_SAFE_MERGE_FIELDS: new Set(['camera', 'name']),
+}));
+
+const toastMock = vi.hoisted(() => ({
+  success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn(),
+}));
+vi.mock('@UI/react/store/toastStore', () => ({
+  toast: toastMock,
+}));
+
+vi.mock('@Services/apiClient.js', () => ({
+  apiClient: { put: vi.fn(() => Promise.resolve({})) },
 }));
 
 vi.mock('@Utils/conflictStrategies.js', () => ({
@@ -235,5 +247,139 @@ describe('ConflictResolutionDialog — generic behavior', () => {
 
     act(() => { fireEvent.click(screen.getByLabelText(/close conflict dialog/i)); });
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  // ==========================================================================
+  // Toast feedback (gap fix: resolution outcome was previously silent)
+  // ==========================================================================
+
+  test('"Use server version" shows a success toast on success', async () => {
+    const mgr = makeManager();
+    window.CIA.viewConfigurationManager = mgr;
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict());
+
+    await act(async () => { fireEvent.click(screen.getByText(/use server version/i)); });
+    expect(toastMock.success).toHaveBeenCalledWith(expect.stringMatching(/server version/i));
+  });
+
+  test('"Use server version" shows an error toast when the resolver throws', async () => {
+    const mgr = makeManager();
+    mgr.resolveConflictUseServer.mockImplementation(() => { throw new Error('boom'); });
+    window.CIA.viewConfigurationManager = mgr;
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict());
+
+    await act(async () => { fireEvent.click(screen.getByText(/use server version/i)); });
+    expect(toastMock.error).toHaveBeenCalledWith(expect.stringMatching(/boom/));
+    // Dialog still dismisses so the user is not stuck
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  test('"Keep mine" (confirmed) shows a success toast', async () => {
+    const mgr = makeManager();
+    window.CIA.viewConfigurationManager = mgr;
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict());
+
+    await act(async () => { fireEvent.click(screen.getByText(/keep mine \(overwrite\)/i)); });
+    await act(async () => { fireEvent.click(screen.getByText(/confirm: keep mine/i)); });
+    expect(toastMock.success).toHaveBeenCalledWith(expect.stringMatching(/kept and pushed/i));
+  });
+
+  test('"Keep mine" (confirmed) shows an error toast when overwrite rejects', async () => {
+    const mgr = makeManager();
+    mgr.resolveConflictOverwrite.mockRejectedValue(new Error('network down'));
+    window.CIA.viewConfigurationManager = mgr;
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict());
+
+    await act(async () => { fireEvent.click(screen.getByText(/keep mine \(overwrite\)/i)); });
+    await act(async () => { fireEvent.click(screen.getByText(/confirm: keep mine/i)); });
+    expect(toastMock.error).toHaveBeenCalledWith(expect.stringMatching(/network down/));
+  });
+
+  test('"Save as copy" shows a success toast', async () => {
+    const mgr = makeManager();
+    window.CIA.viewConfigurationManager = mgr;
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict());
+
+    await act(async () => { fireEvent.click(screen.getByText(/save mine as new copy/i)); });
+    expect(toastMock.success).toHaveBeenCalledWith(expect.stringMatching(/saved as a new/i));
+  });
+
+  test('Merge failure shows an error toast and keeps dialog open for manual resolution', async () => {
+    canAutoMergeSafe.mockReturnValue(true);
+    const { apiClient } = await import('@Services/apiClient.js');
+    apiClient.put.mockRejectedValueOnce(new Error('server rejected merge'));
+    window.CIA.viewConfigurationManager = makeManager();
+
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict());
+
+    await act(async () => { fireEvent.click(screen.getByText(/merge \(safe/i)); });
+    expect(toastMock.error).toHaveBeenCalledWith(expect.stringMatching(/auto-merge failed/i));
+    // Dialog stays open (unlike other actions) so the user can pick another resolution
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  test('Merge success shows a success toast', async () => {
+    canAutoMergeSafe.mockReturnValue(true);
+    const { apiClient } = await import('@Services/apiClient.js');
+    apiClient.put.mockResolvedValueOnce({});
+    window.CIA.viewConfigurationManager = makeManager();
+
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict());
+
+    await act(async () => { fireEvent.click(screen.getByText(/merge \(safe/i)); });
+    expect(toastMock.success).toHaveBeenCalledWith(expect.stringMatching(/merged independent changes/i));
+  });
+
+  // ==========================================================================
+  // Field-level conflict summary (UX polish: show what actually conflicts)
+  // ==========================================================================
+
+  test('shows which fields changed on each side', () => {
+    diff.mockImplementation((a, b) => {
+      // server diff: base(client) -> server
+      if (b?.name === 'Server Version') return [{ path: '/name', op: 'replace' }];
+      // client diff: base(server) -> client
+      if (b?.name === 'My Version') return [{ path: '/camera', op: 'replace' }];
+      return [];
+    });
+    window.CIA.viewConfigurationManager = makeManager();
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict());
+
+    expect(screen.getByText(/their changes:/i)).toBeTruthy();
+    expect(screen.getByText(/your changes:/i)).toBeTruthy();
+  });
+
+  test('flags overlapping fields edited by both sides', () => {
+    diff.mockImplementation(() => [{ path: '/name', op: 'replace' }]);
+    window.CIA.viewConfigurationManager = makeManager();
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict());
+
+    expect(screen.getByText(/overlapping field/i)).toBeTruthy();
+  });
+
+  test('shows an "applying resolution" status while resolving', async () => {
+    const mgr = makeManager();
+    let resolveOverwrite;
+    mgr.resolveConflictOverwrite.mockReturnValue(new Promise((res) => { resolveOverwrite = res; }));
+    window.CIA.viewConfigurationManager = mgr;
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict());
+
+    fireEvent.click(screen.getByText(/keep mine \(overwrite\)/i));
+    fireEvent.click(screen.getByText(/confirm: keep mine/i));
+
+    expect(screen.getByRole('status')).toBeTruthy();
+    expect(screen.getByLabelText(/close conflict dialog/i)).toBeDisabled();
+
+    await act(async () => { resolveOverwrite(); });
   });
 });

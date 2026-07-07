@@ -443,13 +443,21 @@ router.delete("/:roomId", validateRoomId, async (req, res, next) => {
       return res.status(400).json({ error: "Cannot delete the main room" });
     }
 
-    // Only room admin or project admin can delete
+    // Only room admin or project admin/owner can delete
     if (room.user_role !== "admin") {
-      // TODO: Also check project admin status
-      await client.query("ROLLBACK");
-      return res
-        .status(403)
-        .json({ error: "Only room admins can delete rooms" });
+      const projectRole = await client.query(
+        `SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2`,
+        [projectId, userId]
+      );
+      const isProjectAdmin = ["admin", "owner"].includes(
+        projectRole.rows[0]?.role
+      );
+      if (!isProjectAdmin) {
+        await client.query("ROLLBACK");
+        return res
+          .status(403)
+          .json({ error: "Only room or project admins can delete rooms" });
+      }
     }
 
     // Delete room (cascades to room_members)

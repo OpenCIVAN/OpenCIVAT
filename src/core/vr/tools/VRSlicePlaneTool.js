@@ -3,6 +3,7 @@
 
 import { VRToolInterface } from './VRToolInterface.js';
 import { vr as log } from '@Utils/logger.js';
+import { rotateVectorByQuaternion } from './vrPlaneMath.js';
 
 export class VRSlicePlaneTool extends VRToolInterface {
   constructor() {
@@ -70,23 +71,28 @@ export class VRSlicePlaneTool extends VRToolInterface {
     if (this._grabbedBy) {
       const ctrl = controllers[this._grabbedBy];
 
-      // Released grip
+      // Released grip — gesture end: signal the manager to sync/persist.
       if (!ctrl?.squeezePressed) {
         this._grabbedBy = null;
-        return { type: 'grab-end', plane: this._activePlane };
+        return {
+          type: 'slice-plane-updated',
+          data: { ...this._activePlane, final: true },
+        };
       }
 
-      // Update plane position
+      // Update plane position. Controller deltas are in XR space (metres);
+      // the plane lives in data space, so scale by 1/vrScale.
       const delta = this._computePoseDelta(this._initialGrabPose, ctrl.pose);
+      const s = this._context.vrContext?.vrScale || 1.0;
 
       this._activePlane.origin = [
-        this._initialPlaneTransform.origin[0] + delta.position.x,
-        this._initialPlaneTransform.origin[1] + delta.position.y,
-        this._initialPlaneTransform.origin[2] + delta.position.z,
+        this._initialPlaneTransform.origin[0] + delta.position.x / s,
+        this._initialPlaneTransform.origin[1] + delta.position.y / s,
+        this._initialPlaneTransform.origin[2] + delta.position.z / s,
       ];
 
-      // Rotate normal
-      this._activePlane.normal = this._rotateVector(
+      // Rotate normal by the controller's relative rotation since grab start.
+      this._activePlane.normal = rotateVectorByQuaternion(
         this._initialPlaneTransform.normal,
         delta.rotation
       );
@@ -99,7 +105,7 @@ export class VRSlicePlaneTool extends VRToolInterface {
 
       return {
         type: 'slice-plane-updated',
-        data: this._activePlane
+        data: { ...this._activePlane, final: false },
       };
     }
 
@@ -120,7 +126,10 @@ export class VRSlicePlaneTool extends VRToolInterface {
         this._activePlane
       );
 
-      return { type: 'slice-plane-updated', data: this._activePlane };
+      return {
+        type: 'slice-plane-updated',
+        data: { ...this._activePlane, final: false },
+      };
     }
 
     // Trigger to create new plane
@@ -149,7 +158,7 @@ export class VRSlicePlaneTool extends VRToolInterface {
       right: {
         grip: 'Grab plane to move',
         thumbstick: 'Slide along normal',
-        trigger: 'Create new plane',
+        trigger: 'Create new plane (preview is local for mesh data)',
       },
     };
   }
@@ -210,29 +219,22 @@ export class VRSlicePlaneTool extends VRToolInterface {
     };
   }
 
+  /**
+   * Relative rotation from q1 to q2: qDelta = q2 · q1⁻¹.
+   * For a unit quaternion the inverse is the conjugate (-x, -y, -z, w).
+   * Feeding qDelta to rotateVectorByQuaternion applies exactly the rotation
+   * the controller performed since grab start.
+   */
   _getRotationDelta(q1, q2) {
-    // Quaternion delta
+    // Conjugate of q1 (unit quaternion inverse)
+    const c = { x: -q1.x, y: -q1.y, z: -q1.z, w: q1.w };
+    // Hamilton product q2 · c
     return {
-      x: q2.x - q1.x,
-      y: q2.y - q1.y,
-      z: q2.z - q1.z,
-      w: q2.w - q1.w,
+      x: q2.w * c.x + q2.x * c.w + q2.y * c.z - q2.z * c.y,
+      y: q2.w * c.y - q2.x * c.z + q2.y * c.w + q2.z * c.x,
+      z: q2.w * c.z + q2.x * c.y - q2.y * c.x + q2.z * c.w,
+      w: q2.w * c.w - q2.x * c.x - q2.y * c.y - q2.z * c.z,
     };
-  }
-
-  _rotateVector(vec, rotation) {
-    // Apply quaternion rotation to vector
-    // Simplified - for proper rotation, use quaternion math
-    const q = rotation;
-    const magnitude = Math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
-
-    if (magnitude < 0.001) {
-      return vec; // No rotation
-    }
-
-    // Simplified rotation - keeping original for now
-    // TODO: Implement proper quaternion-vector rotation
-    return vec;
   }
 
   _performRaycast(controller, frame) {

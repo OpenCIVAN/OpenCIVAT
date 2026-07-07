@@ -15,6 +15,7 @@ import { RoomSection } from './RoomSection';
 import { PinnedSection } from './PinnedSection';
 import { VoiceSection } from './VoiceSection';
 import { ChatSection } from './ChatSection';
+import { CollabViewControls } from './CollabViewControls';
 import {
     useRoomSection,
     usePinnedSection,
@@ -121,6 +122,9 @@ const RoomHeader = memo(function RoomHeader({
                 />
 
                 <div className="room-header__spacer" />
+
+                <CollabViewControls />
+
                 <div className="room-header__divider" />
 
                 <VoiceSection

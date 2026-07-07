@@ -466,6 +466,7 @@ export const InstanceToolsPanel = memo(function InstanceToolsPanel({
   const {
     hasInstance,
     instanceInfo,
+    permissionDeniedReason,
     activeTab,
     setActiveTab,
     layers,
@@ -505,6 +506,13 @@ export const InstanceToolsPanel = memo(function InstanceToolsPanel({
 
           {/* Instance Header */}
           <InstanceHeader instanceInfo={instanceInfo} />
+
+          {permissionDeniedReason && (
+            <div className="instance-tools-panel__permission-banner" role="note">
+              <Icon name="lock" size={12} />
+              <span>{permissionDeniedReason}</span>
+            </div>
+          )}
 
           {/* Tab Bar */}
           <div className="instance-tools-panel__tabs">

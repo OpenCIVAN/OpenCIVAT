@@ -50,6 +50,8 @@ export { voiceFeedbackService } from "./voice/voiceFeedbackService.js";
 export { apiClient } from "./apiClient.js";
 export { DivergenceLevel, calculateDivergence, checkForServerReset, checkSyncStatus, clearSyncState, fetchServerStatus, performReconciliation, updateSyncState } from "./syncService.js";
 export { serverSync } from "./serverSync.js";
+export { replayService, REPLAY_EVENTS, REPLAY_SPEEDS } from "./replayService.js";
+export { followService } from "./followService.js";
 export { initializeStorageProvider, checkServerHealth, getStorageConfig } from "./storage/storageService.js";
 export { dataCache } from "./storage/dataCache.js";
 
@@ -59,6 +61,12 @@ export { dataCache } from "./storage/dataCache.js";
 
 export { ThumbnailCaptureService } from "./ThumbnailCaptureService.js";
 export { thumbnailCacheService } from "./thumbnails/ThumbnailCacheService.js";
+
+// ============================================================================
+// METRICS (sync latency instrumentation — see docs/user-study-protocol.md)
+// ============================================================================
+
+export { metricsService } from "./metrics/metricsService.js";
 
 // ============================================================================
 // LIFECYCLE & STATE MANAGEMENT

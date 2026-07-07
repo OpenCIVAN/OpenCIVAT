@@ -538,6 +538,18 @@ export async function initializePhase2() {
         "warn"
       );
       log.debug("Annotation system ready");
+
+      // Wire AnnotationManager to receive WebSocket broadcasts
+      try {
+        const { serverSync } = await import("@Services/serverSync.js");
+        serverSync.setAnnotationManager(annotationManager);
+        log.debug("AnnotationManager wired to server sync");
+      } catch (wireError) {
+        log.warn(
+          "Failed to wire AnnotationManager to server sync:",
+          wireError.message
+        );
+      }
     } catch (annotError) {
       log.warn("Annotation system failed to initialize:", annotError);
     }

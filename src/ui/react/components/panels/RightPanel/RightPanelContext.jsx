@@ -92,6 +92,14 @@ export const RIGHT_PANEL_TABS = [
         group: 'documentation',
         contentComponent: 'RecordingsPanelContent',
     },
+    {
+        id: 'replay',
+        icon: 'history',
+        label: 'Replay',
+        color: 'amber',
+        group: 'documentation',
+        contentComponent: 'SessionReplayPanel',
+    },
     // SETTINGS
     {
         id: 'settings',
@@ -106,7 +114,7 @@ export const RIGHT_PANEL_TABS = [
 /**
  * Dividers appear after these tabs (per spec)
  */
-export const RIGHT_PANEL_DIVIDERS_AFTER = ['rooms', 'activity', 'recording'];
+export const RIGHT_PANEL_DIVIDERS_AFTER = ['rooms', 'activity', 'replay'];
 
 // =============================================================================
 // TAB CONTENT REGISTRY

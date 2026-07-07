@@ -17,7 +17,6 @@ const { server: log, db, http: httpLog } = require("./utils/logger");
 const { createRecordingService } = require("./services/recordingService");
 const thumbnailService = require("./services/thumbnailService");
 const { createMatrixBridge } = require("./services/matrixBridge");
-const { createMatrixUserResolver } = require("./services/matrixUserResolver");
 const { startPruningSchedule, PRUNING_ENABLED } = require("./services/syncEventPruning");
 const { startCleanupSchedule: startWorkspaceCleanup } = require("./services/workspaceCleanupService");
 
@@ -108,11 +107,10 @@ if (matrixBridge.config.enabled) {
       // For now, initialize with pool only
       await matrixBridge.initialize(null, pool);
 
-      // Create user resolver
-      if (matrixBridge.client) {
-        matrixUserResolver = createMatrixUserResolver(matrixBridge.client, pool);
-        log.info('Matrix user resolver initialized');
-      }
+      // matrixBridge.initialize() creates its own MatrixUserResolver internally
+      // (used for resolving inbound Matrix senders) — reuse it here instead of
+      // creating a second resolver/cache for the same Matrix client.
+      matrixUserResolver = matrixBridge.userResolver;
 
       log.info('Matrix federation is active');
     } catch (error) {

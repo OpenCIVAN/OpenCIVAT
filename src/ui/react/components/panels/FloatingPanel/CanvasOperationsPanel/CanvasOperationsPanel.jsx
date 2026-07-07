@@ -12,6 +12,7 @@ import { AuditLogTab } from './tabs/AuditLogTab';
 import { UsersTab } from './tabs/UsersTab';
 import { SavePointsTab } from './tabs/SavePointsTab';
 import { TABS, TAB_CONFIG, DEFAULT_AUDIT_STATE } from './CanvasOperationsPanel.logic';
+import { followService } from '@Services/followService.js';
 import './CanvasOperationsPanel.scss';
 
 // =============================================================================
@@ -346,10 +347,16 @@ export function CanvasOperationsPanel({
     onUndoTransaction?.(txId);
   }, [transactions, auditState.revertedOperations, onUndoTransaction]);
 
-  // Users tab handlers
+  // Users tab handlers — drives the real followService; onFollowUser prop kept
+  // for parents that want to observe the change.
   const handleFollow = useCallback((userId) => {
     const newFollowing = followingUser === userId ? null : userId;
     setFollowingUser(newFollowing);
+    if (newFollowing) {
+      followService.follow(newFollowing);
+    } else {
+      followService.unfollow();
+    }
     onFollowUser?.(newFollowing);
   }, [followingUser, onFollowUser]);
 

@@ -29,6 +29,7 @@ import { WebsocketProvider } from "y-websocket";
 
 import clientConfig from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager";
+import cameraSharePolicy from "@Core/session/cameraSharePolicy.js";
 import { authService } from "@Services/authService.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { sync as log } from "@Utils/logger.js";
@@ -277,6 +278,9 @@ export function syncViewPresenceToYjs(viewId, viewers) {
  * @param {Object} cameraState - { position, focalPoint, viewUp, parallelScale, clippingRange, viewAngle }
  */
 export function syncCameraToYjs(viewId, userId, cameraState) {
+  // Personal-camera mode: the user opted out of sharing their viewpoint —
+  // suppress the outgoing broadcast entirely (see cameraSharePolicy).
+  if (!cameraSharePolicy.isCameraShared()) return;
   try {
     yCameras.set(viewId, {
       camera: cameraState,

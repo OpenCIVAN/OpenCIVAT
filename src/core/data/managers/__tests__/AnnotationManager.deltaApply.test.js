@@ -230,3 +230,70 @@ describe('AnnotationManager.applyDeltaEvent', () => {
     expect(ok).toBe(false);
   });
 });
+
+describe('AnnotationManager.handleServerBroadcast — remote create idempotency', () => {
+  test('annotation:created is skipped when the annotation already exists locally', () => {
+    const existing = makeAnnotation({ id: 'ann-dup' });
+    const dataset = makeDataset([existing]);
+    dataset.addAnnotation = vi.fn();
+    const mgr = makeManager();
+    mgr._datasetManager.getDataset.mockReturnValue(dataset);
+
+    const emitted = vi.fn();
+    mgr.on?.('annotationAdded', emitted);
+
+    mgr.handleServerBroadcast('annotation:created', {
+      fileId: 'ds-1',
+      annotation: { id: 'ann-dup', type: 'point', position: [0, 0, 0] },
+    });
+
+    expect(dataset.addAnnotation).not.toHaveBeenCalled();
+  });
+
+  test('annotation:created adds a new annotation from a raw server row (snake_case)', () => {
+    const dataset = makeDataset([]);
+    dataset.addAnnotation = vi.fn();
+    const mgr = makeManager();
+    mgr._datasetManager.getDataset.mockReturnValue(dataset);
+
+    // Server broadcasts raw PG rows: dataset_id, created_by, created_at
+    mgr.handleServerBroadcast('annotation:created', {
+      fileId: 'ds-1',
+      annotation: {
+        id: 'ann-new',
+        dataset_id: 'ds-1',
+        type: 'point',
+        position: [1, 2, 3],
+        text: 'remote note',
+        created_by: 'user-2',
+        created_at: '2026-07-03T00:00:00Z',
+        revision: '1',
+      },
+    });
+
+    expect(dataset.addAnnotation).toHaveBeenCalledTimes(1);
+    const added = dataset.addAnnotation.mock.calls[0][0];
+    expect(added.id).toBe('ann-new');
+    expect(added.datasetId).toBe('ds-1');
+    expect(added.text).toBe('remote note');
+    expect(added.createdBy).toBe('user-2');
+    expect(added.revision).toBe(1);
+  });
+
+  test('annotation:updated maps server row fields onto the local model', () => {
+    const existing = makeAnnotation({ id: 'ann-upd', text: 'old' });
+    const dataset = makeDataset([existing]);
+    const mgr = makeManager();
+    mgr._datasetManager.getDataset.mockReturnValue(dataset);
+
+    mgr.handleServerBroadcast('annotation:updated', {
+      fileId: 'ds-1',
+      annotation: { id: 'ann-upd', text: 'new text', revision: '4' },
+    });
+
+    expect(existing.text).toBe('new text');
+    expect(existing.revision).toBe(4);
+    // No snake_case pollution on the model
+    expect(existing.dataset_id).toBeUndefined();
+  });
+});

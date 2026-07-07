@@ -29,7 +29,21 @@ const getServerConfig = () => {
     };
   }
 
-  console.log("⚠️  Certificates not found, falling back to HTTP");
+  console.log("");
+  console.log("========================================================================");
+  console.log("  WARNING: HTTPS CERTIFICATES NOT FOUND -- FALLING BACK TO HTTP");
+  console.log("");
+  console.log("  WebXR (VR mode, Apple Vision Pro) REQUIRES HTTPS. On plain HTTP the");
+  console.log("  Enter VR button will not appear and headsets cannot connect.");
+  console.log("");
+  console.log("  Fix:   ./scripts/generate-certs.sh");
+  console.log("         (add your LAN IP for headset access, e.g.");
+  console.log("          ./scripts/generate-certs.sh 192.168.1.50)");
+  console.log("");
+  console.log("  HTTP on purpose (e.g. LiveKit voice testing)? Silence this warning");
+  console.log("  with USE_HTTP=true (npm run start:http).");
+  console.log("========================================================================");
+  console.log("");
   return undefined;
 };
 

@@ -1,0 +1,168 @@
+// SessionReplayPanel.scss
+// Colors use design-token CSS variables only — no hardcoded colors.
+
+.session-replay-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    color: var(--color-text-primary, #e6e6e6);
+    font-size: 13px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    &__title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+        color: var(--color-text-primary, #e6e6e6);
+    }
+
+    &__filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        padding: 8px 0;
+        border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+        border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+    }
+
+    &__loading,
+    &__error,
+    &__empty {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 16px 8px;
+        color: var(--color-text-secondary, #a0a0a0);
+        justify-content: center;
+    }
+
+    &__empty {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    &__error {
+        color: var(--color-accent-red, #e05252);
+    }
+
+    // ---- Current event readout ----
+    &__readout {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 10px;
+        background: var(--color-bg-secondary, rgba(255, 255, 255, 0.04));
+        border-radius: var(--adaptive-border-radius, 6px);
+    }
+
+    &__readout-line {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    &__op {
+        color: var(--color-text-secondary, #a0a0a0);
+    }
+
+    &__entity {
+        font-weight: 600;
+    }
+
+    &__readout-meta {
+        display: flex;
+        justify-content: space-between;
+        color: var(--color-text-tertiary, #808080);
+        font-size: 11px;
+    }
+
+    &__dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--color-accent-gray, #808080);
+        flex-shrink: 0;
+
+        &[data-color='blue'] { background: var(--color-accent-blue, #4a9eff); }
+        &[data-color='purple'] { background: var(--color-accent-purple, #a06eff); }
+        &[data-color='amber'] { background: var(--color-accent-amber, #f0b429); }
+        &[data-color='teal'] { background: var(--color-accent-teal, #2dd4bf); }
+    }
+
+    // ---- Timeline ----
+    &__timeline {
+        position: relative;
+        padding-top: 8px;
+    }
+
+    &__ticks {
+        position: relative;
+        height: 8px;
+        margin: 0 6px 2px;
+    }
+
+    &__tick {
+        position: absolute;
+        top: 0;
+        width: 2px;
+        height: 8px;
+        border-radius: 1px;
+        transform: translateX(-50%);
+        background: var(--color-accent-gray, #808080);
+        opacity: 0.6;
+
+        &[data-color='blue'] { background: var(--color-accent-blue, #4a9eff); }
+        &[data-color='purple'] { background: var(--color-accent-purple, #a06eff); }
+        &[data-color='amber'] { background: var(--color-accent-amber, #f0b429); }
+        &[data-color='teal'] { background: var(--color-accent-teal, #2dd4bf); }
+    }
+
+    &__scrubber {
+        width: 100%;
+        margin: 0;
+        accent-color: var(--color-accent-primary, #4a9eff);
+        cursor: pointer;
+    }
+
+    // ---- Controls ----
+    &__controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    &__speeds {
+        display: flex;
+        gap: 2px;
+        margin-left: auto;
+    }
+
+    &__speed {
+        padding: 3px 7px;
+        font-size: 11px;
+        border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+        border-radius: var(--adaptive-border-radius-sm, 4px);
+        background: transparent;
+        color: var(--color-text-secondary, #a0a0a0);
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--color-accent-primary, #4a9eff);
+            color: var(--color-text-primary, #e6e6e6);
+        }
+
+        &--active {
+            background: var(--color-accent-primary, #4a9eff);
+            border-color: var(--color-accent-primary, #4a9eff);
+            color: var(--color-bg-primary, #1a1a1a);
+        }
+    }
+}

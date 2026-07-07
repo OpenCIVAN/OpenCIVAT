@@ -4,6 +4,9 @@
 const express = require("express");
 const router = express.Router();
 const { getUserId } = require("../middleware/auth");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("canvases");
 
 // UUID validation regex
 const UUID_REGEX =
@@ -132,7 +135,7 @@ router.get("/:id", async (req, res, next) => {
       placements: placementsResult.rows,
     });
   } catch (error) {
-    console.error("[canvases] GET /:id error:", error);
+    log.error("[canvases] GET /:id error:", error);
     next(error);
   }
 });
@@ -171,7 +174,7 @@ router.post("/", async (req, res, next) => {
     // Handle both old and new schema
     let result;
     try {
-      console.log("[DEBUG] canvases.js: Inserting canvas with new schema");
+      log.debug("Inserting canvas with new schema");
       // Try with new schema (layout_mode, flow_direction)
       result = await pool.query(
         `INSERT INTO canvases (
@@ -192,14 +195,14 @@ router.post("/", async (req, res, next) => {
         ]
       );
     } catch (insertError) {
-      console.log("[DEBUG] canvases.js: Insert error:", insertError.message);
+      log.debug("Insert error:", insertError.message);
       // Fallback for old schema (without layout_mode, flow_direction)
       if (
         insertError.message.includes("layout_mode") ||
         insertError.message.includes("flow_direction") ||
         insertError.message.includes("column")
       ) {
-        console.log("[DEBUG] canvases.js: Falling back to old schema");
+        log.debug("Falling back to old schema");
         result = await pool.query(
           `INSERT INTO canvases (workspace_id, project_id, name, dimensions, ownership, created_by)
            VALUES ($1, $2, $3, $4, $5, $6)
@@ -445,8 +448,8 @@ router.post("/:id/placements", async (req, res, next) => {
       );
 
       if (viewCheck.rows.length === 0) {
-        console.warn(
-          `[canvases] Rejected placement: view ${resolvedContentId} does not exist`
+        log.warn(
+          `Rejected placement: view ${resolvedContentId} does not exist`
         );
         return res.status(400).json({
           error: "InvalidReference",

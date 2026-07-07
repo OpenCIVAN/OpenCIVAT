@@ -22,6 +22,7 @@ class MatrixUserResolver {
     this.cacheTTL = 15 * 60 * 1000; // 15 minutes
 
     // Start cache cleanup timer
+    this.cacheCleanupInterval = null;
     this._startCacheCleanup();
   }
 
@@ -252,7 +253,11 @@ class MatrixUserResolver {
    * @private
    */
   _startCacheCleanup() {
-    setInterval(() => {
+    if (this.cacheCleanupInterval) {
+      return;
+    }
+
+    this.cacheCleanupInterval = setInterval(() => {
       const now = Date.now();
       let cleaned = 0;
 
@@ -268,6 +273,21 @@ class MatrixUserResolver {
         log.debug('Cleaned up', cleaned, 'expired user cache entries');
       }
     }, 5 * 60 * 1000); // Run every 5 minutes
+
+    // Don't keep the process alive solely for this timer (e.g. in short-lived tests)
+    if (typeof this.cacheCleanupInterval.unref === 'function') {
+      this.cacheCleanupInterval.unref();
+    }
+  }
+
+  /**
+   * Stop the cache cleanup timer (call on shutdown to avoid leaking the interval)
+   */
+  stopCacheCleanup() {
+    if (this.cacheCleanupInterval) {
+      clearInterval(this.cacheCleanupInterval);
+      this.cacheCleanupInterval = null;
+    }
   }
 
   /**

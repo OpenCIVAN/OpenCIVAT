@@ -8,6 +8,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { ui as log } from "@Utils/logger.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { authService } from "@Services/authService.js";
+import { followService } from "@Services/followService.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 
 // Layout
@@ -41,7 +42,11 @@ import { SessionPanel } from "@UI/react/components/panels/SessionPanel/SessionPa
 // Modals
 import { CreateRoomModal } from "@UI/react/components/modals/CreateRoomModal";
 import { DatasetSelectorModal } from "@UI/react/components/modals/DatasetSelectorModal";
+import { SnapshotPickerModal } from "@UI/react/components/modals/SnapshotPickerModal";
 import { DeleteViewDialog } from "@UI/react/components/modals/confirmations/DeleteViewDialog";
+
+// Sync conflict resolution (mounted globally so any manager's 'cia:sync-conflict' surfaces it)
+import { ConflictResolutionDialog } from "@UI/react/components/organisms";
 
 // Server-side rendering overlay
 import { ServerRenderOverlay } from "@/rendering/ServerRenderOverlay.jsx";
@@ -78,6 +83,11 @@ export function CIAWebApp({ username, userId, projectId }) {
   useEffect(() => {
     setWorkspaceRoomId(currentRoomId || null);
   }, [currentRoomId]);
+
+  // Follow-user service: wire camera-feed + window-event subscriptions once.
+  useEffect(() => {
+    followService.init();
+  }, []);
 
   const resolvedWorkspaceRoomId = useMemo(
     () => workspaceRoomId || currentRoomId || sessionManager.getRoomId?.() || null,
@@ -154,6 +164,45 @@ export function CIAWebApp({ username, userId, projectId }) {
       ensureCanvas(currentWorkspaceId);
     }
   }, [workspaces, currentWorkspaceId, selectWorkspace, ensureCanvas]);
+
+  // Delta hydration: once a workspace is selected, scope the sync watermark
+  // to it and replay any sync_events missed since this client's last visit
+  // (falls back to full hydration when the watermark is absent or expired —
+  // see performStartupHydration in syncService.js). Runs once per workspace
+  // selection; dynamic imports keep boot order and module cycles out of play.
+  useEffect(() => {
+    if (!currentWorkspaceId || !userId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [{ serverSync }, { performStartupHydration }, appInit, { viewGroupManager }, { workspaceAnnotationManager }] =
+          await Promise.all([
+            import('@Services/serverSync.js'),
+            import('@Services/syncService.js'),
+            import('@Init/appInitializer.js'),
+            import('@Core/data/managers/ViewGroupManager.js'),
+            import('@Core/data/managers/WorkspaceAnnotationManager.js'),
+          ]);
+        if (cancelled) return;
+        serverSync.setWorkspaceId(currentWorkspaceId);
+        await performStartupHydration(
+          currentWorkspaceId,
+          {
+            viewConfigurationManager: appInit.getViewConfigurationManager?.(),
+            annotationManager: appInit.getAnnotationManager?.(),
+            viewGroupManager,
+            workspaceAnnotationManager,
+          },
+          userId
+        );
+      } catch (err) {
+        log.warn('Workspace delta hydration failed:', err.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentWorkspaceId, userId]);
 
   const { canvasId } = useCanvas(currentWorkspace?.activeCanvasId || null);
 
@@ -399,6 +448,9 @@ export function CIAWebApp({ username, userId, projectId }) {
                         targetCol={datasetSelectorTarget?.col ?? 0}
                       />
 
+                      {/* Global snapshot picker — opens on cia:show-snapshot-picker */}
+                      <SnapshotPickerModal />
+
                       <DeleteViewDialog
                         isOpen={deleteViewTarget !== null}
                         onClose={() => setDeleteViewTarget(null)}
@@ -407,6 +459,9 @@ export function CIAWebApp({ username, userId, projectId }) {
                       />
 
                       <ToastContainer />
+
+                      {/* Sync conflict resolution — global listener for 'cia:sync-conflict' */}
+                      <ConflictResolutionDialog />
 
                       {/* Server-rendered VTK overlay (shown when RENDER_MODE=server and dataset selected) */}
                       <ServerRenderOverlay />

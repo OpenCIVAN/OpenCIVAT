@@ -46,6 +46,31 @@ const DEFAULT_SETTINGS = {
   planePreset: 'x',
 };
 
+/**
+ * Normalize a declarative clipping config (from Y.js / ViewConfiguration
+ * sync) so malformed or missing fields never throw. The plane itself
+ * (origin/normal) is optional — when absent, the preset/inverted fields
+ * alone are enough to reproduce the plane locally via setPlanePreset().
+ */
+export function normalizeClippingConfig(raw = {}) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+
+  const planePreset = PLANE_PRESETS[source.planePreset] ? source.planePreset : DEFAULT_SETTINGS.planePreset;
+
+  const plane = source.plane && typeof source.plane === 'object'
+    && Array.isArray(source.plane.origin) && source.plane.origin.length === 3
+    && Array.isArray(source.plane.normal) && source.plane.normal.length === 3
+    ? { origin: [...source.plane.origin], normal: [...source.plane.normal] }
+    : null;
+
+  return {
+    enabled: source.enabled === true,
+    inverted: source.inverted === true,
+    planePreset,
+    plane,
+  };
+}
+
 // =============================================================================
 // VTK CLIPPING FEATURE
 // =============================================================================
@@ -315,6 +340,63 @@ export class VTKClippingFeature extends FeatureInterface {
     if (!state || !state.enabled) return;
 
     vtkPlaneWidget.setPlane(instanceId, planeData);
+  }
+
+  // ===========================================================================
+  // COLLABORATIVE SYNC
+  // ===========================================================================
+
+  /**
+   * Declarative config for collaborative sync — parameters only, never the
+   * live widget/mapper. Includes the concrete plane (origin/normal) so a
+   * manually-dragged plane (not just a preset) round-trips to peers too.
+   */
+  getConfigForSync(instanceId) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state) return normalizeClippingConfig({});
+
+    const plane = state.enabled ? vtkPlaneWidget.getPlane(instanceId) : null;
+
+    return normalizeClippingConfig({
+      enabled: state.enabled,
+      inverted: state.inverted,
+      planePreset: state.planePreset,
+      plane,
+    });
+  }
+
+  /**
+   * Apply an incoming (remote/collaborative) declarative clipping config.
+   * Reuses the existing setters so local rendering stays consistent, and
+   * normalizes first so malformed fields never throw.
+   */
+  applyRemoteConfig(instanceId, rawConfig) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state) return;
+
+    const config = normalizeClippingConfig(rawConfig);
+
+    if (!config.enabled) {
+      if (state.enabled) this.disableClipping(instanceId);
+      return;
+    }
+
+    if (!state.enabled) {
+      this.enableClipping(instanceId);
+    }
+
+    if (config.inverted !== state.inverted) {
+      this.invertClipping(instanceId);
+    }
+
+    if (config.plane) {
+      // Exact plane wins over the preset when both are present — it reflects
+      // the peer's actual (possibly hand-dragged) widget position.
+      this.setPlaneData(instanceId, config.plane);
+      state.planePreset = config.planePreset;
+    } else if (config.planePreset !== state.planePreset) {
+      this.setPlanePreset(instanceId, config.planePreset);
+    }
   }
 
   // ===========================================================================

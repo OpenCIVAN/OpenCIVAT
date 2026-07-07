@@ -111,15 +111,8 @@ export const LEFT_PANEL_TABS = [
         group: 'spatial',
         contentComponent: 'BookmarksFiltersPanelContent',
     },
-    // PRESENCE (future VR expansion)
-    {
-        id: 'cursors',
-        icon: 'mousePointer',
-        label: 'Cursors',
-        color: 'cyan',
-        group: 'presence',
-        contentComponent: 'CursorsPanelContent',
-    },
+    // NOTE: the Cursors tab is retired — it showed hardcoded sample users.
+    // Real presence + follow live in the RightPanel People tab.
     // NOTE: Canvas Map has been migrated to CanvasMapPanel (PanelShell floating panel)
     // Use: import { CanvasMapPanel } from '@UI/react/components/panels/CanvasMapPanel';
 ];
@@ -142,7 +135,7 @@ export const LEFT_PANEL_SHORTCUTS = {
     n: 'navigator',
     a: 'annotations',
     'shift+b': 'bookmarks',
-    c: 'cursors',
+    // c: 'cursors' - tab retired (real presence lives in the People tab)
     // m: 'canvasmap' - migrated to CanvasMapPanel (PanelShell)
 };
 

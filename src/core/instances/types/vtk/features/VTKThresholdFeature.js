@@ -49,6 +49,21 @@ const DEFAULT_SETTINGS = {
   showOriginal: false,  // Show original data as wireframe
 };
 
+/**
+ * Normalize a declarative threshold config (from Y.js / ViewConfiguration sync)
+ * so malformed or missing fields never throw.
+ */
+export function normalizeThresholdConfig(raw = {}) {
+  const mode = THRESHOLD_MODES[raw.mode] ? raw.mode : 'between';
+  return {
+    enabled: raw.enabled === true,
+    mode,
+    minValue: Number.isFinite(raw.minValue) ? raw.minValue : 0,
+    maxValue: Number.isFinite(raw.maxValue) ? raw.maxValue : 1,
+    selectedArray: typeof raw.selectedArray === 'string' ? raw.selectedArray : null,
+  };
+}
+
 // =============================================================================
 // VTK THRESHOLD FEATURE
 // =============================================================================
@@ -495,6 +510,67 @@ export class VTKThresholdFeature extends FeatureInterface {
     if (state.enabled) {
       this.disableThreshold(instanceId);
     } else {
+      this.enableThreshold(instanceId);
+    }
+  }
+
+  // ===========================================================================
+  // COLLABORATIVE SYNC
+  // ===========================================================================
+
+  /**
+   * Declarative config for collaborative sync — parameters only, never data.
+   * Array is referenced by name so it resolves on every client.
+   */
+  getConfigForSync(instanceId) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state) return normalizeThresholdConfig({});
+
+    return normalizeThresholdConfig({
+      enabled: state.enabled,
+      mode: state.mode,
+      minValue: state.minValue,
+      maxValue: state.maxValue,
+      selectedArray: state.selectedArray,
+    });
+  }
+
+  /**
+   * Apply an incoming (remote/collaborative) declarative threshold config.
+   * Reuses the existing setters so local rendering stays consistent, and
+   * normalizes first so malformed fields never throw.
+   */
+  applyRemoteConfig(instanceId, rawConfig) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state) return;
+
+    const config = normalizeThresholdConfig(rawConfig);
+
+    if (!config.enabled) {
+      if (state.enabled) this.disableThreshold(instanceId);
+      return;
+    }
+
+    if (state.availableArrays.length === 0) {
+      log.warn(`applyRemoteConfig: no scalar arrays for threshold on ${instanceId}`);
+      return;
+    }
+
+    if (
+      config.selectedArray &&
+      config.selectedArray !== state.selectedArray &&
+      state.availableArrays.some((a) => a.name === config.selectedArray)
+    ) {
+      this.selectArray(instanceId, config.selectedArray);
+    }
+
+    if (config.mode !== state.mode) {
+      this.setMode(instanceId, config.mode);
+    }
+
+    this.setRange(instanceId, config.minValue, config.maxValue);
+
+    if (!state.enabled) {
       this.enableThreshold(instanceId);
     }
   }

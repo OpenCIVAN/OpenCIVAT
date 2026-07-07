@@ -17,6 +17,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@UI/react/components/atoms/Button';
 import { diff, canAutoMergeSafe } from '@Utils/jsonPatch.js';
 import { CONFLICT_STRATEGIES } from '@Utils/conflictStrategies.js';
+import { toast } from '@UI/react/store/toastStore';
 
 // ============================================================================
 // HELPERS
@@ -39,11 +40,15 @@ function formatUserLabel(conflict) {
   return by ? `user ${by.slice(0, 8)}…` : 'another user';
 }
 
-function summariseDiff(ops) {
-  if (!ops || ops.length === 0) return 'No detected changes';
-  const paths = [...new Set(ops.map((o) => o.path.split('/')[1]).filter(Boolean))];
-  if (paths.length <= 3) return `Changed: ${paths.join(', ')}`;
-  return `Changed ${paths.length} fields including: ${paths.slice(0, 3).join(', ')}…`;
+function fieldNamesFromDiff(ops) {
+  if (!ops || ops.length === 0) return [];
+  return [...new Set(ops.map((o) => o.path.split('/')[1]).filter(Boolean))];
+}
+
+function summariseFields(paths) {
+  if (paths.length === 0) return 'No detected changes';
+  if (paths.length <= 3) return paths.join(', ');
+  return `${paths.slice(0, 3).join(', ')} +${paths.length - 3} more`;
 }
 
 // ============================================================================
@@ -105,29 +110,47 @@ export function ConflictResolutionDialog() {
   }, []);
 
   const handleUseServer = useCallback(async () => {
-    if (!resolverRef.current) return;
+    if (!resolverRef.current || !strategy) return;
     setResolving(true);
-    resolverRef.current.useServer();
+    try {
+      await resolverRef.current.useServer();
+      toast.success(`Loaded the server version of this ${strategy.entityLabel}.`);
+    } catch (err) {
+      console.warn('[ConflictResolutionDialog] Use server version failed:', err);
+      toast.error(`Failed to load the server version: ${err?.message || 'unknown error'}`);
+    }
     dismiss();
-  }, [dismiss]);
+  }, [dismiss, strategy]);
 
   const handleOverwrite = useCallback(async () => {
     if (!confirmOverwrite) {
       setConfirmOverwrite(true);
       return;
     }
-    if (!resolverRef.current) return;
+    if (!resolverRef.current || !strategy) return;
     setResolving(true);
-    await resolverRef.current.overwrite();
+    try {
+      await resolverRef.current.overwrite();
+      toast.success(`Your changes were kept and pushed to the server.`);
+    } catch (err) {
+      console.warn('[ConflictResolutionDialog] Overwrite failed:', err);
+      toast.error(`Failed to overwrite the server version: ${err?.message || 'unknown error'}`);
+    }
     dismiss();
-  }, [confirmOverwrite, dismiss]);
+  }, [confirmOverwrite, dismiss, strategy]);
 
   const handleSaveAsCopy = useCallback(async () => {
-    if (!resolverRef.current?.saveAsCopy) return;
+    if (!resolverRef.current?.saveAsCopy || !strategy) return;
     setResolving(true);
-    await resolverRef.current.saveAsCopy();
+    try {
+      await resolverRef.current.saveAsCopy();
+      toast.success(`Your changes were saved as a new ${strategy.entityLabel}.`);
+    } catch (err) {
+      console.warn('[ConflictResolutionDialog] Save as copy failed:', err);
+      toast.error(`Failed to save a copy: ${err?.message || 'unknown error'}`);
+    }
     dismiss();
-  }, [dismiss]);
+  }, [dismiss, strategy]);
 
   const handleMerge = useCallback(async () => {
     if (!conflict || !strategy) return;
@@ -162,8 +185,12 @@ export function ConflictResolutionDialog() {
       };
       const route = routeMap[conflict.entityType] || `/views/${conflict.entityId}`;
       await apiClient.put(route, { ...merged, force_overwrite: true });
+      toast.success(`Merged independent changes to this ${strategy.entityLabel}.`);
     } catch (err) {
       console.warn('[ConflictResolutionDialog] Auto-merge failed:', err);
+      toast.error(`Auto-merge failed: ${err?.message || 'unknown error'}. Please resolve manually.`);
+      setResolving(false);
+      return;
     }
     dismiss();
   }, [conflict, strategy, dismiss]);
@@ -174,6 +201,10 @@ export function ConflictResolutionDialog() {
   const clientDiff = diff(conflict.serverObject || {}, conflict.clientObject || {});
   const mergeEnabled = canAutoMergeSafe(serverDiff, clientDiff, strategy.safeFields);
   const hasSaveAsCopy = strategy.supportsDuplication && resolverRef.current?.saveAsCopy != null;
+
+  const serverFields = fieldNamesFromDiff(serverDiff);
+  const clientFields = fieldNamesFromDiff(clientDiff);
+  const overlappingFields = serverFields.filter((f) => clientFields.includes(f));
 
   return (
     <div
@@ -214,9 +245,33 @@ export function ConflictResolutionDialog() {
         Server revision {conflict.serverRevision ?? '?'} · Your base was{' '}
         {conflict.clientBaseRevision ?? '?'}.
       </p>
-      <p style={{ margin: '0 0 16px 0', fontSize: '0.8rem', opacity: 0.6 }}>
-        {summariseDiff(serverDiff)}
+      <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', opacity: 0.6 }}>
+        Their changes: {summariseFields(serverFields)}
       </p>
+      <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', opacity: 0.6 }}>
+        Your changes: {summariseFields(clientFields)}
+      </p>
+      {overlappingFields.length > 0 && (
+        <p
+          style={{
+            margin: '0 0 12px 0',
+            fontSize: '0.8rem',
+            color: 'var(--color-warning, #f0a020)',
+          }}
+        >
+          Overlapping field{overlappingFields.length > 1 ? 's' : ''}: {overlappingFields.join(', ')} — both of you edited{' '}
+          {overlappingFields.length > 1 ? 'these' : 'this'}.
+        </p>
+      )}
+      {resolving && (
+        <p
+          role="status"
+          aria-live="polite"
+          style={{ margin: '0 0 12px 0', fontSize: '0.8rem', opacity: 0.7, fontStyle: 'italic' }}
+        >
+          Applying resolution…
+        </p>
+      )}
 
       {/* Confirm overwrite notice */}
       {confirmOverwrite && (
@@ -295,6 +350,7 @@ export function ConflictResolutionDialog() {
       {/* Dismiss */}
       <button
         onClick={dismiss}
+        disabled={resolving}
         aria-label="Close conflict dialog"
         style={{
           position: 'absolute',
@@ -303,10 +359,10 @@ export function ConflictResolutionDialog() {
           background: 'none',
           border: 'none',
           color: 'inherit',
-          cursor: 'pointer',
+          cursor: resolving ? 'not-allowed' : 'pointer',
           fontSize: '1.2rem',
           lineHeight: 1,
-          opacity: 0.5,
+          opacity: resolving ? 0.25 : 0.5,
         }}
       >
         ×

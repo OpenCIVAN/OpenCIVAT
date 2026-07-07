@@ -67,17 +67,26 @@ export class VRAnnotationTool extends VRToolInterface {
 
     // A button to undo last annotation
     if (rightCtrl.buttons?.a && !this._lastAButtonState) {
-      if (this._annotations.length > 0) {
-        const removed = this._annotations.pop();
-        return {
-          type: 'annotation-removed',
-          data: removed
-        };
+      const undone = this.undoLast();
+      if (undone) {
+        this._lastAButtonState = true;
+        return undone;
       }
     }
     this._lastAButtonState = rightCtrl.buttons?.a || false;
 
     return null;
+  }
+
+  /**
+   * Remove the most recently placed annotation (shared by the A-button and the
+   * spatial menu's Undo button).
+   * @returns {Object|null} annotation-removed action, or null if none left
+   */
+  undoLast() {
+    if (this._annotations.length === 0) return null;
+    const removed = this._annotations.pop();
+    return { type: 'annotation-removed', data: removed };
   }
 
   getControllerHints() {

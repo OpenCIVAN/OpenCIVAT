@@ -26,6 +26,7 @@ import {
 } from "@Collaboration/presence/cursors.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { worldToScreen } from "@VTK/utils/vtkRaycaster.js";
+import { vtkRemoteVRRays } from "./VTKRemoteVRRays.js";
 import { cursor as log } from "@Utils/logger.js";
 import { hexToRgb, clamp } from "@Utils/colorHelpers.js";
 
@@ -254,6 +255,11 @@ class VTKInstanceCursors {
       }
       // Initialize actor pool now that we have scene objects
       this._initializeActorPool(state);
+
+      // Remote VR controller rays render alongside cursors in the same scene
+      if (state.sceneObjects?.renderer && state.viewConfigId) {
+        vtkRemoteVRRays.attach(instanceId, state.sceneObjects, state.viewConfigId);
+      }
     }
   }
 
@@ -928,6 +934,9 @@ class VTKInstanceCursors {
   cleanupInstance(instanceId) {
     const state = this.instanceStates.get(instanceId);
     if (!state) return;
+
+    // Remove remote VR ray actors for this instance
+    vtkRemoteVRRays.detach(instanceId);
 
     // Remove all actor cursors from renderer
     state.actorCursors.forEach((cursorActor) => {

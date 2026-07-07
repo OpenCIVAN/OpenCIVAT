@@ -13,6 +13,12 @@ import { vtkOrientationWidget } from '@Core/instances/types/vtk/widgets/orientat
 import vtkSceneFeature from '@Core/instances/types/vtk/features/VTKSceneFeature.js';
 import { TOOL_SECTIONS, TRANSFORM_LIMITS } from './constants';
 import { normalizeInstanceToolsResult } from '@UI/react/utils/instanceTools.js';
+import {
+  pushSharedCameraUpdate,
+  pushSharedVisualizationUpdate,
+  pushSharedWidgetToggle,
+  getPermissionDeniedReason,
+} from '@Services/visualizationSyncService.js';
 
 /**
  * useInstanceToolsPanel - Main logic hook for Instance Tools Panel V2
@@ -388,6 +394,21 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     };
   }, [activeInstance, refreshKey]);
 
+  const activeViewId = instanceInfo?.viewId || null;
+
+  // -------------------------------------------------------------------------
+  // Permission Gating (shared ViewConfiguration edits)
+  // -------------------------------------------------------------------------
+  const [permissionDeniedReason, setPermissionDeniedReason] = useState(null);
+
+  useEffect(() => {
+    const refresh = () => setPermissionDeniedReason(getPermissionDeniedReason());
+    refresh();
+
+    window.addEventListener('ws:workspace:role-changed', refresh);
+    return () => window.removeEventListener('ws:workspace:role-changed', refresh);
+  }, [activeViewId]);
+
   // -------------------------------------------------------------------------
   // Section Navigation
   // -------------------------------------------------------------------------
@@ -427,19 +448,39 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
   // -------------------------------------------------------------------------
   // Transform Handlers (wired to VTK)
   // -------------------------------------------------------------------------
+  // NOTE: the transform patch always carries position+rotation+scale together.
+  // The Y.js/ViewConfigurationManager merge is shallow (replaces the whole
+  // `transform` key), so sending only the touched sub-field would drop the
+  // other two on the next merge.
   const handlePositionChange = useCallback((axis, value) => {
     const newPosition = { ...position, [axis]: value };
     setPosition(newPosition);
     if (!activeInstance?.instanceId) return;
-    instanceTools.setPosition(activeInstance.instanceId, newPosition.x, newPosition.y, newPosition.z);
-  }, [activeInstance?.instanceId, position]);
+    const posArr = [newPosition.x, newPosition.y, newPosition.z];
+    instanceTools.setPosition(activeInstance.instanceId, ...posArr);
+    pushSharedVisualizationUpdate(activeViewId, {
+      transform: {
+        position: posArr,
+        rotation: [rotation.x, rotation.y, rotation.z],
+        scale: [scale.x / 100, scale.y / 100, scale.z / 100],
+      },
+    });
+  }, [activeInstance?.instanceId, position, rotation, scale, activeViewId]);
 
   const handleRotationChange = useCallback((axis, value) => {
     const newRotation = { ...rotation, [axis]: value };
     setRotation(newRotation);
     if (!activeInstance?.instanceId) return;
-    instanceTools.setRotation(activeInstance.instanceId, newRotation.x, newRotation.y, newRotation.z);
-  }, [activeInstance?.instanceId, rotation]);
+    const rotArr = [newRotation.x, newRotation.y, newRotation.z];
+    instanceTools.setRotation(activeInstance.instanceId, ...rotArr);
+    pushSharedVisualizationUpdate(activeViewId, {
+      transform: {
+        position: [position.x, position.y, position.z],
+        rotation: rotArr,
+        scale: [scale.x / 100, scale.y / 100, scale.z / 100],
+      },
+    });
+  }, [activeInstance?.instanceId, position, rotation, scale, activeViewId]);
 
   const handleScaleChange = useCallback((axis, value) => {
     let newScale;
@@ -451,13 +492,16 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     setScale(newScale);
     if (!activeInstance?.instanceId) return;
     // UI uses percentage (10-200%), VTK uses multiplier (0.1-2.0)
-    instanceTools.setScale(
-      activeInstance.instanceId,
-      newScale.x / 100,
-      newScale.y / 100,
-      newScale.z / 100
-    );
-  }, [activeInstance?.instanceId, scale, uniformScale]);
+    const scaleArr = [newScale.x / 100, newScale.y / 100, newScale.z / 100];
+    instanceTools.setScale(activeInstance.instanceId, ...scaleArr);
+    pushSharedVisualizationUpdate(activeViewId, {
+      transform: {
+        position: [position.x, position.y, position.z],
+        rotation: [rotation.x, rotation.y, rotation.z],
+        scale: scaleArr,
+      },
+    });
+  }, [activeInstance?.instanceId, position, rotation, scale, uniformScale, activeViewId]);
 
   const handleResetTransform = useCallback(() => {
     setPosition({ x: 0, y: 0, z: 0 });
@@ -465,7 +509,10 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     setScale({ x: 100, y: 100, z: 100 });
     if (!activeInstance?.instanceId) return;
     instanceTools.resetTransform(activeInstance.instanceId);
-  }, [activeInstance?.instanceId]);
+    pushSharedVisualizationUpdate(activeViewId, {
+      transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+    });
+  }, [activeInstance?.instanceId, activeViewId]);
 
   // -------------------------------------------------------------------------
   // Camera Handlers
@@ -489,7 +536,13 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
       const view = viewMap[preset] || preset;
       instanceTools.setCameraView(activeInstance.instanceId, view);
     }
-  }, [activeInstance?.instanceId]);
+
+    const newState = instanceTools.getCameraState(activeInstance.instanceId);
+    if (newState) {
+      setCameraState(prev => ({ ...prev, ...newState }));
+      pushSharedCameraUpdate(activeViewId, newState);
+    }
+  }, [activeInstance?.instanceId, activeViewId]);
 
   // Camera position change handler
   const handleCameraPositionChange = useCallback((axis, value) => {
@@ -506,7 +559,8 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
       position: newPosition,
     };
     instanceTools.setCameraState(activeInstance.instanceId, state);
-  }, [activeInstance?.instanceId, cameraState]);
+    pushSharedCameraUpdate(activeViewId, state);
+  }, [activeInstance?.instanceId, cameraState, activeViewId]);
 
   // Camera focal point change handler
   const handleCameraFocalPointChange = useCallback((axis, value) => {
@@ -523,7 +577,8 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
       focalPoint: newFocalPoint,
     };
     instanceTools.setCameraState(activeInstance.instanceId, state);
-  }, [activeInstance?.instanceId, cameraState]);
+    pushSharedCameraUpdate(activeViewId, state);
+  }, [activeInstance?.instanceId, cameraState, activeViewId]);
 
   // Camera view angle change handler
   const handleCameraViewAngleChange = useCallback((value) => {
@@ -537,7 +592,8 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
       viewAngle: value,
     };
     instanceTools.setCameraState(activeInstance.instanceId, state);
-  }, [activeInstance?.instanceId, cameraState]);
+    pushSharedCameraUpdate(activeViewId, state);
+  }, [activeInstance?.instanceId, cameraState, activeViewId]);
 
   // Toggle camera transform subsection
   const handleToggleCameraTransform = useCallback(() => {
@@ -577,15 +633,10 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     });
 
     // Apply to VTK
-    instanceTools.setCameraState(activeInstance.instanceId, {
-      position,
-      focalPoint,
-      viewUp,
-      viewAngle,
-      parallelScale,
-      clippingRange,
-    });
-  }, [activeInstance?.instanceId]);
+    const state = { position, focalPoint, viewUp, viewAngle, parallelScale, clippingRange };
+    instanceTools.setCameraState(activeInstance.instanceId, state);
+    pushSharedCameraUpdate(activeViewId, state);
+  }, [activeInstance?.instanceId, activeViewId]);
 
   // Delete a saved camera state
   const handleDeleteCameraState = useCallback((stateId) => {
@@ -694,10 +745,13 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
   // -------------------------------------------------------------------------
   // Slice Handlers (wired to VTK)
   // -------------------------------------------------------------------------
+  // NOTE: slice patch always carries orientation+position together — see the
+  // transform NOTE above for why (shallow merge at the sync layer).
   const handleSliceOrientationChange = useCallback((orientation) => {
     setSliceOrientation(orientation);
     if (!activeInstance?.instanceId) return;
     instanceTools.setSliceOrientation(activeInstance.instanceId, orientation);
+    pushSharedVisualizationUpdate(activeViewId, { slice: { orientation, position: slicePosition } });
 
     // Update slice max based on data dimensions
     const dimensions = instanceTools.getDataDimensions(activeInstance.instanceId);
@@ -707,7 +761,7 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
       coronal: dimensions.y,
     };
     setSliceMax(maxMap[orientation] || 256);
-  }, [activeInstance?.instanceId]);
+  }, [activeInstance?.instanceId, slicePosition, activeViewId]);
 
   const handleSlicePositionChange = useCallback((position) => {
     setSlicePosition(position);
@@ -715,7 +769,8 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     // Convert absolute position to percentage for VTK
     const percentage = (position / sliceMax) * 100;
     instanceTools.setSlicePosition(activeInstance.instanceId, percentage);
-  }, [activeInstance?.instanceId, sliceMax]);
+    pushSharedVisualizationUpdate(activeViewId, { slice: { orientation: sliceOrientation, position: percentage } });
+  }, [activeInstance?.instanceId, sliceMax, sliceOrientation, activeViewId]);
 
   // -------------------------------------------------------------------------
   // Window/Level Handlers (wired to VTK)
@@ -724,13 +779,15 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     setWindowValue(value);
     if (!activeInstance?.instanceId) return;
     instanceTools.setWindowLevel(activeInstance.instanceId, value, levelValue);
-  }, [activeInstance?.instanceId, levelValue]);
+    pushSharedVisualizationUpdate(activeViewId, { windowLevel: { window: value, level: levelValue } });
+  }, [activeInstance?.instanceId, levelValue, activeViewId]);
 
   const handleLevelChange = useCallback((value) => {
     setLevelValue(value);
     if (!activeInstance?.instanceId) return;
     instanceTools.setWindowLevel(activeInstance.instanceId, windowValue, value);
-  }, [activeInstance?.instanceId, windowValue]);
+    pushSharedVisualizationUpdate(activeViewId, { windowLevel: { window: windowValue, level: value } });
+  }, [activeInstance?.instanceId, windowValue, activeViewId]);
 
   const handleWindowLevelPreset = useCallback((presetId, windowWidth, windowLevel) => {
     setActiveWindowLevelPreset(presetId);
@@ -738,7 +795,8 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     setLevelValue(windowLevel);
     if (!activeInstance?.instanceId) return;
     instanceTools.applyWindowLevelPreset(activeInstance.instanceId, presetId, windowWidth, windowLevel);
-  }, [activeInstance?.instanceId]);
+    pushSharedVisualizationUpdate(activeViewId, { windowLevel: { window: windowWidth, level: windowLevel } });
+  }, [activeInstance?.instanceId, activeViewId]);
 
   // -------------------------------------------------------------------------
   // Appearance Handlers (wired to VTK)
@@ -748,25 +806,29 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     if (!activeInstance?.instanceId) return;
     // VTK uses 0-1 scale, UI uses 0-100
     instanceTools.setOpacity(activeInstance.instanceId, value / 100);
-  }, [activeInstance?.instanceId]);
+    pushSharedVisualizationUpdate(activeViewId, { opacity: value / 100 });
+  }, [activeInstance?.instanceId, activeViewId]);
 
   const handleRepresentationChange = useCallback((mode) => {
     setRepresentation(mode);
     if (!activeInstance?.instanceId) return;
     instanceTools.setRepresentation(activeInstance.instanceId, mode);
-  }, [activeInstance?.instanceId]);
+    pushSharedVisualizationUpdate(activeViewId, { representation: mode });
+  }, [activeInstance?.instanceId, activeViewId]);
 
   const handlePointSizeChange = useCallback((size) => {
     setPointSize(size);
     if (!activeInstance?.instanceId) return;
     instanceTools.setPointSize(activeInstance.instanceId, size);
-  }, [activeInstance?.instanceId]);
+    pushSharedVisualizationUpdate(activeViewId, { pointSize: size });
+  }, [activeInstance?.instanceId, activeViewId]);
 
   const handleLineWidthChange = useCallback((width) => {
     setLineWidth(width);
     if (!activeInstance?.instanceId) return;
     instanceTools.setLineWidth(activeInstance.instanceId, width);
-  }, [activeInstance?.instanceId]);
+    pushSharedVisualizationUpdate(activeViewId, { lineWidth: width });
+  }, [activeInstance?.instanceId, activeViewId]);
 
   // -------------------------------------------------------------------------
   // Measurement Widgets Handlers (wired to VTK)
@@ -785,33 +847,48 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
   const handleToggleLineWidget = useCallback(() => {
     if (!activeInstance?.instanceId) return;
     instanceTools.toggleRulerMeasurement?.(activeInstance.instanceId);
-    setLineWidgetActive(prev => !prev);
-  }, [activeInstance?.instanceId]);
+    const next = !lineWidgetActive;
+    setLineWidgetActive(next);
+    pushSharedWidgetToggle(activeViewId, 'line', next);
+  }, [activeInstance?.instanceId, lineWidgetActive, activeViewId]);
 
   const handleToggleAngleWidget = useCallback(() => {
     if (!activeInstance?.instanceId) return;
     instanceTools.toggleAngleMeasurement?.(activeInstance.instanceId);
-    setAngleWidgetActive(prev => !prev);
-  }, [activeInstance?.instanceId]);
+    const next = !angleWidgetActive;
+    setAngleWidgetActive(next);
+    pushSharedWidgetToggle(activeViewId, 'angle', next);
+  }, [activeInstance?.instanceId, angleWidgetActive, activeViewId]);
 
   const handleTogglePlaneWidget = useCallback(() => {
     if (!activeInstance?.instanceId) return;
     instanceTools.toggleClippingPlane?.(activeInstance.instanceId);
-    setPlaneWidgetActive(prev => !prev);
-  }, [activeInstance?.instanceId]);
+    const next = !planeWidgetActive;
+    setPlaneWidgetActive(next);
+    pushSharedWidgetToggle(activeViewId, 'plane', next);
+  }, [activeInstance?.instanceId, planeWidgetActive, activeViewId]);
 
   const handleClearAllWidgets = useCallback(() => {
     if (!activeInstance?.instanceId) return;
     const instanceId = activeInstance.instanceId;
 
-    if (lineWidgetActive) instanceTools.toggleRulerMeasurement?.(instanceId);
-    if (angleWidgetActive) instanceTools.toggleAngleMeasurement?.(instanceId);
-    if (planeWidgetActive) instanceTools.toggleClippingPlane?.(instanceId);
+    if (lineWidgetActive) {
+      instanceTools.toggleRulerMeasurement?.(instanceId);
+      pushSharedWidgetToggle(activeViewId, 'line', false);
+    }
+    if (angleWidgetActive) {
+      instanceTools.toggleAngleMeasurement?.(instanceId);
+      pushSharedWidgetToggle(activeViewId, 'angle', false);
+    }
+    if (planeWidgetActive) {
+      instanceTools.toggleClippingPlane?.(instanceId);
+      pushSharedWidgetToggle(activeViewId, 'plane', false);
+    }
 
     setLineWidgetActive(false);
     setAngleWidgetActive(false);
     setPlaneWidgetActive(false);
-  }, [activeInstance?.instanceId, lineWidgetActive, angleWidgetActive, planeWidgetActive]);
+  }, [activeInstance?.instanceId, lineWidgetActive, angleWidgetActive, planeWidgetActive, activeViewId]);
 
   // -------------------------------------------------------------------------
   // Colormap Handlers (wired to VTK)
@@ -827,7 +904,8 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     if (!activeInstance?.instanceId) return;
     instanceTools.setColorMap?.(activeInstance.instanceId, colormapId);
     setCurrentColormap(colormapId);
-  }, [activeInstance?.instanceId]);
+    pushSharedVisualizationUpdate(activeViewId, { colormap: colormapId });
+  }, [activeInstance?.instanceId, activeViewId]);
 
   // -------------------------------------------------------------------------
   // Scene Handlers (wired to VTK)
@@ -909,6 +987,7 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     activeInstance,
     instanceInfo,
     hasInstance: !!activeInstance,
+    permissionDeniedReason,
 
     // Real Tools from workspaceManager
     tools,

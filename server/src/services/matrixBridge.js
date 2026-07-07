@@ -9,6 +9,7 @@
 // - Bridge ensures messages sync both directions with deduplication
 
 const { createLogger } = require('../utils/logger');
+const { createMatrixUserResolver } = require('./matrixUserResolver');
 
 const log = createLogger('matrix-bridge');
 
@@ -129,12 +130,14 @@ class MatrixBridgeService {
     // Map of matrix_event_id -> timestamp
     this.processedEvents = new Map();
     this.deduplicationTTL = 30 * 60 * 1000; // 30 minutes
+    this.deduplicationCleanupInterval = null;
 
     // Callbacks
     this.onMessageFromMatrix = null; // Called when Matrix message arrives
     this.onMembershipChange = null; // Called when Matrix user joins/leaves (Phase 5)
     this.yjsPersistence = null; // Reference to Y.js persistence service
     this.pool = null; // PostgreSQL connection pool
+    this.userResolver = null; // MatrixUserResolver instance, created on initialize()
 
     // Phase 8: Error Handling & Resilience
     this.circuitBreaker = new CircuitBreaker({
@@ -219,6 +222,10 @@ class MatrixBridgeService {
 
       log.info('Matrix bridge initialized successfully');
       log.info('Bridge user:', this.client.getUserId());
+
+      // Create user resolver now that we have a live Matrix client
+      // (used by _resolveMatrixUser to get real display names/avatars for inbound messages)
+      this.userResolver = createMatrixUserResolver(this.client, this.pool);
 
       // Load existing room mappings from database
       await this._loadRoomMappings();
@@ -349,7 +356,7 @@ class MatrixBridgeService {
       });
 
       // Resolve Matrix user to CIA Web user (or create guest)
-      const ciaUser = await this._resolveMatrixUser(sender);
+      const ciaUser = await this._resolveMatrixUser(sender, matrixRoomId);
 
       // Store in PostgreSQL (source of truth)
       const chatMessage = await this.yjsPersistence.storeChatMessage(
@@ -787,12 +794,31 @@ class MatrixBridgeService {
   }
 
   /**
-   * Resolve Matrix user to CIA Web user
+   * Resolve Matrix user to CIA Web user (or a federated guest profile)
+   * Delegates to MatrixUserResolver for display name / avatar lookup with caching.
+   * Falls back to a basic localpart-derived profile if the resolver is unavailable
+   * or resolution fails (e.g. Matrix API error) so message relay never blocks on this.
    * @private
+   * @param {string} matrixUserId - Matrix user ID (e.g., @user:server.org)
+   * @param {string} [roomId] - Matrix room ID, used for room-specific display names
    */
-  async _resolveMatrixUser(matrixUserId) {
-    // This will be implemented fully in matrixUserResolver.js
-    // For now, return a basic federated user object
+  async _resolveMatrixUser(matrixUserId, roomId = null) {
+    if (this.userResolver) {
+      try {
+        const profile = await this.userResolver.resolveUser(matrixUserId, roomId);
+        return {
+          userId: null, // Federated users don't have CIA Web user IDs unless linked
+          displayName: profile.displayName,
+          avatarUrl: profile.avatarUrl,
+          matrixUserId,
+          isFederated: true,
+        };
+      } catch (error) {
+        log.warn('User resolver failed, falling back to basic profile:', error.message);
+      }
+    }
+
+    // Fallback: basic federated user object derived from the Matrix ID itself
     return {
       userId: null, // Federated users don't have CIA Web user IDs yet
       displayName: matrixUserId.split(':')[0].replace('@', ''),
@@ -859,7 +885,11 @@ class MatrixBridgeService {
    * @private
    */
   _startDeduplicationCleanup() {
-    setInterval(() => {
+    if (this.deduplicationCleanupInterval) {
+      return;
+    }
+
+    this.deduplicationCleanupInterval = setInterval(() => {
       const now = Date.now();
       let cleaned = 0;
 
@@ -874,6 +904,10 @@ class MatrixBridgeService {
         log.debug('Cleaned up', cleaned, 'old deduplication entries');
       }
     }, 5 * 60 * 1000); // Run every 5 minutes
+
+    if (typeof this.deduplicationCleanupInterval.unref === 'function') {
+      this.deduplicationCleanupInterval.unref();
+    }
   }
 
   /**
@@ -1108,6 +1142,11 @@ class MatrixBridgeService {
       this.healthCheckInterval = null;
     }
 
+    if (this.deduplicationCleanupInterval) {
+      clearInterval(this.deduplicationCleanupInterval);
+      this.deduplicationCleanupInterval = null;
+    }
+
     if (this.client) {
       try {
         await this.client.stopClient();
@@ -1115,6 +1154,12 @@ class MatrixBridgeService {
       } catch (error) {
         log.error('Error stopping Matrix client:', error.message);
       }
+    }
+
+    if (this.userResolver) {
+      this.userResolver.stopCacheCleanup();
+      this.userResolver.clearCache();
+      this.userResolver = null;
     }
 
     this.isConnected = false;

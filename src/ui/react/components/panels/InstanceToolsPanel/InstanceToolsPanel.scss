@@ -17,6 +17,20 @@
   overflow: hidden;
   background: $color-bg-secondary;
 
+  // Read-only banner shown when the user lacks permission to persist
+  // shared ViewConfiguration changes (local edits still apply, just don't sync)
+  &__permission-banner {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-md;
+    font-size: 11px;
+    color: $color-accent-amber;
+    background: rgba($color-accent-amber, 0.1);
+    border-bottom: 1px solid rgba($color-accent-amber, 0.3);
+    flex-shrink: 0;
+  }
+
   // Tab bar
   &__tabs {
     display: flex;

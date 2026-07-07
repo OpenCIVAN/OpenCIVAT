@@ -12,7 +12,7 @@
  * />
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -21,6 +21,7 @@ import {
 import { MemberRow } from '@UI/react/components/molecules/MemberRow';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
 import { useRoomPresence } from '@UI/react/hooks/useRoomPresence.js';
+import { followService } from '@Services/followService.js';
 
 /**
  * @typedef {Object} RoomSubtabProps
@@ -44,6 +45,24 @@ export function RoomSubtab({
     onSelectMember,
 }) {
     const { inVoice, notInVoice, inVR } = useRoomPresence(roomId);
+
+    // Follow-user state: which collaborator's viewpoint we're mirroring
+    const [followedUserId, setFollowedUserId] = useState(
+        followService.getFollowedUserId()
+    );
+    useEffect(() => followService.onChange(
+        ({ followedUserId: id }) => setFollowedUserId(id)
+    ), []);
+
+    const handleFollow = useCallback((user) => {
+        const targetId = user.userId;
+        if (!targetId) return;
+        if (followService.isFollowing(targetId)) {
+            followService.unfollow();
+        } else {
+            followService.follow(targetId, { userName: user.userName });
+        }
+    }, []);
 
     // Filter by search query
     const filteredInVR = useMemo(() => {
@@ -94,6 +113,8 @@ export function RoomSubtab({
                             user={user}
                             isSelected={selectedMember === (user.clientId || user.userId)}
                             onSelect={onSelectMember}
+                            onFollow={() => handleFollow(user)}
+                            isFollowed={followedUserId === user.userId}
                             showVRSession
                             showActions
                         />
@@ -121,7 +142,10 @@ export function RoomSubtab({
                             user={user}
                             isSelected={selectedMember === (user.clientId || user.userId)}
                             onSelect={onSelectMember}
+                            onFollow={() => handleFollow(user)}
+                            isFollowed={followedUserId === user.userId}
                             showVoiceStatus
+                            showActions
                         />
                     ))
                 )}
@@ -147,6 +171,9 @@ export function RoomSubtab({
                             user={user}
                             isSelected={selectedMember === (user.clientId || user.userId)}
                             onSelect={onSelectMember}
+                            onFollow={() => handleFollow(user)}
+                            isFollowed={followedUserId === user.userId}
+                            showActions
                         />
                     ))
                 )}

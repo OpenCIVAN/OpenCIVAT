@@ -33,6 +33,7 @@ import { vtkThresholdPointsFeature } from "@VTK/features/VTKThresholdPointsFeatu
 import { vtkAnnotationWidgetsFeature } from "@VTK/features/VTKAnnotationWidgetsFeature";
 import { vtkResliceCursorFeature } from "@VTK/features/VTKResliceCursorFeature";
 import { vtkMeasurementWidgetsFeature } from "@VTK/features/VTKMeasurementWidgetsFeature";
+import { vtkAnnotationLinesFeature } from "@VTK/features/VTKAnnotationLinesFeature";
 import { vtkImplicitPlaneFeature } from "@VTK/features/VTKImplicitPlaneFeature";
 import { vtkImageCroppingFeature } from "@VTK/features/VTKImageCroppingFeature";
 import { vtkCleanPolyDataFeature } from "@VTK/features/VTKCleanPolyDataFeature";
@@ -41,10 +42,42 @@ import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
 import { getViewConfigurationManager } from "@Init/appInitializer.js";
 import {
   syncCameraToYjs,
-  syncVisualizationToYjs,
+  syncVisualizationToYjs as _syncVisualizationToYjs,
   syncManipulatorToYjs,
 } from "@Collaboration/yjs/yjsSetup.js";
 import { getUserId, getUserName } from "@Collaboration/presence/userManagement.js";
+import { metricsService } from "@Services/metrics/metricsService.js";
+
+/**
+ * Thin instrumentation wrapper around syncVisualizationToYjs. Stamps the
+ * outgoing patch with a `_syncOriginTs` (this client's send-time, ms epoch)
+ * so the receiving side (applySharedState, below) can compute an end-to-end
+ * apply-latency delta. Falls back to the plain (uninstrumented) call if
+ * anything here throws — instrumentation must never break the Y.js sync
+ * path. See src/services/metrics/metricsService.js for the latency-metrics
+ * module and its clock-skew caveat.
+ * @param {string} viewId
+ * @param {string} userId
+ * @param {Object} vizState
+ */
+function syncVisualizationToYjs(viewId, userId, vizState) {
+  try {
+    return _syncVisualizationToYjs(viewId, userId, {
+      ...vizState,
+      _syncOriginTs: Date.now(),
+    });
+  } catch (err) {
+    // Instrumentation failure — fall back to uninstrumented call so sync
+    // itself is unaffected.
+    try {
+      return _syncVisualizationToYjs(viewId, userId, vizState);
+    } catch {
+      // If even the fallback throws, let it propagate as it would have
+      // without instrumentation (original behavior).
+      throw err;
+    }
+  }
+}
 
 // Raycasting and cursor collaboration
 import {
@@ -363,6 +396,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     await vtkAnnotationWidgetsFeature.cleanup(instanceId);
     await vtkResliceCursorFeature.cleanup(instanceId);
     await vtkMeasurementWidgetsFeature.cleanup(instanceId);
+    await vtkAnnotationLinesFeature.cleanup(instanceId);
     await vtkImplicitPlaneFeature.cleanup(instanceId);
     await vtkImageCroppingFeature.cleanup(instanceId);
     await vtkCleanPolyDataFeature.cleanup(instanceId);
@@ -843,6 +877,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     await vtkAnnotationWidgetsFeature.initialize(instanceId, instanceData);
     await vtkResliceCursorFeature.initialize(instanceId, instanceData);
     await vtkMeasurementWidgetsFeature.initialize(instanceId, instanceData);
+    await vtkAnnotationLinesFeature.initialize(instanceId, instanceData);
     await vtkImplicitPlaneFeature.initialize(instanceId, instanceData);
     await vtkImageCroppingFeature.initialize(instanceId, instanceData);
     await vtkCleanPolyDataFeature.initialize(instanceId, instanceData);
@@ -2215,7 +2250,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             this._emitToolsUpdate(instanceId);
             if (!this._isApplyingRemoteState) {
               const vId = this.instances.get(instanceId)?.viewConfigId;
-              if (vId) syncVisualizationToYjs(vId, getUserId(), { opacity: value });
+              if (vId) {
+                syncVisualizationToYjs(vId, getUserId(), { opacity: value });
+                getViewConfigurationManager()?.updateVisualization(vId, { opacity: value });
+              }
             }
           },
         },
@@ -2238,7 +2276,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             this._emitToolsUpdate(instanceId);
             if (!this._isApplyingRemoteState) {
               const vId = this.instances.get(instanceId)?.viewConfigId;
-              if (vId) syncVisualizationToYjs(vId, getUserId(), { representation: "surface" });
+              if (vId) {
+                syncVisualizationToYjs(vId, getUserId(), { representation: "surface" });
+                getViewConfigurationManager()?.updateVisualization(vId, { representation: "surface" });
+              }
             }
           },
         },
@@ -2255,7 +2296,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             this._emitToolsUpdate(instanceId);
             if (!this._isApplyingRemoteState) {
               const vId = this.instances.get(instanceId)?.viewConfigId;
-              if (vId) syncVisualizationToYjs(vId, getUserId(), { representation: "wireframe" });
+              if (vId) {
+                syncVisualizationToYjs(vId, getUserId(), { representation: "wireframe" });
+                getViewConfigurationManager()?.updateVisualization(vId, { representation: "wireframe" });
+              }
             }
           },
         },
@@ -2272,7 +2316,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             this._emitToolsUpdate(instanceId);
             if (!this._isApplyingRemoteState) {
               const vId = this.instances.get(instanceId)?.viewConfigId;
-              if (vId) syncVisualizationToYjs(vId, getUserId(), { representation: "points" });
+              if (vId) {
+                syncVisualizationToYjs(vId, getUserId(), { representation: "points" });
+                getViewConfigurationManager()?.updateVisualization(vId, { representation: "points" });
+              }
             }
           },
         },
@@ -2757,7 +2804,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
                 this._emitToolsUpdate(instanceId);
                 if (!this._isApplyingRemoteState) {
                   const vId = this.instances.get(instanceId)?.viewConfigId;
-                  if (vId) syncVisualizationToYjs(vId, getUserId(), { activeArray: null });
+                  if (vId) {
+                    syncVisualizationToYjs(vId, getUserId(), { activeArray: null });
+                    getViewConfigurationManager()?.updateVisualization(vId, { activeArray: null });
+                  }
                 }
               },
             },
@@ -2772,7 +2822,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
                 this._emitToolsUpdate(instanceId);
                 if (!this._isApplyingRemoteState) {
                   const vId = this.instances.get(instanceId)?.viewConfigId;
-                  if (vId) syncVisualizationToYjs(vId, getUserId(), { activeArray: array.name, activeArrayType: array.type });
+                  if (vId) {
+                    syncVisualizationToYjs(vId, getUserId(), { activeArray: array.name, activeArrayType: array.type });
+                    getViewConfigurationManager()?.updateVisualization(vId, { activeArray: array.name, activeArrayType: array.type });
+                  }
                 }
               },
             })),
@@ -2798,7 +2851,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
                 this._emitToolsUpdate(instanceId);
                 if (!this._isApplyingRemoteState) {
                   const vId = this.instances.get(instanceId)?.viewConfigId;
-                  if (vId) syncVisualizationToYjs(vId, getUserId(), { colormap: cmapName });
+                  if (vId) {
+                    syncVisualizationToYjs(vId, getUserId(), { colormap: cmapName });
+                    getViewConfigurationManager()?.updateVisualization(vId, { colormap: cmapName });
+                  }
                 }
               },
             })),
@@ -2824,7 +2880,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         this._emitToolsUpdate(instanceId);
         if (!this._isApplyingRemoteState) {
           const vId = this.instances.get(instanceId)?.viewConfigId;
-          if (vId) syncVisualizationToYjs(vId, getUserId(), { glyph: vtkGlyphFeature.getConfigForSync(instanceId) });
+          if (vId) {
+            const glyphConfig = vtkGlyphFeature.getConfigForSync(instanceId);
+            syncVisualizationToYjs(vId, getUserId(), { glyph: glyphConfig });
+            getViewConfigurationManager()?.updateVisualization(vId, { glyph: glyphConfig });
+          }
         }
       };
 
@@ -2987,6 +3047,20 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       const sliceState = vtkSliceFeature.getState(instanceId);
       const sliceEnabled = sliceState?.enabled || false;
 
+      // Shared helper so every slice-plane mutation syncs to collaborators
+      // and persists into the view configuration the same way glyph/threshold do.
+      const syncSlicePlane = () => {
+        this._emitToolsUpdate(instanceId);
+        if (!this._isApplyingRemoteState) {
+          const vId = this.instances.get(instanceId)?.viewConfigId;
+          if (vId) {
+            const sliceConfig = vtkSliceFeature.getConfigForSync(instanceId);
+            syncVisualizationToYjs(vId, getUserId(), { slicePlane: sliceConfig });
+            getViewConfigurationManager()?.updateVisualization(vId, { slicePlane: sliceConfig });
+          }
+        }
+      };
+
       tools.push({
         id: "slice-viewing",
         type: "menu",
@@ -3009,14 +3083,14 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
                   instanceData.imageData
                 );
               }
-              this._emitToolsUpdate(instanceId);
+              syncSlicePlane();
             },
           },
           ...(sliceEnabled ? [
             { type: "separator" },
-            { id: "slice-axial", label: "Axial (Z)", active: sliceState.sliceMode === 2, onClick: () => { vtkSliceFeature.setSliceMode(instanceId, 2); this._emitToolsUpdate(instanceId); } },
-            { id: "slice-coronal", label: "Coronal (Y)", active: sliceState.sliceMode === 1, onClick: () => { vtkSliceFeature.setSliceMode(instanceId, 1); this._emitToolsUpdate(instanceId); } },
-            { id: "slice-sagittal", label: "Sagittal (X)", active: sliceState.sliceMode === 0, onClick: () => { vtkSliceFeature.setSliceMode(instanceId, 0); this._emitToolsUpdate(instanceId); } },
+            { id: "slice-axial", label: "Axial (Z)", active: sliceState.sliceMode === 2, onClick: () => { vtkSliceFeature.setSliceMode(instanceId, 2); syncSlicePlane(); } },
+            { id: "slice-coronal", label: "Coronal (Y)", active: sliceState.sliceMode === 1, onClick: () => { vtkSliceFeature.setSliceMode(instanceId, 1); syncSlicePlane(); } },
+            { id: "slice-sagittal", label: "Sagittal (X)", active: sliceState.sliceMode === 0, onClick: () => { vtkSliceFeature.setSliceMode(instanceId, 0); syncSlicePlane(); } },
           ] : []),
         ],
       });
@@ -3073,6 +3147,20 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
       const clippingEnabled = clippingState.enabled;
 
+      // Shared helper so every clip-box mutation syncs to collaborators and
+      // persists into the view configuration the same way glyph/threshold do.
+      const syncClipBox = () => {
+        this._emitToolsUpdate(instanceId);
+        if (!this._isApplyingRemoteState) {
+          const vId = this.instances.get(instanceId)?.viewConfigId;
+          if (vId) {
+            const clipConfig = vtkClippingFeature.getConfigForSync(instanceId);
+            syncVisualizationToYjs(vId, getUserId(), { clipBox: clipConfig });
+            getViewConfigurationManager()?.updateVisualization(vId, { clipBox: clipConfig });
+          }
+        }
+      };
+
       tools.push({
         id: "clipping-plane",
         type: "menu",
@@ -3088,17 +3176,17 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             active: clippingEnabled,
             onClick: () => {
               vtkClippingFeature.toggleClipping(instanceId);
-              this._emitToolsUpdate(instanceId);
+              syncClipBox();
             },
           },
           ...(clippingEnabled ? [
             { type: "separator" },
-            { id: "clip-x", label: "X-Axis (YZ)", active: clippingState.planePreset === 'x', onClick: () => { vtkClippingFeature.setPlanePreset(instanceId, 'x'); this._emitToolsUpdate(instanceId); } },
-            { id: "clip-y", label: "Y-Axis (XZ)", active: clippingState.planePreset === 'y', onClick: () => { vtkClippingFeature.setPlanePreset(instanceId, 'y'); this._emitToolsUpdate(instanceId); } },
-            { id: "clip-z", label: "Z-Axis (XY)", active: clippingState.planePreset === 'z', onClick: () => { vtkClippingFeature.setPlanePreset(instanceId, 'z'); this._emitToolsUpdate(instanceId); } },
+            { id: "clip-x", label: "X-Axis (YZ)", active: clippingState.planePreset === 'x', onClick: () => { vtkClippingFeature.setPlanePreset(instanceId, 'x'); syncClipBox(); } },
+            { id: "clip-y", label: "Y-Axis (XZ)", active: clippingState.planePreset === 'y', onClick: () => { vtkClippingFeature.setPlanePreset(instanceId, 'y'); syncClipBox(); } },
+            { id: "clip-z", label: "Z-Axis (XY)", active: clippingState.planePreset === 'z', onClick: () => { vtkClippingFeature.setPlanePreset(instanceId, 'z'); syncClipBox(); } },
             { type: "separator" },
-            { id: "clip-invert", label: clippingState.inverted ? "Normal Direction" : "Invert Direction", onClick: () => { vtkClippingFeature.invertClipping(instanceId); this._emitToolsUpdate(instanceId); } },
-            { id: "clip-reset", label: "Reset Plane", onClick: () => { vtkClippingFeature.resetPlane(instanceId); this._emitToolsUpdate(instanceId); } },
+            { id: "clip-invert", label: clippingState.inverted ? "Normal Direction" : "Invert Direction", onClick: () => { vtkClippingFeature.invertClipping(instanceId); syncClipBox(); } },
+            { id: "clip-reset", label: "Reset Plane", onClick: () => { vtkClippingFeature.resetPlane(instanceId); syncClipBox(); } },
           ] : []),
         ],
       });
@@ -3112,6 +3200,20 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       tools.push({ type: "separator" });
 
       const thresholdEnabled = thresholdState.enabled;
+
+      // Shared helper so every threshold mutation syncs to collaborators the
+      // same way glyph/colormap/opacity do (declarative params only).
+      const syncThreshold = () => {
+        this._emitToolsUpdate(instanceId);
+        if (!this._isApplyingRemoteState) {
+          const vId = this.instances.get(instanceId)?.viewConfigId;
+          if (vId) {
+            const thresholdConfig = vtkThresholdFeature.getConfigForSync(instanceId);
+            syncVisualizationToYjs(vId, getUserId(), { threshold: thresholdConfig });
+            getViewConfigurationManager()?.updateVisualization(vId, { threshold: thresholdConfig });
+          }
+        }
+      };
 
       tools.push({
         id: "threshold-filter",
@@ -3128,18 +3230,27 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             active: thresholdEnabled,
             onClick: () => {
               vtkThresholdFeature.toggleThreshold(instanceId);
-              this._emitToolsUpdate(instanceId);
+              syncThreshold();
             },
           },
           ...(thresholdEnabled ? [
             { type: "separator" },
-            { id: "thresh-between", label: "Between", active: thresholdState.mode === 'between', onClick: () => { vtkThresholdFeature.setMode(instanceId, 'between'); this._emitToolsUpdate(instanceId); } },
-            { id: "thresh-above", label: "Above", active: thresholdState.mode === 'above', onClick: () => { vtkThresholdFeature.setMode(instanceId, 'above'); this._emitToolsUpdate(instanceId); } },
-            { id: "thresh-below", label: "Below", active: thresholdState.mode === 'below', onClick: () => { vtkThresholdFeature.setMode(instanceId, 'below'); this._emitToolsUpdate(instanceId); } },
+            { id: "thresh-between", label: "Between", active: thresholdState.mode === 'between', onClick: () => { vtkThresholdFeature.setMode(instanceId, 'between'); syncThreshold(); } },
+            { id: "thresh-above", label: "Above", active: thresholdState.mode === 'above', onClick: () => { vtkThresholdFeature.setMode(instanceId, 'above'); syncThreshold(); } },
+            { id: "thresh-below", label: "Below", active: thresholdState.mode === 'below', onClick: () => { vtkThresholdFeature.setMode(instanceId, 'below'); syncThreshold(); } },
             { type: "separator" },
-            { id: "thresh-full", label: "Full Range", onClick: () => { vtkThresholdFeature.setRange(instanceId, thresholdState.scalarRange[0], thresholdState.scalarRange[1]); this._emitToolsUpdate(instanceId); } },
-            { id: "thresh-upper", label: "Upper Half", onClick: () => { const mid = (thresholdState.scalarRange[0] + thresholdState.scalarRange[1]) / 2; vtkThresholdFeature.setRange(instanceId, mid, thresholdState.scalarRange[1]); this._emitToolsUpdate(instanceId); } },
-            { id: "thresh-lower", label: "Lower Half", onClick: () => { const mid = (thresholdState.scalarRange[0] + thresholdState.scalarRange[1]) / 2; vtkThresholdFeature.setRange(instanceId, thresholdState.scalarRange[0], mid); this._emitToolsUpdate(instanceId); } },
+            { id: "thresh-full", label: "Full Range", onClick: () => { vtkThresholdFeature.setRange(instanceId, thresholdState.scalarRange[0], thresholdState.scalarRange[1]); syncThreshold(); } },
+            { id: "thresh-upper", label: "Upper Half", onClick: () => { const mid = (thresholdState.scalarRange[0] + thresholdState.scalarRange[1]) / 2; vtkThresholdFeature.setRange(instanceId, mid, thresholdState.scalarRange[1]); syncThreshold(); } },
+            { id: "thresh-lower", label: "Lower Half", onClick: () => { const mid = (thresholdState.scalarRange[0] + thresholdState.scalarRange[1]) / 2; vtkThresholdFeature.setRange(instanceId, thresholdState.scalarRange[0], mid); syncThreshold(); } },
+            ...(thresholdState.availableArrays.length > 1 ? [
+              { type: "separator" },
+              ...thresholdState.availableArrays.map((arr) => ({
+                id: `thresh-array-${arr.name}`,
+                label: `${arr.name} (${arr.type})`,
+                active: thresholdState.selectedArray === arr.name,
+                onClick: () => { vtkThresholdFeature.selectArray(instanceId, arr.name); syncThreshold(); },
+              })),
+            ] : []),
           ] : []),
         ],
       });
@@ -4170,6 +4281,20 @@ console.log('Tools:', tools);
     // Set flag to prevent sync loops
     this._isApplyingRemoteState = true;
 
+    // Sync-latency instrumentation (send → apply). `state.visualization._syncOriginTs`
+    // is stamped by the syncVisualizationToYjs wrapper above at send time on the
+    // originating client. Same-machine multi-tab deltas are valid latency
+    // measurements; cross-machine deltas are subject to clock skew — see the
+    // caveat in src/services/metrics/metricsService.js. try/catch-safe no-op.
+    try {
+      const originTs = state?.visualization?._syncOriginTs;
+      if (typeof originTs === "number") {
+        metricsService.recordFromOrigin("yjs-visualization", originTs);
+      }
+    } catch {
+      // metrics must never break sync — ignore
+    }
+
     try {
       log.debug(`Applying remote state from user ${sourceUserId}`);
 
@@ -4208,6 +4333,48 @@ console.log('Tools:', tools);
           property.setRepresentation(state.visualization.representation);
         }
 
+        if (state.visualization.pointSize !== undefined) {
+          instanceTools.setPointSize(instanceId, state.visualization.pointSize);
+        }
+
+        if (state.visualization.lineWidth !== undefined) {
+          instanceTools.setLineWidth(instanceId, state.visualization.lineWidth);
+        }
+
+        // Transform: position/rotation/scale (each optional, sent independently
+        // by whichever InstanceToolsPanel handler changed)
+        if (state.visualization.transform) {
+          try {
+            const { position, rotation, scale } = state.visualization.transform;
+            if (position) instanceTools.setPosition(instanceId, ...position);
+            if (rotation) instanceTools.setRotation(instanceId, ...rotation);
+            if (scale) instanceTools.setScale(instanceId, ...scale);
+          } catch (e) {
+            log.warn("applySharedState: failed to apply transform", e);
+          }
+        }
+
+        // Slice orientation/position (units match InstanceToolsPanel: position is a 0-100 percentage)
+        if (state.visualization.slice) {
+          try {
+            const { orientation, position } = state.visualization.slice;
+            if (orientation) instanceTools.setSliceOrientation(instanceId, orientation);
+            if (position !== undefined) instanceTools.setSlicePosition(instanceId, position);
+          } catch (e) {
+            log.warn("applySharedState: failed to apply slice state", e);
+          }
+        }
+
+        // Window/level (CT/MRI intensity windowing)
+        if (state.visualization.windowLevel) {
+          try {
+            const { window, level } = state.visualization.windowLevel;
+            instanceTools.setWindowLevel(instanceId, window, level);
+          } catch (e) {
+            log.warn("applySharedState: failed to apply window/level", e);
+          }
+        }
+
         // Scalar coloring: colormap change
         if (state.visualization.colormap !== undefined) {
           try {
@@ -4240,6 +4407,40 @@ console.log('Tools:', tools);
             vtkGlyphFeature.applyRemoteConfig(instanceId, instanceData.polydata, state.visualization.glyph);
           } catch (e) {
             log.warn("applySharedState: failed to apply glyph config", e);
+          }
+        }
+
+        // Threshold filter: declarative params applied via feature reconciliation
+        if (state.visualization.threshold !== undefined) {
+          try {
+            vtkThresholdFeature.applyRemoteConfig(instanceId, state.visualization.threshold);
+            this._emitToolsUpdate(instanceId);
+          } catch (e) {
+            log.warn("applySharedState: failed to apply threshold config", e);
+          }
+        }
+
+        // Slice plane (volumetric slice viewer): full config applied via feature's
+        // own reconciliation logic. Distinct from the legacy visualization.slice
+        // {orientation, position} branch above, which drives InstanceToolsPanel's
+        // simpler slice controls.
+        if (state.visualization.slicePlane !== undefined) {
+          try {
+            vtkSliceFeature.applyRemoteConfig(instanceId, instanceData.imageData, state.visualization.slicePlane);
+            this._emitToolsUpdate(instanceId);
+          } catch (e) {
+            log.warn("applySharedState: failed to apply slice plane config", e);
+          }
+        }
+
+        // Clip box (interactive clipping plane): declarative params applied via
+        // feature reconciliation
+        if (state.visualization.clipBox !== undefined) {
+          try {
+            vtkClippingFeature.applyRemoteConfig(instanceId, state.visualization.clipBox);
+            this._emitToolsUpdate(instanceId);
+          } catch (e) {
+            log.warn("applySharedState: failed to apply clip box config", e);
           }
         }
       }
@@ -4281,15 +4482,30 @@ console.log('Tools:', tools);
         }
       }
 
-      // Apply widget states (when implemented)
-      // if (state.widgets) {
-      //   this._applyWidgetStates(instanceData, state.widgets);
-      // }
-
-      // Apply filter states (when implemented)
-      // if (state.filters) {
-      //   this._applyFilterStates(instanceData, state.filters);
-      // }
+      // Apply widget activation toggles (ruler/angle/plane). Diff against
+      // current state rather than blindly re-toggling — these are toggles,
+      // not idempotent setters, so re-applying an already-matching state
+      // would flip them the wrong way.
+      if (Array.isArray(state.widgets)) {
+        const instanceId = instanceData.instanceId;
+        const toggleFor = {
+          line: () => instanceTools.toggleRulerMeasurement?.(instanceId),
+          angle: () => instanceTools.toggleAngleMeasurement?.(instanceId),
+          plane: () => instanceTools.toggleClippingPlane?.(instanceId),
+        };
+        for (const widget of state.widgets) {
+          const toggle = toggleFor[widget.type];
+          if (!toggle) continue;
+          const currentlyActive = instanceTools.isWidgetActive?.(instanceId, widget.type) || false;
+          if (currentlyActive !== !!widget.active) {
+            try {
+              toggle();
+            } catch (e) {
+              log.warn(`applySharedState: failed to toggle widget ${widget.type}`, e);
+            }
+          }
+        }
+      }
 
       // Trigger render to show the changes (gated by isPaused)
       this._requestRender(instanceData, "remote-state");
@@ -5018,13 +5234,25 @@ console.log('Tools:', tools);
 
     const { renderer } = vrContext.sceneObjects;
 
+    // Accept either a plain {origin, direction} ray or an XRRigidTransform
+    // (what the VR tools receive as controller.targetRay). For a transform,
+    // the ray points down its -Z axis.
+    let origin = ray.origin;
+    let dir = ray.direction;
+    if ((!origin || !dir) && ray.position && ray.matrix) {
+      const m = ray.matrix;
+      origin = ray.position;
+      dir = { x: -m[8], y: -m[9], z: -m[10] };
+    }
+    if (!origin || !dir) return null;
+
     // Create VTK picker
     const picker = vtkCellPicker.newInstance();
     picker.setTolerance(0.001);
 
     // Convert ray to VTK format
-    const p1 = [ray.origin.x, ray.origin.y, ray.origin.z];
-    const direction = [ray.direction.x, ray.direction.y, ray.direction.z];
+    const p1 = [origin.x, origin.y, origin.z];
+    const direction = [dir.x, dir.y, dir.z];
     const p2 = [
       p1[0] + direction[0] * 1000,
       p1[1] + direction[1] * 1000,
@@ -5081,6 +5309,9 @@ console.log('Tools:', tools);
     vrContext.controllerRenderer = new VRControllerRenderer(renderer, {
       vrScale,
       vrOrigin,
+      // Gaze reticle (Vision Pro transient-pointer): the renderer places a dot
+      // where the pinch would land, using the same picker the tools use.
+      raycast: (targetRay) => this.raycastVR(vrContext, targetRay),
     });
 
     log.debug("VR controller renderer initialized");
