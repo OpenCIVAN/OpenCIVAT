@@ -50,6 +50,19 @@ export const WORKSPACE_ANNOTATION_SAFE_MERGE_FIELDS = new Set([
 ]);
 
 // ============================================================================
+// VIEW identity fields
+//
+// Sent in every PUT body (ViewConfigurationManager._clientToServerFormat) but
+// absent from the server's allowedFields update allowlist (server/src/routes/
+// views.js) — they're set once at creation and never actually re-editable.
+// dataset_id in particular is NULL server-side for built-in datasets by design
+// (buildDatasetRefs in server/src/routes/views.js), while the client always
+// resolves a real display id — so these fields would otherwise show up as a
+// permanent, spurious "conflict" on every view backed by a built-in dataset.
+// ============================================================================
+export const VIEW_IDENTITY_FIELDS = new Set(['dataset_id', 'project_id']);
+
+// ============================================================================
 // CONFLICT_STRATEGIES
 //
 // Add an entry here whenever a new persistent entity type participates in OCC.
@@ -61,6 +74,7 @@ export const CONFLICT_STRATEGIES = {
     entityLabel: 'view',
     supportsDuplication: true,
     safeFields: VIEW_SAFE_MERGE_FIELDS,
+    identityFields: VIEW_IDENTITY_FIELDS,
     resolverId: 'viewConfigurationManager',
     mergeWarning: 'Camera and display settings can be safely merged. Layout, filter, and colour-map settings require manual resolution.',
     duplicationUnsupportedReason: null,

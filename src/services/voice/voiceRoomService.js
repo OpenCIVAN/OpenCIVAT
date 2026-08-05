@@ -18,6 +18,8 @@ import { Room, RoomEvent, Track, ConnectionState } from "livekit-client";
 import { ws as log } from "@Utils/logger.js";
 import { config } from "@Core/config/clientConfig.js";
 import { authService } from "@Services/authService.js";
+import { resolveHttpUrl } from "@Utils/resolveHttpUrl.js";
+import { sessionManager } from "@Core/session/sessionManager.js";
 
 /**
  * Connection status enum
@@ -29,6 +31,33 @@ export const VoiceConnectionState = {
   RECONNECTING: "reconnecting",
   ERROR: "error",
 };
+
+/**
+ * Resolve the canonical voice room name for the current collaboration session.
+ *
+ * This is the single source of truth so the bottom voice bar, the Voice tab, and
+ * voice commands all converge on ONE LiveKit room — the same id Y.js uses
+ * (sessionManager.getRoomId()), so voice is always tied to the collaboration
+ * session. Breakout channels become suffixes of that base room; the default
+ * "main" channel maps to the base room itself.
+ *
+ * @param {string} [channel] - Optional breakout channel id (e.g. "breakout-1").
+ * @returns {string} The LiveKit room name to join.
+ */
+export function getVoiceRoomName(channel) {
+  let base;
+  try {
+    base = sessionManager.getRoomId();
+  } catch {
+    // Session not initialized yet — fall back to a stable shared room so users
+    // still land together rather than in per-client rooms.
+    base = "main-room";
+  }
+  if (channel && channel !== "main") {
+    return `${base}:${channel}`;
+  }
+  return base;
+}
 
 /**
  * Voice Room Service
@@ -56,20 +85,25 @@ class VoiceRoomService {
       participantJoined: new Set(),
       participantLeft: new Set(),
       activeSpeakerChange: new Set(),
+      localSpeakingChange: new Set(),
       error: new Set(),
     };
 
-    // Configuration - use correct property names from clientConfig
-    // Auto-detect protocol based on page protocol to avoid mixed content issues
-    const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    const defaultLiveKitUrl = isSecure ? "wss://localhost:7880" : "ws://localhost:7880";
-    const defaultTokenUrl = isSecure ? "https://localhost:3002" : "http://localhost:3002";
+    // Whether the local participant is currently an active speaker (drives the
+    // avatar speaking pulse via voiceAvatarBridge).
+    this._localSpeaking = false;
 
+    // Configuration from clientConfig. The token URL defaults to the same-origin
+    // "/livekit-token" proxy path — resolveHttpUrl() (below, at fetch time) turns
+    // it into an absolute same-origin URL so it rides the page's TLS/host on
+    // LAN/tunnel (no mixed-content block on HTTPS, required by WebXR on Quest).
+    // The LiveKit media SFU URL must be an absolute ws(s):// endpoint; it cannot
+    // be proxied because WebRTC media is direct/ICE. LiveKit hands the client its
+    // own ICE/TURN servers from the SFU, so no client-side iceServers are set.
     this.config = {
-      tokenServerUrl: config.liveKitTokenUrl || defaultTokenUrl,
-      livekitUrl: config.liveKitUrl || defaultLiveKitUrl,
+      tokenServerUrl: config.liveKitTokenUrl,
+      livekitUrl: config.liveKitUrl,
       autoMuteOnJoin: true,
-      reconnectAttempts: 3,
     };
 
     // Audio elements for remote participants
@@ -118,7 +152,10 @@ class VoiceRoomService {
       headers.Authorization = `Bearer ${authToken}`;
     }
 
-    const response = await fetch(`${this.config.tokenServerUrl}/token`, {
+    // Resolve a same-origin "/livekit-token" path to an absolute URL at fetch
+    // time (absolute URLs pass through unchanged).
+    const tokenUrl = `${resolveHttpUrl(this.config.tokenServerUrl)}/token`;
+    const response = await fetch(tokenUrl, {
       method: "POST",
       headers,
       body: JSON.stringify({ roomName, userName }),
@@ -238,10 +275,53 @@ class VoiceRoomService {
 
     this._setConnectionState(VoiceConnectionState.DISCONNECTED);
 
+    // Clear local speaking state (emit only if it was set).
+    if (this._localSpeaking) {
+      this._localSpeaking = false;
+      this._emit("localSpeakingChange", false);
+    }
+
     log.info("Left voice room");
 
     // Dispatch event
     window.dispatchEvent(new CustomEvent("cia:voice-room-left"));
+  }
+
+  /**
+   * Resume playback of all remote audio elements.
+   *
+   * The Quest / mobile browsers suspend media (and the shared AudioContext) when
+   * a WebXR immersive session starts or ends. Call this on VR enter/exit so voice
+   * keeps playing across the transition. Safe to call when not connected.
+   */
+  async resumeAudio() {
+    // Resume any suspended shared AudioContext (LiveKit uses Web Audio).
+    try {
+      const ctx = this.room?.audioContext;
+      if (ctx && ctx.state === "suspended") {
+        await ctx.resume();
+      }
+    } catch (e) {
+      log.debug("AudioContext resume skipped:", e?.message);
+    }
+
+    // Re-issue play() on each remote <audio> element (autoplay is often paused
+    // across the immersive-session boundary).
+    this._audioElements.forEach((el) => {
+      const p = el.play?.();
+      if (p && typeof p.catch === "function") {
+        p.catch((e) => log.debug("Audio resume play() rejected:", e?.message));
+      }
+    });
+  }
+
+  /**
+   * Identity of the local participant (the app user id used in the LiveKit
+   * token), or null when not connected. Used to key avatar speaking state.
+   * @returns {string|null}
+   */
+  getLocalIdentity() {
+    return this.room?.localParticipant?.identity || null;
   }
 
   /**
@@ -383,6 +463,15 @@ class VoiceRoomService {
       });
 
       this._emit("activeSpeakerChange", speakerIds);
+
+      // Track the local participant's speaking state separately so the avatar
+      // system can pulse the local user's avatar head (emit only on change).
+      const localSid = this.room?.localParticipant?.sid;
+      const localSpeaking = !!(localSid && speakerIds.includes(localSid));
+      if (localSpeaking !== this._localSpeaking) {
+        this._localSpeaking = localSpeaking;
+        this._emit("localSpeakingChange", localSpeaking);
+      }
     });
 
     // Mute state changed
@@ -530,6 +619,15 @@ class VoiceRoomService {
   }
 
   /**
+   * Subscribe to local-participant speaking-state changes.
+   * @param {(speaking: boolean) => void} callback
+   */
+  onLocalSpeakingChange(callback) {
+    this._listeners.localSpeakingChange.add(callback);
+    return () => this._listeners.localSpeakingChange.delete(callback);
+  }
+
+  /**
    * Subscribe to errors
    */
   onError(callback) {
@@ -568,6 +666,11 @@ class VoiceRoomService {
 
   getConnectionState() {
     return this.connectionState;
+  }
+
+  /** Whether the local participant is currently an active speaker. */
+  isLocalSpeaking() {
+    return this._localSpeaking;
   }
 }
 

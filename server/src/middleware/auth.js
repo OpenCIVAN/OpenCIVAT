@@ -79,6 +79,54 @@ async function lookupUserByExternalId(externalId, email, name) {
   }
 }
 
+// UUIDs already known to exist in `users` — one INSERT per new device per
+// process instead of one per request.
+const ensuredDevUserIds = new Set();
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * DEV BYPASS ONLY — make sure a per-device identity coming in via `x-user-id`
+ * exists in `users`, so FK columns like `view_configurations.owner_user_id`
+ * accept it.
+ *
+ * Deliberately NOT `lookupUserByExternalId`: that INSERTs with a *generated*
+ * id, so the database id would differ from the header id and every downstream
+ * Y.js key (all keyed by the header id) would mismatch.
+ *
+ * Never throws into the request path — logs and continues on failure.
+ *
+ * @param {import('pg').Pool|null} pool
+ * @param {{id: string, email?: string, name?: string}} user
+ * @returns {Promise<void>}
+ */
+async function ensureDevUser(pool, { id, email, name } = {}) {
+  if (!DEV_BYPASS_AUTH) return;
+  if (!pool) return;
+  if (!id || typeof id !== "string" || !UUID_RE.test(id)) return;
+  if (ensuredDevUserIds.has(id)) return;
+
+  try {
+    await pool.query(
+      `INSERT INTO users (id, external_id, email, display_name)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        id,
+        `device-${id}`,
+        email || `device-${id}@cia-web.local`,
+        name || `Device ${id.slice(0, 4)}`,
+      ]
+    );
+    ensuredDevUserIds.add(id);
+  } catch (err) {
+    // A pre-existing row with the same email/external_id also lands here; the
+    // request continues either way.
+    log.warn(`ensureDevUser: could not upsert dev user ${id}: ${err.message}`);
+  }
+}
+
 const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN || null;
 const INTERNAL_PATH_PREFIXES = [
   "/api/compute/internal",
@@ -154,12 +202,17 @@ function getUser(req) {
  */
 async function checkProjectAccess(pool, projectId, userId) {
   const result = await pool.query(
-    `SELECT pm.role FROM projects p
+    `SELECT p.visibility, pm.role FROM projects p
      LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $2
      WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id IS NOT NULL)`,
     [projectId, userId]
   );
-  return result.rows.length > 0 ? result.rows[0].role : null;
+  if (result.rows.length === 0) return null;
+  const { visibility, role } = result.rows[0];
+  // A public project matches the WHERE clause even for a non-member, but the
+  // LEFT JOIN then yields a null role — without this fallback every public-
+  // project bypass was dead code, since callers treat a falsy role as denied.
+  return role || (visibility === "public" ? "viewer" : null);
 }
 
 /**
@@ -248,6 +301,13 @@ async function authenticate(req, res, next) {
         name: userName,
         roles: DEV_USER.roles,
       };
+      // Per-device identities are minted client-side; make sure the row exists
+      // before anything FK-references it. No-op after the first request.
+      await ensureDevUser(req.app?.locals?.pool || dbPool, {
+        id: userId,
+        email: userEmail,
+        name: userName,
+      });
     } else {
       log.debug("Dev bypass mode - using default mock user");
       req.user = DEV_USER;
@@ -378,6 +438,12 @@ async function optionalAuth(req, res, next) {
         name: userName,
         roles: DEV_USER.roles,
       };
+      // See authenticate(): keep per-device identities FK-valid.
+      await ensureDevUser(req.app?.locals?.pool || dbPool, {
+        id: userId,
+        email: userEmail,
+        name: userName,
+      });
     } else {
       req.user = DEV_USER;
     }
@@ -590,4 +656,5 @@ module.exports = {
   verifyJwtToken,
   requireWriteAuth,
   setPool,
+  ensureDevUser,
 };

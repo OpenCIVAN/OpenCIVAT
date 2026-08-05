@@ -421,8 +421,8 @@ export const ViewHeader = memo(function ViewHeader({
                     </div>
                 )}
 
-                {/* VR Exploration button - use VRExploreButton when dataset available */}
-                {!isMinimal && dataset && (
+                {/* VR Exploration button - handles its own disabled/no-dataset state */}
+                {!isMinimal && (
                     <VRExploreButton
                         instanceId={instanceId}
                         dataset={dataset}
@@ -434,21 +434,6 @@ export const ViewHeader = memo(function ViewHeader({
                         variant="minimal"
                         className="view-header__vr-button"
                     />
-                )}
-                {/* Fallback VR/AR button when no dataset (legacy behavior) */}
-                {!isMinimal && !dataset && onVRMode && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (isCold) onActivate?.();
-                            onVRMode();
-                        }}
-                        className="view-header__button"
-                        title="Enter VR/AR Mode"
-                        style={{ width: buttonSize, height: buttonSize }}
-                    >
-                        <Icon name="vrHeadset" size={iconSize} />
-                    </button>
                 )}
 
                 {/* Focus button (not shown in focus mode) */}

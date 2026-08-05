@@ -651,33 +651,6 @@ export function ViewSettingsModal({
                         </p>
                     </ModalSection>
 
-                    {/* Advanced (Stub) */}
-                    <ModalSection icon="bolt" title="Advanced" badge="Stub">
-                        <div className="view-settings-modal__advanced">
-                            <div className="view-settings-modal__advanced-row">
-                                <Icon name="mousePointer" size={12} />
-                                <span>Cursor Style</span>
-                                <select disabled>
-                                    <option>Crosshair</option>
-                                    <option>Sphere</option>
-                                    <option>Ring</option>
-                                </select>
-                            </div>
-                            <div className="view-settings-modal__advanced-row">
-                                <Icon name="move" size={12} />
-                                <span>Interaction Mode</span>
-                                <select disabled>
-                                    <option>Trackball</option>
-                                    <option>Flight</option>
-                                    <option>2D Pan/Zoom</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div className="view-settings-modal__note">
-                            <strong>Future:</strong> Cursor style (3D cursor appearance), Interaction mode (how input maps to camera). May also be handler-specific.
-                        </div>
-                    </ModalSection>
-
                     {/* Danger Zone */}
                     <ModalSection icon="trash" title="Danger Zone">
                         <LabeledButton

@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "C:\\Users\\fanaf\\OneDrive\\Desktop\\CIA_Web\\.claude\\start-frontend.bat",
+      "runtimeArgs": [],
+      "port": 8081
+    },
+    {
+      "name": "frontend-http",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set USE_HTTP=true&& npx webpack serve --mode development --open"],
+      "port": 8081
+    }
+  ]
+}

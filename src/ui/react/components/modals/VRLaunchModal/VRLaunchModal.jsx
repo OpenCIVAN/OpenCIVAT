@@ -3,10 +3,9 @@
  * @description Modal for configuring and launching a VR exploration session.
  *
  * Features:
- * - Select exploration scope (full dataset, region, or selection)
- * - Choose navigation mode (fly, teleport, walk, orbit)
- * - Configure collaboration settings
+ * - Choose navigation mode (fly, teleport, walk, move, move object)
  * - Set initial VR scale
+ * - Review how to interact (selection, gripless input, in-VR menu features)
  * - Launch VR session
  */
 
@@ -15,48 +14,60 @@ import { Icon, getIconComponent } from "@UI/react/components/atoms/Icon";
 import { Modal } from "../Modal";
 import { Button } from "@UI/react/components/atoms/Button";
 import { vrManager } from "@Core/vr/VRManager.js";
-import { workspaceManager } from "@Core/instances/workspaceManager.js";
+import { vrExplorationManager } from "@Core/vr/VRExplorationManager.js";
+import { EXPLORATION_MODES } from "@Core/data/models/VRExplorationSession.js";
+import { NAVIGATION_MODE_INFO } from "@Core/vr/navigation/VRNavigationController.js";
 import { toast } from "@UI/react/store/toastStore.js";
 import "./VRLaunchModal.scss";
 
+// Icon registry keys for each mode. NAVIGATION_MODE_INFO's own `icon` field
+// uses a different, non-registry naming scheme (it also drives the in-VR
+// spatial menu's hint copy), so this is a separate, small display-only map.
+const MODE_ICONS = {
+  [EXPLORATION_MODES.FLY]: "compass",
+  [EXPLORATION_MODES.TELEPORT]: "target",
+  [EXPLORATION_MODES.WALK]: "footprints",
+  [EXPLORATION_MODES.GRAB]: "move",
+  [EXPLORATION_MODES.MOVE_OBJECT]: "move",
+};
+
 /**
- * Navigation mode options
+ * Navigation mode options, derived from NAVIGATION_MODE_INFO (the single
+ * source of truth also used by the in-VR spatial menu's hint line) instead of
+ * a second hand-maintained list — the previous version included a fake
+ * "orbit" mode that didn't correspond to any real EXPLORATION_MODES value and
+ * silently never worked. All 5 real modes are offered here (not just the 3
+ * locomotion ones) so a user can see Move/Move Object's controls before
+ * entering VR, even though they're most often reached via the in-VR menu.
  */
 const NAVIGATION_MODES = [
-  {
-    id: "fly",
-    label: "Fly",
-    description: "Free movement in 3D space",
-    icon: "plane",
-  },
-  {
-    id: "teleport",
-    label: "Teleport",
-    description: "Point-and-click movement",
-    icon: "cursor",
-  },
-  {
-    id: "walk",
-    label: "Walk",
-    description: "Ground-based movement",
-    icon: "footprints",
-  },
-  {
-    id: "orbit",
-    label: "Orbit",
-    description: "Rotate around center point",
-    icon: "orbit",
-  },
-];
+  EXPLORATION_MODES.FLY,
+  EXPLORATION_MODES.TELEPORT,
+  EXPLORATION_MODES.WALK,
+  EXPLORATION_MODES.GRAB,
+  EXPLORATION_MODES.MOVE_OBJECT,
+].map((id) => ({
+  id,
+  label: NAVIGATION_MODE_INFO[id].name,
+  description: NAVIGATION_MODE_INFO[id].description,
+  controls: NAVIGATION_MODE_INFO[id].controls,
+  icon: MODE_ICONS[id],
+}));
 
 /**
  * Scale preset options
  */
+// vrScale follows VTKInstanceHandler._updateCameraFromVRPose's mapping
+// (dataPos = xrPos/vrScale + vrOrigin): a SMALL vrScale means a given
+// physical step covers a LARGE data-space distance (overview — the whole
+// dataset fits in a normal room), a LARGE vrScale means a physical step
+// covers only a tiny data-space distance (zoomed into fine detail). Matches
+// the auto-fit/isolation convention (vrScale = 2.5 / dataset diagonal).
 const SCALE_PRESETS = [
-  { id: "overview", label: "Overview", scale: 10.0, description: "See the whole dataset" },
+  { id: "overview", label: "Overview", scale: 0.1, description: "See the whole dataset" },
   { id: "normal", label: "Normal", scale: 1.0, description: "1:1 scale" },
-  { id: "detail", label: "Detail", scale: 0.1, description: "10x magnification" },
-  { id: "micro", label: "Micro", scale: 0.01, description: "100x magnification" },
+  { id: "detail", label: "Detail", scale: 10.0, description: "10x magnification" },
+  { id: "micro", label: "Micro", scale: 100.0, description: "100x magnification" },
 ];
 
 /**
@@ -65,20 +76,20 @@ const SCALE_PRESETS = [
  * @param {Object} props
  * @param {boolean} props.isOpen - Whether modal is visible
  * @param {() => void} props.onClose - Close handler
+ * @param {string} props.instanceId - The workspace instance to explore in VR
  * @param {Object} props.dataset - The dataset to explore
  * @param {Object} props.viewConfig - Current view configuration
  * @param {string} props.projectId - Project ID for the session
- * @param {Object} props.selection - Current selection (optional)
  * @param {Function} props.onLaunch - Callback when session is launched
  * @param {string} props.className - Additional CSS class
  */
 function VRLaunchModal({
   isOpen,
   onClose,
+  instanceId,
   dataset,
   viewConfig,
   projectId,
-  selection,
   onLaunch,
   className = "",
 }) {
@@ -87,17 +98,14 @@ function VRLaunchModal({
   const [vrCapabilities, setVrCapabilities] = useState(null);
   const [checkingSupport, setCheckingSupport] = useState(true);
 
-  // Configuration state
-  const [selectionType, setSelectionType] = useState("full");
-  const [navigationMode, setNavigationMode] = useState("teleport");
+  // Configuration state. Default to "fly" so the left stick works on entry
+  // (smooth locomotion + snap turn on right stick). Teleport is now an
+  // optional toggle available via the in-VR menu. See NAVIGATION_MODE_INFO
+  // for the new control mappings.
+  const [navigationMode, setNavigationMode] = useState("fly");
   const [scalePreset, setScalePreset] = useState("normal");
   const [customScale, setCustomScale] = useState(1.0);
   const [useCustomScale, setUseCustomScale] = useState(false);
-
-  // Collaboration settings
-  const [allowJoin, setAllowJoin] = useState(true);
-  const [allowDesktopParticipants, setAllowDesktopParticipants] = useState(true);
-  const [allowDesktopControl, setAllowDesktopControl] = useState(false);
 
   // UI state
   const [isLaunching, setIsLaunching] = useState(false);
@@ -143,69 +151,31 @@ function VRLaunchModal({
     return preset?.scale || 1.0;
   }, [useCustomScale, customScale, scalePreset]);
 
-  // Check if we have a selection available
-  const hasSelection = useMemo(() => {
-    return selection && (selection.pointIds?.length > 0 || selection.cellIds?.length > 0);
-  }, [selection]);
-
   /**
-   * Handle launching the VR session
+   * Handle launching the VR session.
+   *
+   * Delegates everything to vrExplorationManager.startExploration(), which
+   * is the single path that: registers the session with the server (via
+   * apiClient, not a raw unauthenticated fetch), requests the XR session
+   * through VRManager (the sole session owner), and enters VR exploration
+   * on the handler with a working WebGL/XRWebGLLayer already attached.
    */
   const handleLaunch = useCallback(async () => {
-    if (!vrSupported || !dataset) return;
+    if (!vrSupported || !dataset || !instanceId) return;
 
     setIsLaunching(true);
     setError("");
 
     try {
-      // Build session configuration
       const sessionConfig = {
         viewConfigurationId: viewConfig?.id,
         datasetId: dataset.id,
         projectId,
-        selectionType,
         explorationMode: navigationMode,
         vrScale: effectiveScale,
-        allowJoin,
-        allowDesktopParticipants,
-        allowDesktopControl,
       };
 
-      // Add selection data if applicable
-      if (selectionType === "selection" && hasSelection) {
-        sessionConfig.selectionIds = selection.pointIds || selection.cellIds;
-      }
-
-      // Create session via API
-      const response = await fetch("/api/vr/sessions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": localStorage.getItem("userId") || "anonymous",
-          "x-user-name": localStorage.getItem("userName") || "Anonymous",
-        },
-        body: JSON.stringify(sessionConfig),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create VR session");
-      }
-
-      const session = await response.json();
-
-      // Enter VR mode
-      const instance = viewConfig?.id
-        ? workspaceManager.getInstanceByViewId(viewConfig.id)
-        : null;
-      const glContext = instance?.handler?.getWebGLContext?.();
-
-      await vrManager.enterVR(glContext, {
-        sessionId: session.id,
-        scale: effectiveScale,
-        navigationMode,
-        deviceProfile: "meta-quest",
-        optionalFeatures: ["bounded-floor", "local-floor", "hand-tracking", "layers"],
-      });
+      const session = await vrExplorationManager.startExploration(instanceId, sessionConfig);
 
       toast.success("VR session started");
 
@@ -225,16 +195,11 @@ function VRLaunchModal({
   }, [
     vrSupported,
     dataset,
+    instanceId,
     viewConfig,
     projectId,
-    selectionType,
     navigationMode,
     effectiveScale,
-    allowJoin,
-    allowDesktopParticipants,
-    allowDesktopControl,
-    hasSelection,
-    selection,
     onLaunch,
     onClose,
   ]);
@@ -259,7 +224,7 @@ function VRLaunchModal({
             variant="primary"
             onClick={handleLaunch}
             loading={isLaunching}
-            disabled={!vrSupported || checkingSupport || isLaunching}
+            disabled={!vrSupported || checkingSupport || isLaunching || !instanceId}
             icon={getIconComponent("vr")}
           >
             {isLaunching ? "Launching..." : "Enter VR"}
@@ -309,56 +274,6 @@ function VRLaunchModal({
           </div>
         )}
 
-        {/* Exploration Scope */}
-        <div className="vr-launch-modal__section">
-          <h4 className="vr-launch-modal__section-title">Exploration Scope</h4>
-          <div className="vr-launch-modal__radio-group">
-            <label className="vr-launch-modal__radio">
-              <input
-                type="radio"
-                name="selectionType"
-                value="full"
-                checked={selectionType === "full"}
-                onChange={() => setSelectionType("full")}
-                disabled={!vrSupported}
-              />
-              <span className="vr-launch-modal__radio-label">
-                <Icon name="cube" size={14} />
-                Full Dataset
-              </span>
-            </label>
-            <label className="vr-launch-modal__radio">
-              <input
-                type="radio"
-                name="selectionType"
-                value="region"
-                checked={selectionType === "region"}
-                onChange={() => setSelectionType("region")}
-                disabled={!vrSupported}
-              />
-              <span className="vr-launch-modal__radio-label">
-                <Icon name="box" size={14} />
-                Current View Region
-              </span>
-            </label>
-            <label className={`vr-launch-modal__radio ${!hasSelection ? "vr-launch-modal__radio--disabled" : ""}`}>
-              <input
-                type="radio"
-                name="selectionType"
-                value="selection"
-                checked={selectionType === "selection"}
-                onChange={() => setSelectionType("selection")}
-                disabled={!vrSupported || !hasSelection}
-              />
-              <span className="vr-launch-modal__radio-label">
-                <Icon name="mousePointer" size={14} />
-                Current Selection
-                {!hasSelection && <span className="vr-launch-modal__hint">(no selection)</span>}
-              </span>
-            </label>
-          </div>
-        </div>
-
         {/* Navigation Mode */}
         <div className="vr-launch-modal__section">
           <h4 className="vr-launch-modal__section-title">Navigation Mode</h4>
@@ -373,9 +288,21 @@ function VRLaunchModal({
                 <Icon name={mode.icon} size={20} />
                 <span className="vr-launch-modal__mode-label">{mode.label}</span>
                 <span className="vr-launch-modal__mode-desc">{mode.description}</span>
+                <span className="vr-launch-modal__mode-controls">{mode.controls}</span>
               </button>
             ))}
           </div>
+        </div>
+
+        {/* How to Interact */}
+        <div className="vr-launch-modal__section">
+          <h4 className="vr-launch-modal__section-title">How to Interact</h4>
+          <ul className="vr-launch-modal__hints">
+            <li>Point and pull the trigger (or pinch, on Vision Pro) to select a menu button or place a tool marker.</li>
+            <li>On Vision Pro there's no trigger or thumbstick — look at a control and pinch to select it.</li>
+            <li>Pinch/squeeze with both hands and pull apart to zoom, twist to rotate.</li>
+            <li>Save/load session snapshots and mute or join voice chat from the in-VR menu — no need to remove your headset.</li>
+          </ul>
         </div>
 
         {/* Scale Settings */}
@@ -417,40 +344,6 @@ function VRLaunchModal({
               disabled={!vrSupported || !useCustomScale}
               className="vr-launch-modal__scale-input"
             />
-          </div>
-        </div>
-
-        {/* Collaboration Settings */}
-        <div className="vr-launch-modal__section">
-          <h4 className="vr-launch-modal__section-title">Collaboration</h4>
-          <div className="vr-launch-modal__checkbox-group">
-            <label className="vr-launch-modal__checkbox">
-              <input
-                type="checkbox"
-                checked={allowJoin}
-                onChange={(e) => setAllowJoin(e.target.checked)}
-                disabled={!vrSupported}
-              />
-              <span>Allow others to join this session</span>
-            </label>
-            <label className="vr-launch-modal__checkbox">
-              <input
-                type="checkbox"
-                checked={allowDesktopParticipants}
-                onChange={(e) => setAllowDesktopParticipants(e.target.checked)}
-                disabled={!vrSupported || !allowJoin}
-              />
-              <span>Allow desktop participants</span>
-            </label>
-            <label className="vr-launch-modal__checkbox">
-              <input
-                type="checkbox"
-                checked={allowDesktopControl}
-                onChange={(e) => setAllowDesktopControl(e.target.checked)}
-                disabled={!vrSupported || !allowJoin || !allowDesktopParticipants}
-              />
-              <span>Allow desktop users to control exploration</span>
-            </label>
           </div>
         </div>
       </div>

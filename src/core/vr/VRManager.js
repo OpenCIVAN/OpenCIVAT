@@ -35,8 +35,6 @@ class VRManager extends BaseManager {
         "handDisconnected",
         "controllerConnected",
         "controllerDisconnected",
-        "selectStart",
-        "selectEnd",
       ],
       logCategory: "vr",
     });
@@ -44,6 +42,15 @@ class VRManager extends BaseManager {
     this._mode = "inactive"; // 'inactive' | 'grid' | 'isolated'
     this._xrSession = null;
     this._referenceSpace = null;
+    // The ORIGINAL reference space returned by requestReferenceSpace, kept
+    // separate from _referenceSpace so snap turn can rebuild _referenceSpace as
+    // a fresh yaw-offset of this base each time (getOffsetReferenceSpace is
+    // relative to the space it's called on, so re-offsetting an already-offset
+    // space would compound instead of replace). _referenceSpace is what every
+    // getPose/getViewerPose caller reads, so rotating it turns the whole
+    // world — head, controllers, floor, dataset — together. See applySnapTurn.
+    this._baseReferenceSpace = null;
+    this._yawOffset = 0; // accumulated snap-turn yaw (radians)
     this._xrLayer = null;
     this._isolatedViewId = null;
     this._inputSources = new Map(); // XRInputSource -> controller data
@@ -71,8 +78,6 @@ class VRManager extends BaseManager {
     this._handleSelect = this._handleSelect.bind(this);
     this._handleSelectStart = this._handleSelectStart.bind(this);
     this._handleSelectEnd = this._handleSelectEnd.bind(this);
-    this._handleSqueezeStart = this._handleSqueezeStart.bind(this);
-    this._handleSqueezeEnd = this._handleSqueezeEnd.bind(this);
   }
 
   // ===========================================================================
@@ -120,11 +125,12 @@ class VRManager extends BaseManager {
       const features = ["immersive-vr"];
 
       // These checks would need actual session to verify, so we just list potential
+      // (omits 'layers' — the renderer uses XRWebGLLayer baseLayer only, and
+      // requesting the Layers API breaks VR entry on headsets that support it)
       const potentialFeatures = [
         "local-floor",
         "bounded-floor",
         "hand-tracking",
-        "layers",
       ];
 
       return {
@@ -180,7 +186,11 @@ class VRManager extends BaseManager {
           : ["local-floor"],
         optionalFeatures: Array.isArray(options.optionalFeatures)
           ? options.optionalFeatures
-          : ["bounded-floor", "hand-tracking", "layers"],
+          // NOTE: never default to 'layers' — the renderer uses XRWebGLLayer
+          // baseLayer only (see _setupWebGLLayer). Headsets that support the
+          // WebXR Layers API (Meta Quest) would grant it, and the spec then
+          // rejects baseLayer in updateRenderState(), breaking VR entry.
+          : ["bounded-floor", "hand-tracking"],
       };
 
       this._sessionConfig = {
@@ -204,11 +214,6 @@ class VRManager extends BaseManager {
       this._xrSession.addEventListener("select", this._handleSelect);
       this._xrSession.addEventListener("selectstart", this._handleSelectStart);
       this._xrSession.addEventListener("selectend", this._handleSelectEnd);
-      this._xrSession.addEventListener(
-        "squeezestart",
-        this._handleSqueezeStart
-      );
-      this._xrSession.addEventListener("squeezeend", this._handleSqueezeEnd);
 
       // Get reference space (try bounded-floor first, fall back to local-floor)
       try {
@@ -222,6 +227,9 @@ class VRManager extends BaseManager {
         );
         log.debug("Using local-floor reference space");
       }
+      // Snap turn rebuilds _referenceSpace as a yaw-offset of this base.
+      this._baseReferenceSpace = this._referenceSpace;
+      this._yawOffset = 0;
 
       // Set up WebGL layer if context provided
       if (glContext) {
@@ -273,9 +281,21 @@ class VRManager extends BaseManager {
     // Create XR layer
     this._xrLayer = new XRWebGLLayer(this._xrSession, glContext);
 
-    // Update session render state
+    // Update session render state. Set ONCE here, never per-frame: now that
+    // the camera converts data units to metres via physicalScale
+    // (VTKInstanceHandler._updateCameraFromVRPose), these depthNear/depthFar
+    // values are true metres and are correct at every vrScale. 0.05 was a
+    // regression from a previous commit — it bought nothing (the menu panel
+    // sits at ~0.6 m, well past 0.05) and doubled the near:far ratio to
+    // 20000:1 (0.05/1000), halving depth-buffer precision. 0.1/200 gives a
+    // 2000:1 ratio. 200 m rather than a tighter far plane because the
+    // dataset renders in data space at `diagonal * vrScale` physical metres,
+    // so a far plane of 100 m would clip the dataset past roughly 40x
+    // auto-fit zoom.
     this._xrSession.updateRenderState({
       baseLayer: this._xrLayer,
+      depthNear: 0.1,
+      depthFar: 200,
     });
 
     log.debug("WebGL layer configured for XR");
@@ -337,11 +357,6 @@ class VRManager extends BaseManager {
         this._handleSelectStart
       );
       this._xrSession.removeEventListener("selectend", this._handleSelectEnd);
-      this._xrSession.removeEventListener(
-        "squeezestart",
-        this._handleSqueezeStart
-      );
-      this._xrSession.removeEventListener("squeezeend", this._handleSqueezeEnd);
     }
 
     // Clear input sources
@@ -352,6 +367,8 @@ class VRManager extends BaseManager {
     // Clear WebXR state
     this._xrSession = null;
     this._referenceSpace = null;
+    this._baseReferenceSpace = null;
+    this._yawOffset = 0;
     this._xrLayer = null;
     this._glContext = null;
     this._frameId = null;
@@ -642,15 +659,9 @@ class VRManager extends BaseManager {
    * @private
    */
   _handleSelectStart(event) {
-    const data = this._inputSources.get(event.inputSource);
     // Track select state per source so gripless inputs (Vision Pro
     // transient-pointer) expose a trigger-equivalent without a gamepad.
     this._selectPressed.set(event.inputSource, true);
-    this._emit("selectStart", {
-      source: event.inputSource,
-      handedness: data?.handedness,
-      frame: event.frame,
-    });
   }
 
   /**
@@ -658,39 +669,7 @@ class VRManager extends BaseManager {
    * @private
    */
   _handleSelectEnd(event) {
-    const data = this._inputSources.get(event.inputSource);
     this._selectPressed.set(event.inputSource, false);
-    this._emit("selectEnd", {
-      source: event.inputSource,
-      handedness: data?.handedness,
-      frame: event.frame,
-    });
-  }
-
-  /**
-   * Handle squeeze start event (grip pressed)
-   * @private
-   */
-  _handleSqueezeStart(event) {
-    const data = this._inputSources.get(event.inputSource);
-    this._emit("squeezeStart", {
-      source: event.inputSource,
-      handedness: data?.handedness,
-      frame: event.frame,
-    });
-  }
-
-  /**
-   * Handle squeeze end event (grip released)
-   * @private
-   */
-  _handleSqueezeEnd(event) {
-    const data = this._inputSources.get(event.inputSource);
-    this._emit("squeezeEnd", {
-      source: event.inputSource,
-      handedness: data?.handedness,
-      frame: event.frame,
-    });
   }
 
   // ===========================================================================
@@ -867,6 +846,121 @@ class VRManager extends BaseManager {
    */
   getReferenceSpace() {
     return this._referenceSpace;
+  }
+
+  /**
+   * Snap-turn the user by a fixed step, pivoting about their HEAD rather than
+   * the world origin. This is the standard WebXR way to turn in place without
+   * touching camera/tool math: it chains an offset onto _referenceSpace, so
+   * the NEXT frame's getViewerPose (head) AND every getPose (controllers)
+   * come back already rotated — head, hands, floor and dataset all turn
+   * together, consistently. The dataset placement (vrOrigin/vrScale) is
+   * untouched.
+   *
+   * Pivoting about the world origin (the old behavior, still used by setYaw)
+   * also TRANSLATES a user who is standing away from the origin — it reads as
+   * lurching sideways rather than turning in place. Pivoting about the head
+   * fixes that: build the rotation as P = T(h) . Ry(-step) . T(-h), i.e.
+   * translate the head to the origin, rotate, translate back.
+   *
+   * WebXR's getOffsetReferenceSpace applies the transform as the new space's
+   * origin expressed in the old space, which moves the world OPPOSITE the
+   * intended head turn — so to turn the user by +step we rotate the space by
+   * -step (same sign convention as setYaw).
+   *
+   * Head-pivot turns MUST compound (each turn has a different pivot, since
+   * the head moves), so this chains off the CURRENT _referenceSpace rather
+   * than rebuilding from _baseReferenceSpace: per the WebXR spec,
+   * getOffsetReferenceSpace composes into a single originOffset rather than
+   * building a linked list, so repeated calls correctly accumulate.
+   *
+   * Sanity check for the translation term: a physically fixed point p
+   * transforms under the space offset as q' = T(h).Ry(+step).T(-h).q (the
+   * inverse of the -step space rotation). At p = h this gives q' = h, i.e.
+   * the head itself does not move — only the world spins around it. Since
+   * camera position = xrPos/vrScale + vrOrigin, an unmoved head means no
+   * lurch. When headPos is null/omitted, hx = hz = 0 and t degenerates to
+   * {0,0,0} — i.e. the old world-origin pivot.
+   *
+   * @param {number} sign - +1 or -1 (right/left); magnitude ignored
+   * @param {number|null} [stepRad=null] - turn step in radians; null falls
+   *   back to the default 30° step (Math.PI / 6)
+   * @param {{x:number,y:number,z:number}|null} [headPos=null] - head position
+   *   in the current reference space (e.g. inputState.headPose.position);
+   *   null pivots about the world origin (old behavior)
+   * @returns {number} the new accumulated yaw offset (radians)
+   */
+  applySnapTurn(sign, stepRad = null, headPos = null) {
+    if (!sign) return this._yawOffset;
+    const step = Math.sign(sign) * (stepRad != null ? stepRad : Math.PI / 6);
+    this._yawOffset += step;
+
+    if (
+      !this._referenceSpace ||
+      typeof this._referenceSpace.getOffsetReferenceSpace !== "function" ||
+      typeof XRRigidTransform !== "function"
+    ) {
+      return this._yawOffset;
+    }
+    try {
+      const c = Math.cos(-step);
+      const s = Math.sin(-step);
+      const hx = headPos?.x || 0;
+      const hz = headPos?.z || 0;
+      const t = { x: hx - (hx * c + hz * s), y: 0, z: hz - (-hx * s + hz * c) };
+      const half = -step / 2;
+      const q = { x: 0, y: Math.sin(half), z: 0, w: Math.cos(half) };
+      this._referenceSpace = this._referenceSpace.getOffsetReferenceSpace(
+        new XRRigidTransform(t, q)
+      );
+    } catch (e) {
+      log.warn(`Snap turn failed: ${e?.message}`);
+    }
+    return this._yawOffset;
+  }
+
+  /**
+   * Set the absolute snap-turn yaw offset (radians), rebuilding _referenceSpace
+   * from _baseReferenceSpace. No-ops (leaving _referenceSpace as-is) if there's
+   * no base space yet or the platform lacks getOffsetReferenceSpace/XRRigidTransform.
+   * @param {number} radians
+   * @returns {number} the applied yaw offset
+   */
+  setYaw(radians) {
+    this._yawOffset = radians;
+    const base = this._baseReferenceSpace;
+    if (
+      !base ||
+      typeof base.getOffsetReferenceSpace !== "function" ||
+      typeof XRRigidTransform !== "function"
+    ) {
+      return this._yawOffset;
+    }
+    try {
+      // Rotate the space by −yaw about world-up (Y). Quaternion for a rotation
+      // of angle a about +Y is (0, sin(a/2), 0, cos(a/2)).
+      const half = -this._yawOffset / 2;
+      const orientation = { x: 0, y: Math.sin(half), z: 0, w: Math.cos(half) };
+      const transform = new XRRigidTransform({ x: 0, y: 0, z: 0 }, orientation);
+      this._referenceSpace = base.getOffsetReferenceSpace(transform);
+    } catch (e) {
+      log.warn(`Snap turn failed: ${e?.message}`);
+    }
+    return this._yawOffset;
+  }
+
+  /**
+   * Current accumulated snap-turn yaw offset (radians). Any change means
+   * `_referenceSpace` was just re-derived via getOffsetReferenceSpace — every
+   * pose reported afterward (including cached raw-space anchors computed
+   * before the change) is now expressed in a different coordinate frame. See
+   * applySnapTurn/setYaw; consumers that cache raw XR-space coordinates
+   * across frames (e.g. VTKVRSpatialUI's panel anchor) must watch this and
+   * invalidate their cache when it changes.
+   * @returns {number}
+   */
+  getYawOffset() {
+    return this._yawOffset;
   }
 
   /**

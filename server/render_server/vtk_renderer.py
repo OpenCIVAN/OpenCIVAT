@@ -42,12 +42,20 @@ class VTKRenderer:
         self.renderer = vtk.vtkRenderer()
         self.renderer.SetBackground(0.15, 0.15, 0.15)
 
-        self.render_window = vtk.vtkRenderWindow()
+        if os.environ.get("ENABLE_GPU_RENDERING") == "true" and hasattr(vtk, "vtkEGLRenderWindow"):
+            self.render_window = vtk.vtkEGLRenderWindow()
+            self.render_window.SetDeviceIndex(int(os.environ.get("EGL_DEVICE_INDEX", "0")))
+        else:
+            self.render_window = vtk.vtkRenderWindow()
+
         self.render_window.SetOffScreenRendering(1)
         self.render_window.AddRenderer(self.renderer)
         self.render_window.SetSize(width, height)
 
-        log.info(f"[vtk_renderer] Initialized offscreen renderer {width}x{height}")
+        log.info(
+            f"[vtk_renderer] Initialized offscreen renderer {width}x{height} "
+            f"({self.render_window.GetClassName()})"
+        )
 
     def load(self, path: str, file_type: str) -> dict:
         """

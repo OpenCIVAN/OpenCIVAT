@@ -150,7 +150,9 @@ export class VTKClippingFeature extends FeatureInterface {
     const state = this.instanceStates.get(instanceId);
     if (!state) return null;
 
-    const plane = vtkPlaneWidget.getPlane(instanceId);
+    const plane = this._isManual(state)
+      ? this.getManualPlane(instanceId)
+      : vtkPlaneWidget.getPlane(instanceId);
 
     return {
       enabled: state.enabled,
@@ -166,17 +168,85 @@ export class VTKClippingFeature extends FeatureInterface {
   // ===========================================================================
 
   /**
-   * Enable clipping with interactive widget
+   * Returns true when this instance is using the widget-free manual clip
+   * plane path (a `vtkPlane` we own directly) instead of the interactive
+   * `vtkImplicitPlaneWidget`.
    */
-  enableClipping(instanceId) {
+  _isManual(state) {
+    return !!state?.manualClipPlane;
+  }
+
+  /**
+   * Create the manual (widget-free) clip plane, if it doesn't already exist.
+   * This is the path VR always uses: `vtkWidgetManager` needs a mouse
+   * interactor and would add widget actors into the shared VR renderer
+   * (contaminating desktop bounds), so VR drives a plain `vtkPlane` directly
+   * off controller pose instead of an interactive widget.
+   */
+  enableManualClipping(instanceId) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state) return;
+
+    if (!state.manualClipPlane) {
+      state.manualClipPlane = vtkPlane.newInstance();
+    }
+  }
+
+  /**
+   * Set the manual clip plane's origin/normal and (re)apply it to the
+   * mapper. Mirrors the apply sequence used by VTKPlaneWidget.setPlane() /
+   * VTKImplicitPlaneFeature._applyClipping(): removeAllClippingPlanes() →
+   * addClippingPlane() → render().
+   */
+  setManualPlane(instanceId, { origin, normal } = {}) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state || !state.manualClipPlane) return;
+
+    const { mapper, renderWindow } = state.sceneObjects || {};
+    if (!mapper) return;
+
+    if (normal) state.manualClipPlane.setNormal(normal);
+    if (origin) state.manualClipPlane.setOrigin(origin);
+
+    mapper.removeAllClippingPlanes();
+    mapper.addClippingPlane(state.manualClipPlane);
+    renderWindow?.render();
+  }
+
+  /**
+   * Read the manual clip plane back out as plain { origin, normal } — the
+   * same shape vtkPlaneWidget.getPlane() returns, so callers don't need to
+   * know which path is live.
+   */
+  getManualPlane(instanceId) {
+    const state = this.instanceStates.get(instanceId);
+    if (!state || !state.manualClipPlane) return null;
+
+    return {
+      origin: state.manualClipPlane.getOrigin(),
+      normal: state.manualClipPlane.getNormal(),
+    };
+  }
+
+  /**
+   * Enable clipping.
+   *
+   * `{ manual: true }` (or no widgetManager at all) uses a plain `vtkPlane`
+   * applied directly to the mapper instead of the interactive
+   * `vtkImplicitPlaneWidget`. VR MUST always pass `{ manual: true }`:
+   * `vtkWidgetManager` needs a mouse interactor and would add widget actors
+   * into the shared VR renderer, contaminating desktop bounds (see
+   * VTKInstanceHandler.js:4689-4702 for the documented symptom).
+   */
+  enableClipping(instanceId, { manual = false } = {}) {
     const state = this.instanceStates.get(instanceId);
     if (!state || state.enabled) return;
 
     const { sceneObjects, widgetManager } = state;
-    const { mapper, renderWindow } = sceneObjects;
+    const { mapper } = sceneObjects;
 
-    if (!mapper || !widgetManager) {
-      log.warn('Cannot enable clipping: missing mapper or widget manager');
+    if (!mapper) {
+      log.warn('Cannot enable clipping: missing mapper');
       return;
     }
 
@@ -190,6 +260,22 @@ export class VTKClippingFeature extends FeatureInterface {
         (bounds[2] + bounds[3]) / 2,
         (bounds[4] + bounds[5]) / 2,
       ];
+    }
+
+    const useManual = manual || !widgetManager;
+
+    if (useManual) {
+      this.enableManualClipping(instanceId);
+
+      state.enabled = true;
+      state.widgetVisible = false;
+
+      // Apply preset orientation (routes through the manual path since
+      // state.manualClipPlane is now set)
+      this.setPlanePreset(instanceId, state.planePreset);
+
+      log.debug(`Clipping enabled (manual) for instance: ${instanceId}`);
+      return;
     }
 
     // Initialize the plane widget
@@ -280,11 +366,15 @@ export class VTKClippingFeature extends FeatureInterface {
       normal = normal.map(n => -n);
     }
 
-    // Update plane widget
-    vtkPlaneWidget.setPlane(instanceId, {
-      origin,
-      normal,
-    });
+    if (this._isManual(state)) {
+      this.setManualPlane(instanceId, { origin, normal });
+    } else {
+      // Update plane widget
+      vtkPlaneWidget.setPlane(instanceId, {
+        origin,
+        normal,
+      });
+    }
 
     log.debug(`Plane preset set to: ${presetName}`);
   }
@@ -298,14 +388,25 @@ export class VTKClippingFeature extends FeatureInterface {
 
     state.inverted = !state.inverted;
 
+    const isManual = this._isManual(state);
+
     // Get current plane and invert normal
-    const currentPlane = vtkPlaneWidget.getPlane(instanceId);
+    const currentPlane = isManual
+      ? this.getManualPlane(instanceId)
+      : vtkPlaneWidget.getPlane(instanceId);
+
     if (currentPlane && currentPlane.normal) {
       const invertedNormal = currentPlane.normal.map(n => -n);
-      vtkPlaneWidget.setPlane(instanceId, {
+      const planeData = {
         origin: currentPlane.origin,
         normal: invertedNormal,
-      });
+      };
+
+      if (isManual) {
+        this.setManualPlane(instanceId, planeData);
+      } else {
+        vtkPlaneWidget.setPlane(instanceId, planeData);
+      }
     }
 
     log.debug(`Clipping inverted: ${state.inverted}`);
@@ -329,6 +430,10 @@ export class VTKClippingFeature extends FeatureInterface {
    * Get plane data for synchronization
    */
   getPlaneData(instanceId) {
+    const state = this.instanceStates.get(instanceId);
+    if (state && this._isManual(state)) {
+      return this.getManualPlane(instanceId);
+    }
     return vtkPlaneWidget.getPlane(instanceId);
   }
 
@@ -338,6 +443,11 @@ export class VTKClippingFeature extends FeatureInterface {
   setPlaneData(instanceId, planeData) {
     const state = this.instanceStates.get(instanceId);
     if (!state || !state.enabled) return;
+
+    if (this._isManual(state)) {
+      this.setManualPlane(instanceId, planeData);
+      return;
+    }
 
     vtkPlaneWidget.setPlane(instanceId, planeData);
   }
@@ -355,7 +465,9 @@ export class VTKClippingFeature extends FeatureInterface {
     const state = this.instanceStates.get(instanceId);
     if (!state) return normalizeClippingConfig({});
 
-    const plane = state.enabled ? vtkPlaneWidget.getPlane(instanceId) : null;
+    const plane = state.enabled
+      ? (this._isManual(state) ? this.getManualPlane(instanceId) : vtkPlaneWidget.getPlane(instanceId))
+      : null;
 
     return normalizeClippingConfig({
       enabled: state.enabled,

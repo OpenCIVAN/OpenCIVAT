@@ -20,6 +20,7 @@ import { getHandlerForFileType } from "@Core/instances/types/instanceTypesInit.j
 import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry.js";
 import { getViewConfigurationManager } from "@Init/appInitializer.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { eventBus, BUS_EVENTS } from "@Core/events/EventBus.js";
 import { useWorkspaceFiles } from "./useWorkspaceFiles.js";
 
 /**
@@ -528,11 +529,34 @@ export function useFilesTab({
           detail: { datasetId, fileId: datasetId, fileName: datasetName },
         })
       );
-      // Clear loading indicator after a brief delay — the actual render is async
+      // Outer safety net only — the real clear happens the moment
+      // ViewLifecycleService reports success or failure (see the effect
+      // below). Without this a load that never emits either event (a bug
+      // upstream) would leave the spinner stuck forever.
       setTimeout(() => setLoadingBuiltInId(null), 3000);
     },
     []
   );
+
+  // Clear the built-in-dataset spinner as soon as the request it triggered
+  // actually settles, instead of waiting out handleLoadBuiltIn's fixed 3s
+  // timeout. ViewLifecycleService._handleInstanceRequest serializes requests
+  // (it ignores a new one while another is in flight), so while
+  // loadingBuiltInId is set, any of these events belongs to that request.
+  useEffect(() => {
+    if (!loadingBuiltInId) return undefined;
+    const clear = () => setLoadingBuiltInId(null);
+    const onError = ({ error } = {}) => {
+      setBuiltInLoadError(error || "Failed to load dataset");
+      clear();
+    };
+    const unsubs = [
+      eventBus.on(BUS_EVENTS.VIEW_CREATED, clear),
+      eventBus.on(BUS_EVENTS.VIEW_PLACED, clear),
+      eventBus.on(BUS_EVENTS.VIEW_ERROR, onError),
+    ];
+    return () => unsubs.forEach((unsub) => unsub?.());
+  }, [loadingBuiltInId]);
 
   // Add a local File object as a dataset without uploading to server.
   // Used as fallback when the server is offline.

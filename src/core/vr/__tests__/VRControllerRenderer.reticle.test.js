@@ -1,6 +1,10 @@
 // src/core/vr/__tests__/VRControllerRenderer.reticle.test.js
-// Gaze reticle for Vision Pro transient-pointer input: shows at the raycast
-// hit, hides on miss / non-transient input / missing raycast.
+// Hit-point reticle: shows at the raycast hit for ANY controller input type,
+// hides on miss / missing raycast. Used to be Vision Pro (transient-pointer)
+// only, on the assumption that a tracked controller's persistent ray line was
+// "feedback enough" — it isn't, since that ray is drawn at a fixed length
+// regardless of whether the raycast actually hits anything. A Quest user had
+// no way to tell "will my trigger register here" before pulling it.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@Utils/logger.js", () => {
@@ -68,13 +72,24 @@ describe("VRControllerRenderer gaze reticle", () => {
     expect(ctrl._reticle?.getVisibility() ?? false).toBe(false);
   });
 
-  it("keeps the reticle hidden for regular tracked-pointer controllers", () => {
+  it("also shows the reticle at the raycast hit for tracked-pointer (Quest) controllers", () => {
     const raycast = vi.fn(() => ({ hit: true, position: { x: 1, y: 2, z: 3 } }));
     const ctrl = new VRControllerRenderer(renderer, { vrScale: 1, raycast });
 
     ctrl.update(transientInput({ targetRayMode: "tracked-pointer" }));
-    expect(raycast).not.toHaveBeenCalled();
-    expect(ctrl._reticle).toBeNull();
+
+    expect(raycast).toHaveBeenCalled();
+    expect(ctrl._reticle).not.toBeNull();
+    expect(ctrl._reticle.getVisibility()).toBe(true);
+    expect(ctrl._reticle.getPosition()).toEqual([1, 2, 3]);
+  });
+
+  it("hides the reticle on a raycast miss for a tracked-pointer controller too", () => {
+    const raycast = vi.fn(() => null);
+    const ctrl = new VRControllerRenderer(renderer, { vrScale: 1, raycast });
+
+    ctrl.update(transientInput({ targetRayMode: "tracked-pointer" }));
+    expect(ctrl._reticle?.getVisibility() ?? false).toBe(false);
   });
 
   it("does nothing without an injected raycast", () => {

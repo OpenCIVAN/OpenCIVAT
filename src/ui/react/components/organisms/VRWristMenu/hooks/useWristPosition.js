@@ -6,7 +6,7 @@
  * Position is 5cm above the wrist joint, facing the user.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { vrManager } from '@Core/vr/VRManager.js';
 
 /**
@@ -20,6 +20,22 @@ const DEFAULT_POSITION = {
     isTracking: false,
 };
 
+// Below this, a frame-to-frame position/rotation change is not worth a React
+// re-render — this menu's DOM output is invisible in-headset during an actual
+// WebXR immersive session anyway (immersive sessions don't composite the
+// page DOM; see VTKVRSpatialUI.js's header comment for why the in-world panel
+// exists instead), so there is no visual cost to coalescing sub-threshold
+// motion. Without this, handleFrame previously called setState with a brand
+// new object EVERY XR frame (90Hz on Quest 2) whenever hand tracking was
+// active, forcing a React re-render every frame — and since
+// useIsLookingAtWrist's effect depends on this hook's returned object
+// reference, that ALSO tore down and re-subscribed its own frame listener
+// every frame. Both ran on the same main thread that must synchronously
+// execute the stereo VR render loop, which is what actually caused the
+// reported "shaky, distorted" world on Quest 2.
+const POSITION_EPSILON_M = 0.003; // 3mm
+const ROTATION_EPSILON_RAD = 0.02;
+
 /**
  * Hook to get wrist position from VR hand tracking
  *
@@ -29,9 +45,31 @@ const DEFAULT_POSITION = {
  */
 export function useWristPosition(hand = 'left', offsetY = 0.05) {
     const [position, setPosition] = useState(DEFAULT_POSITION);
+    // Mirrors `position` but updates synchronously (no React batching delay),
+    // so consecutive frames within one tick still compare against the latest
+    // value rather than a stale pre-render snapshot.
+    const lastEmittedRef = useRef(DEFAULT_POSITION);
 
     useEffect(() => {
         if (!vrManager) return;
+
+        // Only setState when the new value differs meaningfully from the last
+        // emitted one (see POSITION_EPSILON_M/ROTATION_EPSILON_RAD above) —
+        // this is the fix for the 90Hz re-render storm.
+        const maybeEmit = (next) => {
+            const prev = lastEmittedRef.current;
+            const changed =
+                next.isTracking !== prev.isTracking ||
+                Math.abs(next.x - prev.x) > POSITION_EPSILON_M ||
+                Math.abs(next.y - prev.y) > POSITION_EPSILON_M ||
+                Math.abs(next.z - prev.z) > POSITION_EPSILON_M ||
+                Math.abs(next.rotation.x - prev.rotation.x) > ROTATION_EPSILON_RAD ||
+                Math.abs(next.rotation.y - prev.rotation.y) > ROTATION_EPSILON_RAD ||
+                Math.abs(next.rotation.z - prev.rotation.z) > ROTATION_EPSILON_RAD;
+            if (!changed) return;
+            lastEmittedRef.current = next;
+            setPosition(next);
+        };
 
         const handleFrame = (frameData) => {
             // Get hand data from VRManager
@@ -39,14 +77,18 @@ export function useWristPosition(hand = 'left', offsetY = 0.05) {
             const handData = hands?.[hand];
 
             if (!handData || !handData.joints) {
-                setPosition(prev => ({ ...prev, isTracking: false }));
+                if (lastEmittedRef.current.isTracking) {
+                    maybeEmit({ ...lastEmittedRef.current, isTracking: false });
+                }
                 return;
             }
 
             // Get wrist joint position
             const wristJoint = handData.joints['wrist'];
             if (!wristJoint) {
-                setPosition(prev => ({ ...prev, isTracking: false }));
+                if (lastEmittedRef.current.isTracking) {
+                    maybeEmit({ ...lastEmittedRef.current, isTracking: false });
+                }
                 return;
             }
 
@@ -63,7 +105,7 @@ export function useWristPosition(hand = 'left', offsetY = 0.05) {
                 isTracking: true,
             };
 
-            setPosition(menuPosition);
+            maybeEmit(menuPosition);
         };
 
         // Also support controller-based positioning (fallback)
@@ -85,7 +127,7 @@ export function useWristPosition(hand = 'left', offsetY = 0.05) {
                 isTracking: true,
             };
 
-            setPosition(menuPosition);
+            maybeEmit(menuPosition);
         };
 
         vrManager.on('frame', handleFrame);

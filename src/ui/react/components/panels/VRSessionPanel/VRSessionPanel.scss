@@ -204,6 +204,12 @@
     &--current {
       background: var(--color-primary-dim);
     }
+
+    // Data-manipulation token holder. Amber, matching the in-VR roster card
+    // and the avatar halo, so the same person reads the same everywhere.
+    &--holder {
+      box-shadow: inset 2px 0 0 #f59e0b;
+    }
   }
 
   &__avatar {
@@ -251,6 +257,38 @@
   &__participant-scale {
     font-weight: 600;
     color: var(--color-text-secondary);
+  }
+
+  &__control-chip {
+    flex-shrink: 0;
+    padding: 0 0.3125rem;
+    border-radius: 3px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #241703;
+    background: #f59e0b;
+  }
+
+  &__participant-activity {
+    font-style: italic;
+    color: #f59e0b;
+  }
+
+  &__grant-control {
+    flex-shrink: 0;
+    padding: 0.125rem 0.375rem;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background: transparent;
+    font-size: 0.6875rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-text-primary);
+      border-color: #f59e0b;
+    }
   }
 
   // Actions

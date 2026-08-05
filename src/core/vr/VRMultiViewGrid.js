@@ -255,6 +255,12 @@ export class VRMultiViewGrid {
         }
 
         this._positionProxy(proxy, cell, 1);
+        // The VR renderer IS the desktop renderer, and VR raycasting
+        // (VTKInstanceHandler._getVRPickTargets) filters candidates by
+        // pickability — an unpickable-by-default grid proxy actor would
+        // otherwise stand between the user and the live data and absorb
+        // probe/measure/teleport hits.
+        proxy.setPickable(false);
         this._renderer.addActor(proxy);
         cell.proxies.push(proxy);
       } catch (err) {

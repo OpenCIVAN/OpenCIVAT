@@ -5,19 +5,21 @@ import { Icon, IconButton } from '@UI/react/components/atoms';
 import {
     MenuItem,
     LabeledButton,
-    VRButton,
     SliderMenuOption,
     SliderWithPresets,
     CameraViewGridPicker,
     ColorSwatchGrid,
     PositionGridPicker,
 } from '@UI/react/components/molecules';
+import { VRExploreButton } from '@UI/react/components/molecules/VRExploreButton';
 
 import { instance as log } from "@Utils/logger.js";
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { setActiveInstance } from '@Collaboration/presence/cursors.js';
 import { vrManager } from '@Core/vr/VRManager.js';
+import { vrExplorationManager } from '@Core/vr/VRExplorationManager.js';
+import { toast } from '@UI/react/store/toastStore.js';
 import { useFloatingPanels } from '@UI/react/components/panels/FloatingPanel/FloatingPanelContext';
 import { useCanvasFocus } from '@UI/react/context/CanvasFocusContext';
 
@@ -247,10 +249,10 @@ function GearOnlyDropdown({
                         className="instance-viewport__gear-item"
                         onClick={(e) => {
                             e.stopPropagation();
-                            onToggle(); // Close menu, VRButton handles its own logic
+                            onToggle(); // Close menu, VRExploreButton handles its own logic
                         }}
                     >
-                        <VRButton instanceId={instanceId} size="sm" showLabel />
+                        <VRExploreButton instanceId={instanceId} size="sm" showLabel />
                     </div>
                     <MenuItem
                         icon="maximize"
@@ -681,6 +683,12 @@ export function InstanceViewport({
                     setHasData(true);
 
                     log.info(`Instance ${actualInstanceId} is now type: ${instance.type}`);
+                } else {
+                    // No dataset reference — e.g. a corrupt server row where the
+                    // built-in datasetId could not be recovered. Surface a
+                    // visible error instead of an eternal "Loading…" tile.
+                    log.warn(`View ${viewConfigId} has no datasetId — cannot load data`);
+                    setError('Dataset unavailable for this view — reload it from Load Data');
                 }
 
             } catch (err) {
@@ -1015,10 +1023,12 @@ export function InstanceViewport({
     }, []);
 
     const handleVRMode = useCallback(async () => {
-        // Dispatch event to trigger VR mode - VRButton handles the actual logic
-        window.dispatchEvent(new CustomEvent('cia:toggle-vr-mode', {
-            detail: { instanceId: actualInstanceId }
-        }));
+        try {
+            await vrExplorationManager.startExploration(actualInstanceId, {});
+        } catch (err) {
+            log.error('Enter VR failed:', err);
+            toast.error(`VR unavailable: ${err.message}`);
+        }
     }, [actualInstanceId]);
 
     const handleExitVR = useCallback(async () => {
@@ -1531,7 +1541,10 @@ export function InstanceViewport({
         } catch (e) {
             return null;
         }
-    }, [viewConfigId, hasData]);
+        // viewRefreshCounter is bumped by the viewUpdated listener above —
+        // needed because datasetId can be attached to the view asynchronously
+        // after hasData first flips true, and this memo must recompute then.
+    }, [viewConfigId, hasData, viewRefreshCounter]);
 
     // Use position-based color when provided (from CanvasCell), fall back to instance color
     const colorHex = positionColor || instanceColor?.hex || '#60a5fa';

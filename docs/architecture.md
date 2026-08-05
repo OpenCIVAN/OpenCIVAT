@@ -83,7 +83,7 @@ src/
 ├── ui/react/
 │   ├── components/          Atomic Design: atoms → molecules → organisms
 │   │   ├── atoms/           Button, Icon, Badge, Slider, Toggle, …
-│   │   ├── molecules/       SearchBar, Tabs, ColorSwatch, VRButton, …
+│   │   ├── molecules/       SearchBar, Tabs, ColorSwatch, VRExploreButton, …
 │   │   ├── organisms/       FilterToolbar, VRWristMenu, RoomHeader, …
 │   │   ├── panels/          LeftPanel, RightPanel, FloatingPanel, …
 │   │   ├── modals/          DatasetSelectorModal, CreateRoomModal, …
@@ -234,21 +234,24 @@ User clicks "Enter VR"
 
 | Module | Responsibility |
 |---|---|
-| `VRManager.js` | XR session lifecycle, reference space, render loop, controller/hand events |
+| `VRManager.js` | Sole owner of XR session lifecycle, reference space, the XR render loop, and controller/hand events |
+| `VRExplorationManager.js` | Orchestrates everything else once a session is live (navigation, tools, avatars, spatial UI); drives the stereo render off VRManager's frame event |
+| `VREnvironment.js` | Physically-anchored floor grid + horizon background |
 | `VRGridLayout.js` | Calculate 3D world positions for canvas panels (flat grid) |
-| `VRNavigationController.js` | Switch between fly and teleport modes |
+| `VRNavigationController.js` | Switch between fly/teleport/walk modes; two-hand pinch scale |
 | `VRFlyMode.js` | Continuous thumbstick movement |
-| `VRTeleportMode.js` | Point-and-teleport arc navigation |
+| `VRTeleportMode.js` | Point-and-teleport arc navigation, raycast against the dataset |
 | `VRToolManager.js` | Register and dispatch VR tools |
-| `VRAnnotationTool.js` | Place annotations in 3D space via controller |
+| `VRAnnotationTool.js` | Place annotations in 3D space via controller (preset labels — see ANNOTATION_LABEL_PRESETS) |
 | `VRMeasureTool.js` | Distance and angle measurement |
 | `VRClipBoxTool.js` | Interactive clipping box manipulation |
 | `VRSlicePlaneTool.js` | Slice plane drag in VR |
 | `VRCursorSync.js` | Broadcast controller positions to other users |
 | `VRParticipantSync.js` | Receive and render remote user avatars |
-| `VTKVRController.js` | VTK.js controller model rendering |
+| `VRControllerRenderer.js` | VTK.js controller/ray model rendering |
 | `VTKVRAvatars.js` | VTK.js remote avatar rendering |
-| `VRWristMenu` | React UI mounted in VR (look at left wrist) |
+| `VRSpatialMenuModel.js` / `VTKVRSpatialUI.js` | In-scene VTK tool menu (DOM doesn't render in immersive sessions) |
+| `VRWristMenu` | React UI, pre-session/fallback only |
 
 ### AdaptiveContext
 

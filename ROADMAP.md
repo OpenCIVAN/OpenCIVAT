@@ -24,12 +24,12 @@ OpenCIVAN is in **active pre-release development** (v0.x). Core functionality is
 
 - VTK.js 3D visualization (volume rendering, isosurfaces, slicing, scalar coloring, glyphs, clipping, thresholding, time series)
 - Synchronous multi-user collaboration (Y.js presence layer: cursors, avatars, cameras)
-- WebXR mode for Quest 2 browser (controller and hand tracking, fly and teleport navigation, VR wrist menu)
+- WebXR mode for **both Apple Vision Pro** (gripless transient-pointer/pinch input) **and Oculus/Meta Quest 2** (full controller input: thumbstick locomotion, snap turn, grip pull-world, trigger object-move, fly/walk/teleport navigation)
+- In-VR spatial menu: activity-grouped (Tools / Move / View / Scene / Session) card panel, driven by the same session state as the desktop UI
 - Server-authoritative state (REST API + WebSocket broadcast)
 - Dataset upload and server-side VTK compute jobs
 - Username-based session join (no Keycloak required in dev mode)
 - Docker-based backend (PostgreSQL, MinIO, Redis, BullMQ)
-- VR flat-grid panel layout
 
 ---
 
@@ -42,7 +42,7 @@ OpenCIVAN is in **active pre-release development** (v0.x). Core functionality is
 
 - [ ] Public GitHub repository with complete documentation
 - [ ] Reproducible development environment (single `docker compose up` + `npm start`)
-- [ ] Automated CI (lint, tests) on pull requests
+- [x] Automated CI (lint, tests) on pull requests — `.github/workflows/ci.yml`
 - [ ] Example dataset (public-domain scientific data with loading instructions)
 - [ ] Quest 2 end-to-end test pass (enter VR, load dataset, interact)
 - [ ] Session join flow: shareable session URL for collaborators
@@ -60,9 +60,9 @@ OpenCIVAN is in **active pre-release development** (v0.x). Core functionality is
 <details>
 <summary>Show items</summary>
 
-- [ ] Curved/spatial VR panel layout (improve readability in headset)
+- [ ] Curved/spatial VR panel layout (improve readability in headset) — panel is currently flat, activity-grouped cards
 - [ ] Room-scale isolation mode (pull one dataset view to full room scale)
-- [ ] Annotation system: create, edit, and share annotations in 3D space
+- [x] Annotation system: create, edit, and share annotations in 3D space — `VRAnnotationTool.js`, synced per `docs/synchronization.md`
 - [ ] Bookmark system: save and restore camera + filter state
 - [ ] Multi-dataset support: load and compare multiple datasets in one session
 - [ ] Role-based collaboration: viewer vs. editor permissions

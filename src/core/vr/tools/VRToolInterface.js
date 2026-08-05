@@ -73,11 +73,56 @@ export class VRToolInterface {
   }
 
   /**
-   * Render tool visuals
-   * @param {Object} renderer - VTK renderer
+   * Render tool visuals into the VR scene.
+   *
+   * Called once per XR frame by VRToolManager.update with the live VR scene
+   * renderer (vrContext.sceneObjects.renderer). Contract for subclasses:
+   *  - Create vtk actors LAZILY (on first need) and add them via
+   *    renderer.addActor(actor); mark them setPickable(false) so they never
+   *    intercept teleport/tool raycasts, and setLighting(false) for flat,
+   *    predictable color (mirrors VRControllerRenderer._ensureReticle).
+   *  - Positions coming from raycastVR / annotation data are already in
+   *    data/scene space — place actors there directly, no vr→scene transform.
+   *  - For constant apparent size as the user scales the world, scale actors
+   *    by `this._apparentScale(baseMeters)` each frame (see helper below).
+   *  - Keep a reference to `renderer` so deactivate()/reset can remove the
+   *    actors it added (deactivate has no renderer argument).
+   *  - Dirty-check (e.g. on item count) so geometry is rebuilt only when the
+   *    underlying set changes, not every frame.
+   *
+   * @param {Object} renderer - VTK renderer (truthy; manager guards null)
    */
   render(renderer) {
     // Override in subclass
+  }
+
+  /**
+   * Current VR world scale from the tool context (1.0 when unavailable).
+   * @protected
+   * @returns {number}
+   */
+  _getVrScale() {
+    const s = this._context?.vrContext?.vrScale;
+    return typeof s === "number" && s > 0 ? s : 1.0;
+  }
+
+  /**
+   * Data-space scale factor that keeps an actor at a constant APPARENT size
+   * regardless of world zoom. Because dataDisplacement maps to
+   * xrDisplacement × vrScale (see VTKInstanceHandler._updateCameraFromVRPose),
+   * an apparent size of `apparentMeters` needs a data-space size of
+   * apparentMeters / vrScale — the same relation VRControllerRenderer uses for
+   * its gaze reticle (0.01 / vrScale ≈ 1cm).
+   *
+   * @protected
+   * @param {number} apparentMeters - desired on-screen size in metres
+   * @param {number} [min=1e-4] - clamp floor on the returned scale
+   * @param {number} [max=1e3] - clamp ceiling on the returned scale
+   * @returns {number}
+   */
+  _apparentScale(apparentMeters, min = 1e-4, max = 1e3) {
+    const s = apparentMeters / this._getVrScale();
+    return Math.min(max, Math.max(min, s));
   }
 
   /**

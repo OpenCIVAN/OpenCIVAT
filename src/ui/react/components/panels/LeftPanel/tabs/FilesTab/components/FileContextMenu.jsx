@@ -83,7 +83,7 @@ export const FileContextMenu = memo(function FileContextMenu({ x, y, onClose, on
                 }
 
                 const handlerType = handler.id || 'vtk';
-                const url = new URL(`${config.apiBaseUrl}/compute/operations`);
+                const url = new URL(`${config.apiBaseUrl}/compute/operations`, window.location.origin);
                 url.searchParams.set('handlerType', handlerType);
                 url.searchParams.set('fileType', file.fileType);
 

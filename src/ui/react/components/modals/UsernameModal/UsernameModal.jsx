@@ -27,16 +27,31 @@ import './UsernameModal.scss';
 /**
  * @typedef {Object} UsernameModalProps
  * @property {(username: string) => void} onSubmit - Callback with validated username
+ * @property {() => void} [onCancel] - When provided, renders a dismiss action
+ * @property {string} [title] - Heading (defaults to the app name)
+ * @property {string} [subtitle] - Sub-heading under the title
+ * @property {string} [label] - Field label
+ * @property {string} [submitLabel] - Submit button text
+ * @property {string} [hint] - Footer hint under the form
  */
 
 /**
  * Entry-point modal for username input.
- * Shown at application entry before joining the collaborative session.
+ * Shown at application entry before joining the collaborative session, and
+ * reused (with different copy) before entering VR.
  *
  * @param {UsernameModalProps} props - Component props
  * @returns {React.ReactElement} The modal element
  */
-export function UsernameModal({ onSubmit }) {
+export function UsernameModal({
+  onSubmit,
+  onCancel = null,
+  title = "CIA Web",
+  subtitle = "Collaborative Immersive Analytics",
+  label = "Enter your display name",
+  submitLabel = "Enter Web App",
+  hint = "Your teammates will see this name",
+}) {
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const inputRef = useRef(null);
@@ -81,10 +96,8 @@ export function UsernameModal({ onSubmit }) {
           <div className="username-modal__logo">
             <Icon name="user" size={32} />
           </div>
-          <h1 className="username-modal__title">CIA Web</h1>
-          <p className="username-modal__subtitle">
-            Collaborative Immersive Analytics
-          </p>
+          <h1 className="username-modal__title">{title}</h1>
+          <p className="username-modal__subtitle">{subtitle}</p>
         </div>
 
         {/* Form */}
@@ -94,7 +107,7 @@ export function UsernameModal({ onSubmit }) {
               htmlFor="username-input"
               className="username-modal__label"
             >
-              Enter your display name
+              {label}
             </label>
             <input
               ref={inputRef}
@@ -118,17 +131,24 @@ export function UsernameModal({ onSubmit }) {
           </div>
 
           <LabeledButton
-            label="Enter Web App"
+            label={submitLabel}
             onClick={handleSubmit}
             variant="primary"
             className="username-modal__submit"
           />
+
+          {onCancel && (
+            <LabeledButton
+              label="Cancel"
+              onClick={onCancel}
+              variant="ghost"
+              className="username-modal__submit"
+            />
+          )}
         </form>
 
         {/* Hint */}
-        <div className="username-modal__hint">
-          Your teammates will see this name
-        </div>
+        <div className="username-modal__hint">{hint}</div>
       </div>
     </div>
   );

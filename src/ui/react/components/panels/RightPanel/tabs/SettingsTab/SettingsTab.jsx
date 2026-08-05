@@ -15,7 +15,6 @@ import { YourPreferences } from './sections/YourPreferences';
 import { VRSettings } from './sections/VRSettings';
 import { ProjectInfo } from './sections/ProjectInfo';
 import { AdminSettings } from './sections/AdminSettings';
-import { DangerZone } from './sections/DangerZone';
 import './SettingsTab.scss';
 
 /**
@@ -43,7 +42,6 @@ export function SettingsPanelContent({ workspaceId, projectId }) {
  * @property {string} userRole - Current user's role
  * @property {Object} roleConfig - Role configuration
  * @property {boolean} isAdmin - Whether user is admin or owner
- * @property {boolean} isOwner - Whether user is owner
  * @property {Object} preferences - User preferences
  * @property {Function} updatePreferences - Preference update handler
  * @property {boolean} loading - Loading state
@@ -62,7 +60,6 @@ export function SettingsTab({
     userRole,
     roleConfig,
     isAdmin,
-    isOwner,
     preferences,
     updatePreferences,
     loading,
@@ -113,18 +110,8 @@ export function SettingsTab({
             });
         }
 
-        if (isOwner) {
-            sections.push({
-                id: 'danger',
-                icon: 'alertTriangle',
-                label: 'Danger Zone',
-                color: '#f87171', // red
-                content: <DangerZone project={project} />,
-            });
-        }
-
         return sections;
-    }, [preferences, updatePreferences, project, roleConfig, isAdmin, isOwner]);
+    }, [preferences, updatePreferences, project, roleConfig, isAdmin]);
 
     if (loading) {
         return (

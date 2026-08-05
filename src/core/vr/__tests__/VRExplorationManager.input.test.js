@@ -12,6 +12,7 @@ vi.mock("@Utils/logger.js", () => {
 const mockVrManager = {
   isVRSupported: vi.fn(() => false),
   isSelectPressed: vi.fn(() => false),
+  getReferenceSpace: vi.fn(() => ({})),
   on: vi.fn(),
   off: vi.fn(),
 };
@@ -25,6 +26,7 @@ vi.mock("@Core/data/models/VRExplorationSession.js", () => ({
   VRExplorationSession: class {},
   PARTICIPATION_MODE: { VR_EXPLORER: "vr-explorer", DESKTOP_OBSERVER: "desktop-observer" },
   SESSION_STATUS: { ACTIVE: "active" },
+  EXPLORATION_MODES: { FLY: "fly", TELEPORT: "teleport", WALK: "walk", SCALE: "scale", GRAB: "grab" },
 }));
 vi.mock("@Core/vr/VRParticipantSync.js", () => ({ VRParticipantSync: class {} }));
 vi.mock("@Core/vr/tools/VRToolManager.js", () => ({ VRToolManager: class {} }));
@@ -43,7 +45,7 @@ vi.mock("@Collaboration/presence/userManagement.js", () => ({
   getUserColor: vi.fn(() => "#ff0000"),
 }));
 vi.mock("@Core/instances/types/vtk/vr/VTKVRAvatars.js", () => ({
-  vrAvatarSystem: { initialize: vi.fn(), dispose: vi.fn() },
+  vrAvatarSystem: { initialize: vi.fn(), dispose: vi.fn(), update: vi.fn() },
 }));
 
 import { vrExplorationManager } from "../VRExplorationManager.js";
@@ -81,6 +83,7 @@ describe("VRExplorationManager._gatherInputState — transient-pointer support",
     expect(state.controllers.right.targetRay).toBe(TRANSFORM);
     expect(state.controllers.right.triggerPressed).toBe(true);
     expect(state.controllers.right.targetRayMode).toBe("transient-pointer");
+    expect(state.controllers.right.isTransientPointer).toBe(true);
   });
 
   it("does not overwrite a tracked controller with a transient pointer for the same hand", () => {
@@ -106,6 +109,7 @@ describe("VRExplorationManager._gatherInputState — transient-pointer support",
     // The tracked controller (with gamepad) wins
     expect(state.controllers.right.gamepad).toBe(tracked.gamepad);
     expect(state.controllers.right.triggerPressed).toBe(true);
+    expect(state.controllers.right.isTransientPointer).toBe(false);
   });
 
   it("still reads gamepad-based trigger for grip controllers, ORed with select state", () => {
@@ -122,6 +126,24 @@ describe("VRExplorationManager._gatherInputState — transient-pointer support",
     const state = vrExplorationManager._gatherInputState(frame, {});
 
     expect(state.controllers.left.triggerPressed).toBe(true);
+    expect(state.controllers.left.isTransientPointer).toBe(false);
+  });
+
+  it("maps Quest face buttons by hand so left X is distinct from right A", () => {
+    const buttons = Array.from({ length: 6 }, () => ({ pressed: false, value: 0 }));
+    buttons[4] = { pressed: true, value: 1 };
+    const left = {
+      handedness: "left",
+      targetRaySpace: {},
+      gripSpace: {},
+      gamepad: { buttons, axes: [] },
+      hand: null,
+    };
+    const right = { ...left, handedness: "right", targetRaySpace: {}, gripSpace: {} };
+
+    const state = vrExplorationManager._gatherInputState(makeFrame([left, right]), {});
+    expect(state.controllers.left.buttons).toMatchObject({ x: true, y: false, a: false, b: false });
+    expect(state.controllers.right.buttons).toMatchObject({ x: false, y: false, a: true, b: false });
   });
 
   it("skips hand-tracking sources and sources without poses", () => {
@@ -141,3 +163,10 @@ describe("VRExplorationManager._gatherInputState — transient-pointer support",
     expect(state.controllers.right).toBeNull();
   });
 });
+
+// NOTE: The "one-shot gripless navigation-mode switch" feature has been
+// replaced by the always-on layered navigation model. With the new
+// architecture, Vision Pro's gripless input is handled transparently by the
+// grip engagement predicate in setWorldGrabEngagement — it routes pinches
+// to world-grab on Vision Pro (triggerPressed) and squeeze on tracked
+// controllers (squeezeValue > 0.7). No mode switch is needed.

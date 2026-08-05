@@ -8,7 +8,7 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 vi.mock('@Utils/logger.js', () => {
   const mkLog = () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() });
   return {
-    wsa: mkLog(), annotation: mkLog(), view: mkLog(), viewGroup: mkLog(),
+    workspace: mkLog(), annotation: mkLog(), view: mkLog(), viewGroup: mkLog(),
     sync: mkLog(), presence: mkLog(), app: mkLog(),
     createLogger: () => mkLog(),
   };

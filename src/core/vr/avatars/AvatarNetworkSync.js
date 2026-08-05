@@ -61,12 +61,55 @@ export class AvatarNetworkSync {
     yAvatars.observe(observer);
     this._yjsObserverCleanup = () => yAvatars.unobserve(observer);
 
+    // Replay whatever is ALREADY in the map. Y.Map.observe fires only on
+    // CHANGES, so a peer who joined before us and has no reason to rewrite
+    // their entry would never deliver their displayName/color — and
+    // AvatarManager._onRemotePose then falls back to a truncated hex user id
+    // in default grey. Whoever enters the session second is exactly the case
+    // that hits this, i.e. it shows up the moment a second headset joins.
+    this._replayPresenceSnapshot();
+
     log.debug('AvatarNetworkSync initialized');
   }
 
   /**
+   * Deliver the current yAvatars contents to the presence callback, as though
+   * each entry had just changed. Called once at initialize().
+   * @private
+   */
+  _replayPresenceSnapshot() {
+    const myId = this._localUserId;
+    let replayed = 0;
+    yAvatars.forEach((data, userId) => {
+      if (!data || userId === myId) return;
+      try {
+        this._remotePresenceCb?.(userId, data);
+        replayed += 1;
+      } catch (err) {
+        log.error('AvatarNetworkSync presence snapshot error:', err);
+      }
+    });
+    if (replayed > 0) {
+      log.debug(`AvatarNetworkSync: replayed ${replayed} existing avatar presence entries`);
+    }
+  }
+
+  /**
    * Broadcast local user avatar metadata (not pose).
-   * @param {{ avatarUrl?: string, displayName: string, color: string, isSpeaking?: boolean }} state
+   *
+   * `sessionId` is carried because `yAvatars` is ROOM-global, not session-
+   * scoped: without it, a peer exploring a different VR session in the same
+   * room shows up as an avatar in your scene. AvatarManager._onRemotePresence
+   * filters on it.
+   *
+   * `activity` ('dataset' | 'filter' | null) rides here rather than on the pose
+   * channel deliberately: who is manipulating changes a few times a minute, and
+   * this method already short-circuits on an unchanged payload, so it costs one
+   * Y.js write per transition instead of one per frame at the pose rate.
+   *
+   * @param {{ avatarUrl?: string, displayName: string, color: string,
+   *   isSpeaking?: boolean, sessionId?: string|null,
+   *   activity?: string|null }} state
    */
   sendLocalPresence(state) {
     const userId = this._localUserId;
@@ -82,6 +125,8 @@ export class AvatarNetworkSync {
       color: state.color,
       avatarUrl: state.avatarUrl || null,
       isSpeaking: state.isSpeaking || false,
+      sessionId: state.sessionId || null,
+      activity: state.activity || null,
     });
   }
 
@@ -163,12 +208,36 @@ export class AvatarNetworkSync {
       visible: !!(visible && p?.position),
     });
 
+    // Pointer origin/direction ride in the SENDER's XR metres, exactly like the
+    // limb poses above — RemoteAvatarController._toScenePose converts them with
+    // the sender's vrScale/vrOrigin. A pointer missing either half is not
+    // renderable as a ray, so it is reported invisible rather than half-built.
+    const ptr = data.pointer;
+    const pointer =
+      ptr?.origin && ptr?.direction
+        ? {
+            origin: ptr.origin,
+            direction: ptr.direction,
+            hand: ptr.hand === 'left' ? 'left' : 'right',
+            visible: ptr.visible !== false,
+          }
+        : { origin: null, direction: null, visible: false };
+
     return {
       head: toLimb(data.headPose, true),
       leftHand: toLimb(data.leftHandPose, true),
       rightHand: toLimb(data.rightHandPose, true),
-      pointer: { origin: null, direction: null, visible: false },
+      pointer,
+      // The surface hit is NOT in the sender's XR space: it is a point on the
+      // shared geometry, already in data space and identical for every viewer.
+      // Passed straight through, and deliberately NOT re-transformed downstream.
+      pointerHit: data.pointerHit || null,
       timestamp: data.timestamp || Date.now(),
+      // Sender's own vrScale/vrOrigin — the poses above are in THIS
+      // sender's physical XR space, and must be converted to data space
+      // using their transform, not the local viewer's own.
+      vrScale: typeof data.vrScale === 'number' ? data.vrScale : 1.0,
+      vrOrigin: Array.isArray(data.vrOrigin) ? data.vrOrigin : [0, 0, 0],
     };
   }
 }

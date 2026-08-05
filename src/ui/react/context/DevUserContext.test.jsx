@@ -7,9 +7,15 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DevUserProvider, useDevUser } from './DevUserContext.jsx';
 
+// Mutable so a test can flip the identity revert flag. Hoisted because the
+// static import of DevUserContext.jsx runs the mock factory first.
+const mockConfig = vi.hoisted(() => ({
+  devBypassAuth: true,
+  identity: { deviceFallback: true },
+}));
 vi.mock('@Core/config/clientConfig.js', () => ({
-  config: { devBypassAuth: true },
-  default: { devBypassAuth: true },
+  config: mockConfig,
+  default: mockConfig,
 }));
 
 vi.mock('@Utils/logger.js', () => ({
@@ -87,17 +93,25 @@ describe('DevUserProvider identity resolution', () => {
     expect(screen.getByTestId('user-name').textContent).toBe('Bob Builder');
   });
 
-  test('without query param or storage, falls back to default mock user', () => {
+  test('without query param or storage, falls back to the per-device identity', () => {
     render(
       <DevUserProvider>
         <Probe />
       </DevUserProvider>
     );
 
-    expect(screen.getByTestId('user-name').textContent).toBe('CIA Admin');
+    // NOT the shared default mock user: two headsets sharing ...0002 would
+    // collapse into a single Y.js participant and be invisible to each other.
+    expect(screen.getByTestId('user-id').textContent).not.toBe(
+      '00000000-0000-0000-0000-000000000002'
+    );
+    expect(screen.getByTestId('user-id').textContent).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
+    expect(screen.getByTestId('user-name').textContent).toBeTruthy();
   });
 
-  test('unknown ?devUser= value falls back to default rather than crashing', () => {
+  test('unknown ?devUser= value falls back to the device identity rather than crashing', () => {
     setLocation('?devUser=nobody');
     render(
       <DevUserProvider>
@@ -105,6 +119,24 @@ describe('DevUserProvider identity resolution', () => {
       </DevUserProvider>
     );
 
-    expect(screen.getByTestId('user-name').textContent).toBe('CIA Admin');
+    expect(screen.getByTestId('user-id').textContent).not.toBe(
+      '00000000-0000-0000-0000-000000000002'
+    );
+    expect(screen.getByTestId('user-name').textContent).toBeTruthy();
+  });
+
+  test('identity.deviceFallback=false reverts to the default mock user', () => {
+    mockConfig.identity = { deviceFallback: false };
+    try {
+      render(
+        <DevUserProvider>
+          <Probe />
+        </DevUserProvider>
+      );
+
+      expect(screen.getByTestId('user-name').textContent).toBe('CIA Admin');
+    } finally {
+      mockConfig.identity = { deviceFallback: true };
+    }
   });
 });

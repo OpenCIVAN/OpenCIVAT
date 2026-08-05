@@ -114,10 +114,8 @@ export class VRSnapshotManager {
   }
 
   _triggerHapticFeedback(type) {
-    // Dispatch event for VR system to trigger haptics
-    window.dispatchEvent(new CustomEvent('cia:vr-haptic', {
-      detail: { type, intensity: type === 'save' ? 0.5 : 0.3, duration: 100 }
-    }));
+    // Haptics not implemented — WebXR gamepad actuators would be pulsed here.
+    log.debug(`VR haptic (${type}) requested — no haptics backend`);
   }
 
   cleanup() {

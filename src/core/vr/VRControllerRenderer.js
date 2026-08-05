@@ -135,6 +135,12 @@ export class VRControllerRenderer {
     actor.getProperty().setColor(...color);
     actor.getProperty().setOpacity(0.9);
 
+    // Never intercept tool/teleport raycasts. VR shares the desktop renderer,
+    // and VTKInstanceHandler._getVRPickTargets picks from every pickable actor
+    // in it — so an unmarked controller mesh sitting in front of the user's own
+    // ray would absorb the hit before it ever reached the data.
+    actor.setPickable(false);
+
     // Rotate to align with controller grip
     actor.rotateX(90);
 
@@ -165,6 +171,9 @@ export class VRControllerRenderer {
     actor.getProperty().setOpacity(0.6);
     actor.getProperty().setLineWidth(2);
 
+    // The pointer ray must never pick itself — see _createControllerActor.
+    actor.setPickable(false);
+
     // NOTE: VTK actors are frozen (Object.freeze), so the line source is
     // returned alongside the actor rather than attached to it — attaching
     // used to throw and broke this whole constructor.
@@ -174,7 +183,7 @@ export class VRControllerRenderer {
   /**
    * Update controller positions from input state
    *
-   * @param {Object} inputState - Controller input state from VRSceneRenderer
+   * @param {Object} inputState - Controller input state from VRExplorationManager._gatherInputState
    */
   update(inputState) {
     for (const hand of ["left", "right"]) {
@@ -225,16 +234,20 @@ export class VRControllerRenderer {
   }
 
   /**
-   * Show a small dot where the transient-pointer's gaze ray hits the data;
-   * hidden for regular tracked-pointer controllers (their persistent ray is
-   * feedback enough) and on miss.
+   * Show a small dot where the controller's ray currently hits the data, on
+   * either input type. This used to be Vision Pro-only, on the assumption
+   * that a tracked controller's persistent ray line was "feedback enough" —
+   * it isn't: the ray line (_rayLength, below) is drawn at a fixed length
+   * regardless of whether raycastVR is actually hitting anything, so a Quest
+   * user had no way to tell "will my trigger register here" before pulling
+   * it, and no way to distinguish a genuine miss from a broken picker. Hidden
+   * on miss for both input types.
    */
   _updateReticle(inputState) {
     const ctrl =
       inputState.controllers?.right || inputState.controllers?.left;
 
-    const isTransient = ctrl?.targetRayMode === "transient-pointer";
-    if (!isTransient || !ctrl?.targetRay || !this._raycast) {
+    if (!ctrl?.targetRay || !this._raycast) {
       this._reticle?.setVisibility(false);
       return;
     }
@@ -431,6 +444,10 @@ export class VRControllerRenderer {
       const color = this._colors[hand];
       actor.getProperty().setColor(...color);
       actor.getProperty().setOpacity(0.7);
+
+      // Hand joint spheres sit directly between the eye and the data — they
+      // must never absorb a tool raycast (see _createControllerActor).
+      actor.setPickable(false);
 
       this._handActors[hand].push(actor);
       this._renderer.addActor(actor);

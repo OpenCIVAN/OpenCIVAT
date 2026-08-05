@@ -595,192 +595,13 @@ export class InstanceTypeHandler {
   }
 
   // =========================================================================
-  // VR CAPABILITIES
-  // These methods declare and implement VR support for this instance type
-  // =========================================================================
-
-  /**
-   * Does this instance type support viewing in VR?
-   *
-   * If true, the instance can be "sent to VR" where it renders in an
-   * immersive headset while other instances remain on desktop.
-   *
-   * @returns {boolean} True if instance can render in VR
-   */
-  supportsInstanceVR() {
-    // Default: no VR support
-    return false;
-  }
-
-  /**
-   * Does this instance type adapt when the entire app is in VR mode?
-   *
-   * If true, the instance can adjust its rendering when the whole
-   * application switches to VR (e.g., the user puts on a headset and
-   * sees the entire workspace in 3D space).
-   *
-   * @returns {boolean} True if instance adapts to application VR mode
-   */
-  supportsApplicationVR() {
-    // Default: no special handling for app VR mode
-    return false;
-  }
-
-  /**
-   * Get VR requirements and capabilities
-   *
-   * Returns detailed information about what VR features this type needs.
-   * Used by the VR system to determine if it can launch VR mode.
-   *
-   * @returns {Object} VR capability details
-   */
-  getVRCapabilities() {
-    return {
-      instanceVR: this.supportsInstanceVR(),
-      applicationVR: this.supportsApplicationVR(),
-
-      requirements: {
-        controllers: false,
-        handTracking: false,
-        roomScale: false,
-        minFPS: 60,
-      },
-
-      optional: {
-        eyeTracking: false,
-        haptics: false,
-        spatialAudio: false,
-      },
-    };
-  }
-
-  /**
-   * Enter VR mode for this instance
-   *
-   * Called when user clicks "Send to VR" for this specific instance.
-   * The instance should initialize VR rendering while the desktop view
-   * continues to work for other instances.
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @param {XRSession} xrSession - WebXR session
-   * @returns {Promise<Object>} VR-specific data (stored separately)
-   */
-  async enterInstanceVR(instanceData, xrSession) {
-    throw new Error(
-      `${this.getDisplayName()} does not support instance-level VR. ` +
-        `Set supportsInstanceVR() to true and implement this method.`
-    );
-  }
-
-  /**
-   * Exit VR mode for this instance
-   *
-   * Called when user exits VR for this specific instance.
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @param {Object} vrData - VR data returned from enterInstanceVR
-   */
-  async exitInstanceVR(instanceData, vrData) {
-    // Default: do nothing
-  }
-
-  /**
-   * Update instance VR rendering
-   *
-   * Called every frame while in VR mode. The handler should render
-   * the stereo views for left and right eyes.
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @param {Object} vrData - VR-specific data
-   * @param {XRFrame} frame - Current XR frame with pose data
-   */
-  async updateInstanceVR(instanceData, vrData, frame) {
-    // Default: do nothing
-  }
-
-  /**
-   * Handle VR controller input for this instance
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @param {Object} vrData - VR-specific data
-   * @param {XRInputSource} inputSource - Controller that generated input
-   * @param {string} action - Action performed ('select', 'squeeze', 'trigger')
-   * @param {Object} pose - Controller pose in space
-   */
-  async handleVRInput(instanceData, vrData, inputSource, action, pose) {
-    // Default: do nothing
-  }
-
-  /**
-   * Notify instance that application entered VR mode
-   *
-   * Called when the ENTIRE application switches to VR mode.
-   * The instance should adapt its rendering for this context.
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @param {Object} vrContext - Global VR context information
-   * @returns {Promise<Object>} Any VR adaptation state to store
-   */
-  async onApplicationVREnter(instanceData, vrContext) {
-    // Default: do nothing special
-    return null;
-  }
-
-  /**
-   * Notify instance that application exited VR mode
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @param {Object} vrAdaptationState - State from onApplicationVREnter
-   */
-  async onApplicationVRExit(instanceData, vrAdaptationState) {
-    // Default: do nothing
-  }
-
-  /**
-   * Get VR-optimized viewport settings
-   *
-   * When in application VR mode, instances might need different viewport
-   * configurations.
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @returns {Object} VR viewport settings
-   */
-  getVRViewportSettings(instanceData) {
-    return {
-      resolution: { width: 1920, height: 1920 },
-      targetFPS: 90,
-      multisampling: 4,
-      viewDistance: 2.0,
-      viewportSize: { width: 2.0, height: 1.5 },
-    };
-  }
-
-  /**
-   * Render remote user avatars in VR
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @param {Object} vrData - VR-specific data (if in instance VR)
-   * @param {Array<Object>} users - Remote users with their VR poses
-   */
-  async renderVRAvatars(instanceData, vrData, users) {
-    // Default: do nothing
-  }
-
-  /**
-   * Render annotations in VR space
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @param {Object} vrData - VR-specific data (if in instance VR)
-   * @param {Array<Object>} annotations - Annotations to show
-   */
-  async renderVRAnnotations(instanceData, vrData, annotations) {
-    // Default: use regular annotation rendering
-    return this.setAnnotationVisibility(instanceData, true, annotations);
-  }
-
-  // =========================================================================
   // VR EXPLORATION
-  // These methods enable immersive VR exploration features
+  // These methods enable immersive VR exploration features. This is the
+  // single VR interface — the earlier "instance-level VR" family
+  // (supportsInstanceVR/enterInstanceVR/renderVRAnnotations/etc.) was
+  // removed as dead code: it was never wired to any live UI, and its
+  // functionality is fully superseded by the exploration path below plus
+  // VTKAnnotationLinesFeature (which already renders VR-created annotations).
   // =========================================================================
 
   /**
@@ -804,7 +625,7 @@ export class InstanceTypeHandler {
     return {
       supported: this.supportsVRExploration(),
       explorationModes: [], // ['fly', 'teleport', 'walk', 'scale']
-      tools: [], // ['slice', 'measure', 'annotate', 'clip', 'probe']
+      tools: [], // ['measure', 'annotate', 'clip', 'probe']
       maxRegionSize: null,
       supportsLiveSync: false,
       requiresPreprocessing: [],
@@ -830,10 +651,13 @@ export class InstanceTypeHandler {
    *
    * @param {Object} instanceData
    * @param {VRExplorationSession} session
-   * @param {XRSession} xrSession
+   * @param {XRSession} xrSession - the session VRManager already opened
+   * @param {Object} xrResources - { gl, xrLayer, referenceSpace } already
+   *   set up by VRManager; implementations should not create their own
+   *   WebGL context or XRWebGLLayer.
    * @returns {Promise<Object>} VR exploration context
    */
-  async enterVRExploration(instanceData, session, xrSession) {
+  async enterVRExploration(instanceData, session, xrSession, xrResources) {
     throw new Error(
       `${this.getDisplayName()} does not support VR exploration. ` +
         `Set supportsVRExploration() to true and implement this method.`
@@ -841,13 +665,17 @@ export class InstanceTypeHandler {
   }
 
   /**
-   * Update VR exploration frame
+   * Update VR exploration frame. Called once per XR frame (~90Hz) — must be
+   * synchronous, never await.
    *
    * @param {Object} vrContext - From enterVRExploration
    * @param {XRFrame} frame
    * @param {Object} inputState
+   * @param {XRViewerPose} [viewerPose] - already resolved by VRManager's
+   *   frame loop; implementations may fall back to
+   *   frame.getViewerPose(vrContext.referenceSpace) if omitted.
    */
-  async updateVRExploration(vrContext, frame, inputState) {
+  updateVRExploration(vrContext, frame, inputState, viewerPose) {
     // Default: do nothing
   }
 
@@ -864,36 +692,6 @@ export class InstanceTypeHandler {
   // =========================================================================
   // VR TOOL SUPPORT
   // =========================================================================
-
-  /**
-   * Add a slice plane
-   *
-   * @param {Object} vrContext
-   * @param {Object} plane - { id, origin, normal, visible, color, opacity }
-   */
-  async addSlicePlane(vrContext, plane) {
-    // Override in handler
-  }
-
-  /**
-   * Update a slice plane
-   *
-   * @param {Object} vrContext
-   * @param {Object} plane
-   */
-  async updateSlicePlane(vrContext, plane) {
-    // Override in handler
-  }
-
-  /**
-   * Remove a slice plane
-   *
-   * @param {Object} vrContext
-   * @param {string} planeId
-   */
-  async removeSlicePlane(vrContext, planeId) {
-    // Override in handler
-  }
 
   /**
    * Perform raycast in VR

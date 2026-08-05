@@ -334,10 +334,18 @@ class WorkspaceManagerClass {
   }
 
   /**
-   * Get primary personal workspace for user
+   * Get primary personal workspace for user.
+   * Prefers a workspace that actually holds content (an active canvas or a
+   * non-empty canvas list); otherwise falls back to the oldest primary one
+   * (getPersonalWorkspaces is already sorted primary-name-then-oldest-first).
    */
   getPersonalWorkspace(userId) {
-    return this.getPersonalWorkspaces(userId)[0] || null;
+    const workspaces = this.getPersonalWorkspaces(userId);
+    if (workspaces.length === 0) return null;
+    const withContent = workspaces.find(
+      (ws) => ws.activeCanvasId || (ws.canvasIds?.length > 0)
+    );
+    return withContent || workspaces[0];
   }
 
   /**
@@ -772,31 +780,26 @@ class WorkspaceManagerClass {
         workspaceList.push(personalWorkspace);
       }
 
+      // GET /workspaces already returns canvas_ids (mapped by
+      // _normalizeWorkspaceData), so the per-workspace /canvases request is
+      // redundant for any workspace that already has them. Skipping it avoids an
+      // N+1 fetch storm that, with a duplicated workspaces table, fired hundreds
+      // of thousands of requests on boot and saturated the browser.
+      //
+      // We also no longer persist activeCanvasId here: that write belongs to the
+      // single workspace being activated (see setActiveWorkspace / ensureCanvas),
+      // never fanned out across every workspace on load.
       await Promise.all(
         workspaceList.map(async (workspace) => {
+          if (workspace.canvasIds?.length > 0) return;
           try {
             const canvasesResponse = await this._fetch(
               `/canvases?workspace_id=${workspace.id}`
             );
             const canvasesData = await canvasesResponse.json();
-            const canvasIds = (canvasesData.canvases || []).map(
+            workspace.canvasIds = (canvasesData.canvases || []).map(
               (canvas) => canvas.id
             );
-            workspace.canvasIds = canvasIds;
-            if (!workspace.activeCanvasId && canvasIds.length > 0) {
-              workspace.activeCanvasId = canvasIds[0];
-              try {
-                await this.updateWorkspace(workspace.id, {
-                  canvasIds: workspace.canvasIds,
-                  activeCanvasId: workspace.activeCanvasId,
-                });
-              } catch (error) {
-                log.debug(
-                  `Failed to persist active canvas for workspace ${workspace.id}:`,
-                  error
-                );
-              }
-            }
           } catch (err) {
             log.debug(
               `Failed to load canvases for workspace ${workspace.id}:`,

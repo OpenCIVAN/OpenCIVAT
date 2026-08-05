@@ -13,7 +13,7 @@
 //
 // Dependency direction: Manager → Services → Utils (no React imports)
 
-import { wsa as log } from '@Utils/logger.js';
+import { workspace as log } from '@Utils/logger.js';
 import { apiClient } from '@Services/apiClient.js';
 
 const LOG_CAT = 'workspaceAnnotation';

@@ -117,6 +117,34 @@ describe("followService", () => {
     expect(applied.viewUp[1]).toBeCloseTo(1);
   });
 
+  it("converts the head pose through the SENDER's own vrScale/vrOrigin, not identity", () => {
+    followService.follow("vr-user");
+
+    window.dispatchEvent(
+      new CustomEvent("cia:vr-participant-update", {
+        detail: {
+          odUserId: "vr-user",
+          data: {
+            headPose: {
+              position: { x: 2, y: 0, z: 0 },
+              orientation: IDENTITY_Q,
+            },
+            vrScale: 2.0, // sender is zoomed in 2x
+            vrOrigin: [10, 0, 0],
+          },
+        },
+      })
+    );
+
+    const applied = mockApplySharedState.mock.calls[0][1].camera;
+    // dataPos = xrPos/vrScale + vrOrigin = 2/2 + 10 = 11
+    expect(applied.position[0]).toBeCloseTo(11);
+    // focal distance also divides by vrScale (1.0 / 2.0 = 0.5); identity
+    // orientation looks down -Z, so focalPoint.z = position.z - 0.5
+    expect(applied.focalPoint[0]).toBeCloseTo(11);
+    expect(applied.focalPoint[2]).toBeCloseTo(-0.5);
+  });
+
   it("ignores VR pose events from other users", () => {
     followService.follow("vr-user");
     window.dispatchEvent(

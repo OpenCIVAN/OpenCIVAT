@@ -86,6 +86,17 @@
     color: #fbbf24;
   }
 
+  &__vr-badge {
+    flex-shrink: 0;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #0b1220;
+    background: #7ecbff;
+  }
+
   &__voice-status {
     display: flex;
     align-items: center;

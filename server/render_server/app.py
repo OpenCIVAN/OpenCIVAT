@@ -122,6 +122,7 @@ async def health():
         "dataset_count": len(DATASETS),
         "render_size": f"{RENDER_WIDTH}x{RENDER_HEIGHT}",
         "max_sessions": MAX_SESSIONS,
+        "gpu_rendering_enabled": os.environ.get("ENABLE_GPU_RENDERING") == "true",
     }
 
 

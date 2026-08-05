@@ -876,43 +876,6 @@
 }
 
 // =============================================================================
-// ADVANCED
-// =============================================================================
-
-.view-settings-modal__advanced {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-  opacity: 0.6;
-}
-
-.view-settings-modal__advanced-row {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-
-  svg {
-    color: $color-text-muted;
-    flex-shrink: 0;
-  }
-
-  span {
-    flex: 1;
-    font-size: 11px;
-    color: $color-text-secondary;
-  }
-
-  select {
-    padding: 4px $spacing-sm;
-    background: $color-bg-secondary;
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-sm;
-    color: $color-text-muted;
-    font-size: 10px;
-  }
-}
-
-// =============================================================================
 // DANGER ZONE
 // =============================================================================
 

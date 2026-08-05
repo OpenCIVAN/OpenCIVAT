@@ -1,7 +1,8 @@
 // src/core/instances/types/vtk/features/VTKAnnotationLinesFeature.test.js
 // Covers: measurement annotation content parsing, live add/remove lifecycle
 // via AnnotationManager events, malformed content handling, and cleanup.
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createFakeCtx } from "@/test/fakeCanvas.js";
 
 vi.mock("@Utils/logger.js", () => {
   const mkLog = () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() });
@@ -86,15 +87,31 @@ function makeMockSceneObjects() {
         const i = actors.indexOf(a);
         if (i >= 0) actors.splice(i, 1);
       }),
+      // VRTextBillboard.faceCamera() reads this; harmless no-op for tests
+      // that don't care about facing direction, required for the ones that do.
+      getActiveCamera: vi.fn(() => ({ getPosition: () => [0, 0, 10] })),
       _actors: actors,
     },
     renderWindow: { render: vi.fn() },
   };
 }
 
+let getContextSpy;
+
 beforeEach(() => {
   mockAnnotationManager = null;
   mockApiClient.get.mockReset().mockResolvedValue({ annotations: [] });
+
+  // Labels are now VRTextBillboards (canvas2D -> vtkTexture), and jsdom has
+  // no real <canvas> 2D context -- stub it the same way
+  // VTKVRSpatialUI.integration.test.js does, via the shared fake.
+  getContextSpy = vi
+    .spyOn(HTMLCanvasElement.prototype, "getContext")
+    .mockImplementation(() => createFakeCtx());
+});
+
+afterEach(() => {
+  getContextSpy.mockRestore();
 });
 
 // ---------------------------------------------------------------------------
@@ -181,7 +198,29 @@ describe("parsePointAnnotation", () => {
       position: [1, 2, 3],
       text: "VR marker",
       color: [1, 0, 0],
+      authorName: null,
     });
+  });
+
+  it("extracts authorName from metadata so a persisted pin can say who placed it", () => {
+    const parsed = parsePointAnnotation(
+      makePointAnnotation({ metadata: { authorName: "Alice" } })
+    );
+    expect(parsed.authorName).toBe("Alice");
+  });
+
+  it("defaults authorName to null for an annotation created before the field existed", () => {
+    const parsed = parsePointAnnotation(
+      makePointAnnotation({ metadata: { color: [1, 0, 0] } }) // no authorName key at all
+    );
+    expect(parsed.authorName).toBeNull();
+  });
+
+  it("ignores a non-string authorName rather than propagating garbage", () => {
+    const parsed = parsePointAnnotation(
+      makePointAnnotation({ metadata: { authorName: 42 } })
+    );
+    expect(parsed.authorName).toBeNull();
   });
 
   it("normalizes a hex color string to an [r,g,b] array", () => {
@@ -519,5 +558,289 @@ describe("VTKAnnotationLinesFeature lifecycle", () => {
     expect(feature.getState("inst-1").measurementCount).toBe(1);
 
     await feature.cleanup("inst-1");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pickability: persisted annotations must never absorb a raycast (see
+// VTKInstanceHandler._getVRPickTargets, which filters renderer.getActors()
+// on getPickable() && getVisibility() && getMapper()).
+// ---------------------------------------------------------------------------
+
+describe("VTKAnnotationLinesFeature actor pickability", () => {
+  it("marks the line actor and its label billboard unpickable", async () => {
+    mockAnnotationManager = makeFakeAnnotationManager();
+
+    const feature = new VTKAnnotationLinesFeature();
+    const sceneObjects = makeMockSceneObjects();
+    await feature.initialize("inst-1", { sceneObjects, datasetId: "ds-1" });
+
+    mockAnnotationManager._emit("annotationAdded", {
+      datasetId: "ds-1",
+      annotation: makeMeasurementAnnotation({ id: "annot-1" }),
+    });
+
+    const entry = feature.instanceStates.get("inst-1").lines.get("annot-1");
+    expect(entry.actor.getPickable()).toBe(false);
+    expect(entry.labelBillboard.getActor().getPickable()).toBe(false);
+
+    await feature.cleanup("inst-1");
+  });
+
+  it("marks the point actor and its label billboard unpickable", async () => {
+    mockAnnotationManager = makeFakeAnnotationManager();
+
+    const feature = new VTKAnnotationLinesFeature();
+    const sceneObjects = makeMockSceneObjects();
+    await feature.initialize("inst-1", { sceneObjects, datasetId: "ds-1" });
+
+    mockAnnotationManager._emit("annotationAdded", {
+      datasetId: "ds-1",
+      annotation: makePointAnnotation({ id: "pt-1", text: "Anomaly here" }),
+    });
+
+    const entry = feature.instanceStates.get("inst-1").points.get("pt-1");
+    expect(entry.actor.getPickable()).toBe(false);
+    expect(entry.labelBillboard.getActor().getPickable()).toBe(false);
+
+    await feature.cleanup("inst-1");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Label text: vtkVectorText silently rendered nothing (no opentype.js font
+// is ever supplied). Labels are now VRTextBillboard -- assert the stored
+// entry exposes a real, text-bearing billboard rather than an empty
+// vtkVectorText source/mapper/actor trio.
+// ---------------------------------------------------------------------------
+
+describe("VTKAnnotationLinesFeature label billboards", () => {
+  it("renders the measurement distance as billboard text", async () => {
+    mockAnnotationManager = makeFakeAnnotationManager();
+
+    const feature = new VTKAnnotationLinesFeature();
+    const sceneObjects = makeMockSceneObjects();
+    await feature.initialize("inst-1", { sceneObjects, datasetId: "ds-1" });
+
+    mockAnnotationManager._emit("annotationAdded", {
+      datasetId: "ds-1",
+      annotation: makeMeasurementAnnotation({ id: "annot-1" }),
+    });
+
+    const entry = feature.instanceStates.get("inst-1").lines.get("annot-1");
+    expect(entry.labelBillboard).toBeTruthy();
+    expect(typeof entry.labelBillboard.getText).toBe("function");
+    expect(entry.labelBillboard.getText()).toBe("5.000 mm");
+    // The old vtkVectorText trio no longer exists on the entry.
+    expect(entry.labelSource).toBeUndefined();
+    expect(entry.labelActor).toBeUndefined();
+    expect(entry.labelMapper).toBeUndefined();
+
+    await feature.cleanup("inst-1");
+  });
+
+  it("renders custom point annotation text as billboard text", async () => {
+    mockAnnotationManager = makeFakeAnnotationManager();
+
+    const feature = new VTKAnnotationLinesFeature();
+    const sceneObjects = makeMockSceneObjects();
+    await feature.initialize("inst-1", { sceneObjects, datasetId: "ds-1" });
+
+    mockAnnotationManager._emit("annotationAdded", {
+      datasetId: "ds-1",
+      annotation: makePointAnnotation({ id: "pt-1", text: "Anomaly here" }),
+    });
+
+    const entry = feature.instanceStates.get("inst-1").points.get("pt-1");
+    expect(entry.labelBillboard).toBeTruthy();
+    expect(entry.labelBillboard.getText()).toBe("Anomaly here");
+
+    await feature.cleanup("inst-1");
+  });
+
+  it("appends the author's name to the billboard text so OTHER participants see who placed it", async () => {
+    mockAnnotationManager = makeFakeAnnotationManager();
+
+    const feature = new VTKAnnotationLinesFeature();
+    const sceneObjects = makeMockSceneObjects();
+    await feature.initialize("inst-1", { sceneObjects, datasetId: "ds-1" });
+
+    mockAnnotationManager._emit("annotationAdded", {
+      datasetId: "ds-1",
+      annotation: makePointAnnotation({
+        id: "pt-1",
+        text: "Anomaly here",
+        metadata: { authorName: "Bob" },
+      }),
+    });
+
+    const entry = feature.instanceStates.get("inst-1").points.get("pt-1");
+    expect(entry.labelBillboard.getText()).toBe("Anomaly here — Bob");
+
+    await feature.cleanup("inst-1");
+  });
+
+  it("omits the author suffix when the pin carries no authorName (pre-existing annotations)", async () => {
+    mockAnnotationManager = makeFakeAnnotationManager();
+
+    const feature = new VTKAnnotationLinesFeature();
+    const sceneObjects = makeMockSceneObjects();
+    await feature.initialize("inst-1", { sceneObjects, datasetId: "ds-1" });
+
+    mockAnnotationManager._emit("annotationAdded", {
+      datasetId: "ds-1",
+      annotation: makePointAnnotation({ id: "pt-1", text: "Anomaly here" }),
+    });
+
+    const entry = feature.instanceStates.get("inst-1").points.get("pt-1");
+    expect(entry.labelBillboard.getText()).toBe("Anomaly here");
+
+    await feature.cleanup("inst-1");
+  });
+
+  it("skips the label billboard for the default 'VR marker' placeholder text", async () => {
+    mockAnnotationManager = makeFakeAnnotationManager();
+
+    const feature = new VTKAnnotationLinesFeature();
+    const sceneObjects = makeMockSceneObjects();
+    await feature.initialize("inst-1", { sceneObjects, datasetId: "ds-1" });
+
+    mockAnnotationManager._emit("annotationAdded", {
+      datasetId: "ds-1",
+      annotation: makePointAnnotation({ id: "pt-1" }), // default text: "VR marker"
+    });
+
+    const entry = feature.instanceStates.get("inst-1").points.get("pt-1");
+    expect(entry.labelBillboard).toBeNull();
+
+    await feature.cleanup("inst-1");
+  });
+
+  it("disposes the label billboard (and removes its actor) when the annotation is removed", async () => {
+    mockAnnotationManager = makeFakeAnnotationManager();
+
+    const feature = new VTKAnnotationLinesFeature();
+    const sceneObjects = makeMockSceneObjects();
+    await feature.initialize("inst-1", { sceneObjects, datasetId: "ds-1" });
+
+    mockAnnotationManager._emit("annotationAdded", {
+      datasetId: "ds-1",
+      annotation: makeMeasurementAnnotation({ id: "annot-1" }),
+    });
+
+    const entry = feature.instanceStates.get("inst-1").lines.get("annot-1");
+    const labelActor = entry.labelBillboard.getActor();
+    expect(sceneObjects.renderer._actors).toContain(labelActor);
+
+    mockAnnotationManager._emit("annotationRemoved", {
+      datasetId: "ds-1",
+      annotationId: "annot-1",
+    });
+
+    // A leaked billboard actor would stay in the shared renderer forever --
+    // both the line's geometry actor AND its label billboard must be gone.
+    expect(sceneObjects.renderer._actors).not.toContain(labelActor);
+    expect(sceneObjects.renderer._actors.length).toBe(0);
+
+    await feature.cleanup("inst-1");
+  });
+
+  it("disposes point label billboards on cleanup, along with everything else", async () => {
+    mockAnnotationManager = makeFakeAnnotationManager();
+
+    const feature = new VTKAnnotationLinesFeature();
+    const sceneObjects = makeMockSceneObjects();
+    await feature.initialize("inst-1", { sceneObjects, datasetId: "ds-1" });
+
+    mockAnnotationManager._emit("annotationAdded", {
+      datasetId: "ds-1",
+      annotation: makePointAnnotation({ id: "pt-1", text: "Anomaly here" }),
+    });
+
+    const entry = feature.instanceStates.get("inst-1").points.get("pt-1");
+    const labelActor = entry.labelBillboard.getActor();
+    expect(sceneObjects.renderer._actors).toContain(labelActor);
+
+    await feature.cleanup("inst-1");
+
+    expect(sceneObjects.renderer._actors).not.toContain(labelActor);
+    expect(sceneObjects.renderer._actors.length).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// _computePointRadius: must derive from the DATA actor's bounds, not the
+// renderer's -- in VR, computeVisiblePropBounds() also includes VR chrome
+// (spatial menu, keyboard panel) placed in data space, which would
+// otherwise inflate every marker.
+// ---------------------------------------------------------------------------
+
+describe("VTKAnnotationLinesFeature _computePointRadius", () => {
+  function makeState({ actorBounds, rendererBounds } = {}) {
+    return {
+      pointRadiusFraction: 0.01,
+      pointRadiusFallback: 0.05,
+      sceneObjects: {
+        actor: actorBounds ? { getBounds: vi.fn(() => actorBounds) } : undefined,
+        renderer: {
+          computeVisiblePropBounds: rendererBounds
+            ? vi.fn(() => rendererBounds)
+            : vi.fn(() => undefined),
+        },
+      },
+    };
+  }
+
+  it("uses the data actor's bounds, not the renderer's (which include VR chrome)", () => {
+    const feature = new VTKAnnotationLinesFeature();
+    // Actor: 10-unit diagonal. Renderer (inflated by VR menu/keyboard panels
+    // placed in data space): 100-unit diagonal. If the fix regressed to
+    // renderer bounds, this radius would come out 10x too large.
+    const state = makeState({
+      actorBounds: [0, 10, 0, 0, 0, 0],
+      rendererBounds: [0, 100, 0, 0, 0, 0],
+    });
+
+    const radius = feature._computePointRadius(state);
+
+    expect(radius).toBeCloseTo(10 * 0.01);
+  });
+
+  it("falls back to renderer bounds when there is no data actor", () => {
+    const feature = new VTKAnnotationLinesFeature();
+    const state = makeState({ rendererBounds: [0, 100, 0, 0, 0, 0] });
+
+    const radius = feature._computePointRadius(state);
+
+    expect(radius).toBeCloseTo(100 * 0.01);
+  });
+
+  it("falls back to renderer bounds when the actor has no getBounds()", () => {
+    const feature = new VTKAnnotationLinesFeature();
+    const state = makeState({ rendererBounds: [0, 100, 0, 0, 0, 0] });
+    state.sceneObjects.actor = {}; // no getBounds function
+
+    const radius = feature._computePointRadius(state);
+
+    expect(radius).toBeCloseTo(100 * 0.01);
+  });
+
+  it("falls back to the fixed default when neither bounds source is available", () => {
+    const feature = new VTKAnnotationLinesFeature();
+    const state = makeState();
+
+    expect(feature._computePointRadius(state)).toBe(0.05);
+  });
+
+  it("never throws, even if the actor's getBounds() itself throws", () => {
+    const feature = new VTKAnnotationLinesFeature();
+    const state = makeState({ rendererBounds: [0, 100, 0, 0, 0, 0] });
+    state.sceneObjects.actor = {
+      getBounds: () => {
+        throw new Error("boom");
+      },
+    };
+
+    expect(() => feature._computePointRadius(state)).not.toThrow();
   });
 });

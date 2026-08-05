@@ -238,6 +238,18 @@ export const appToasts = {
         description: reason,
         duration: 4000,
     }),
+
+    /**
+     * A dataset/view failed to load.
+     * @param {string} [error] - Error message
+     * @returns {Object} Toast options
+     */
+    loadFailed: (error) => ({
+        type: 'error',
+        message: 'Load failed',
+        description: error,
+        duration: 5000,
+    }),
 };
 
 export default appToasts;

@@ -21,13 +21,10 @@ export class VRControlManager {
         const data = this._yControlRequests.get(key);
 
         if (data?.type === 'request' && data.toUserId === getUserId()) {
-          // Someone is requesting to control us
-          window.dispatchEvent(new CustomEvent('cia:vr-control-request', {
-            detail: {
-              fromUserId: data.fromUserId,
-              fromUserName: data.fromUserName,
-            }
-          }));
+          // Someone is requesting to control us. No approval UI exists yet —
+          // requests surface only through respondToControl() being called
+          // programmatically (e.g. auto-approval when the session allows it).
+          log.info(`VR control requested by ${data.fromUserName} (${data.fromUserId})`);
         }
 
         if (data?.type === 'response' && data.toUserId === getUserId()) {
@@ -35,14 +32,7 @@ export class VRControlManager {
           if (data.approved) {
             this._session.establishControl(getUserId(), data.fromUserId);
           }
-
-          window.dispatchEvent(new CustomEvent('cia:vr-control-response', {
-            detail: {
-              approved: data.approved,
-              targetUserId: data.fromUserId,
-            }
-          }));
-
+          log.info(`VR control request ${data.approved ? 'approved' : 'denied'} by ${data.fromUserId}`);
           this._pendingRequest = null;
         }
       });
@@ -154,6 +144,30 @@ export class VRControlManager {
    */
   getPendingRequest() {
     return this._pendingRequest;
+  }
+
+  /**
+   * Re-key onto a different Y.js session id (session convergence — see
+   * VRExplorationManager.startExploration / VRParticipantSync.rekey). Unlike
+   * VRParticipantSync, this map is bound once in the CONSTRUCTOR
+   * (`vr-control-<session.id>`), so without this method a re-keyed session
+   * would silently keep reading/writing the pre-rekey map forever.
+   *
+   * @param {string} newSessionId
+   */
+  rekey(newSessionId) {
+    if (!newSessionId || newSessionId === this._session.id) return;
+
+    this._observers.forEach(cleanup => cleanup());
+    this._observers = [];
+
+    this._session.id = newSessionId;
+    this._yControlRequests = ydoc.getMap(`vr-control-${newSessionId}`);
+    this._pendingRequest = null;
+
+    this._setupObservers();
+
+    log.info(`VRControlManager re-keyed to session ${newSessionId}`);
   }
 
   cleanup() {

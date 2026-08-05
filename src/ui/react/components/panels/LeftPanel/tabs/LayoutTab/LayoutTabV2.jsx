@@ -391,6 +391,7 @@ export const LayoutTabV2 = memo(function LayoutTabV2({
         // Selection state
         selectedViewGroupId,
         selectedViewportId,
+        selectedViewId,
         drillInViewGroupId,
 
         // Multi-select state
@@ -420,6 +421,7 @@ export const LayoutTabV2 = memo(function LayoutTabV2({
         // Selection handlers
         handleSelectViewGroup,
         handleSelectViewport,
+        handleSelectView,
 
         // Drill-in handlers
         handleDrillIn,
@@ -459,6 +461,7 @@ export const LayoutTabV2 = memo(function LayoutTabV2({
         savedTemplates,
         handleLoadTemplate,
         handleSaveCurrentAsTemplate,
+        handleDeleteTemplate,
     } = useLayoutTab({ workspaceId });
 
     const handleRenameViewGroup = useCallback((viewGroup, newName) => {
@@ -600,8 +603,8 @@ export const LayoutTabV2 = memo(function LayoutTabV2({
                                         <ViewListItem
                                             key={view.id}
                                             view={view}
-                                            isSelected={false}
-                                            onClick={() => {}}
+                                            isSelected={selectedViewId === view.id}
+                                            onClick={() => handleSelectView(view.id)}
                                         />
                                     ))
                                 ) : (
@@ -624,7 +627,6 @@ export const LayoutTabV2 = memo(function LayoutTabV2({
                                         onToggleCheck={() => handleToggleViewGroupCheck(vg.id)}
                                         onDuplicate={handleDuplicateViewGroup}
                                         onDelete={handleDeleteViewGroup}
-                                        onSettings={() => console.log('Settings:', vg.id)}
                                         onRename={(name) => handleRenameViewGroup(vg, name)}
                                     />
                                 ))
@@ -645,7 +647,6 @@ export const LayoutTabV2 = memo(function LayoutTabV2({
                                 onRename={(newName) => handleRenameViewport(vp, newName)}
                                 onDuplicate={handleDuplicateViewport}
                                 onDelete={handleDeleteViewport}
-                                onSettings={() => console.log('VP Settings:', vp.id)}
                                 onToggleShare={handleToggleShareViewport}
                             />
                         ))}
@@ -666,17 +667,17 @@ export const LayoutTabV2 = memo(function LayoutTabV2({
                         customLayouts={customLayouts}
                         onLoadTemplate={handleLoadTemplate}
                         onSaveCurrentAsTemplate={handleSaveCurrentAsTemplate}
-                        onDeleteTemplate={(template) => console.log('Delete template:', template)}
+                        onDeleteTemplate={handleDeleteTemplate}
                     />
                 )}
             </div>
 
             {/* Footer */}
             <div className="layout-tab-v2__footer">
-                <button className="layout-tab-v2__help-btn">
-                    <Icon name="helpCircle" size={16} />
-                </button>
-                <button className="layout-tab-v2__save-btn">
+                <button
+                    className="layout-tab-v2__save-btn"
+                    onClick={handleSaveCurrentAsTemplate}
+                >
                     <Icon name="save" size={16} />
                     <span>Save Layout</span>
                 </button>

@@ -151,11 +151,16 @@ export function Bootstrap() {
                     await runPhase2Initialization(existingName);
                 }
             } else if (isDevBypass) {
-                // Dev bypass active — auto-fill from mock dev user, skip the username form
+                // Dev bypass active — auto-fill from mock dev user, skip the username form.
+                // Deliberately do NOT call setUserName() here: that persists to
+                // localStorage.cia_username, and authService's mock dev user is the same
+                // "CIA Admin" name on every device — two headsets would both persist it and
+                // collapse into one identity. getUserName() already falls through to the
+                // per-device name (deviceIdentity.getDeviceName()), and leaving
+                // cia_username unset keeps needsDisplayNamePrompt() true so the per-device
+                // VR entry prompt (VRExploreButton) can still fire.
                 log.info("Bootstrap: Dev bypass — auto-setting dev username");
-                const devUser = authService.getUser();
-                const devName = devUser?.name || devUser?.username || 'Developer';
-                setUserName(devName);
+                const devName = getUserName();
                 setUsername(devName);
                 setBootstrapState('initializing');
                 await runPhase2Initialization(devName);

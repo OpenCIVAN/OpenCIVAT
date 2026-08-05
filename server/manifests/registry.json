@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-07-06T16:13:07.982Z",
+  "generatedAt": "2026-08-03T22:01:35.040Z",
   "contractVersion": "1.0.0",
   "buildInfo": {
-    "nodeVersion": "v22.23.1",
-    "platform": "darwin"
+    "nodeVersion": "v24.18.0",
+    "platform": "win32"
   },
   "handlers": {
     "vtk": {

@@ -120,31 +120,6 @@ export {
     useManagerDropdowns,
 } from './WorkspaceBar';
 
-// Footer2 - Canvas toolbar footer with ViewGroup selector and links
-export {
-    Footer2,
-    useFooterLayout,
-    useViewGroupSelector,
-    useLinkStats,
-    useLinkReminderToast,
-    useDuplicationDialog,
-    FOOTER_BREAKPOINTS,
-    TOOLBAR_SECTIONS,
-    LINK_PROPERTIES as FOOTER_LINK_PROPERTIES,
-    TYPE_SPECIFIC_LINK_PROPERTIES,
-    QUICK_CREATE_TEMPLATES,
-    ViewGroupSelector,
-    ViewGroupRow,
-    CreateViewGroupPopover,
-    ViewGroupSettingsPopover,
-    LinksSection,
-    ExpandedLinks,
-    CollapsedLinksIndicator,
-    LinksPopover,
-    LinkPropertyPopover,
-    LinkPropertyIndicator,
-} from './Footer2';
-
 // VRWristMenu - VR wrist-mounted radial menu
 export { VRWristMenu } from './VRWristMenu';
 

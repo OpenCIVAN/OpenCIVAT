@@ -28,6 +28,7 @@
     "dev": "concurrently \"npm:start\" \"npm:server:dev\" \"npm:websocket\"",
     "dev:http": "concurrently \"npm:start:http\" \"npm:server:dev\" \"npm:websocket\"",
     "dev:full": "concurrently \"npm:start\" \"npm:server:dev\" \"npm:websocket\" \"npm:token-server\" \"npm:livekit\"",
+    "dev:cloud": "concurrently \"npm:start\" \"npm:server:dev\" \"npm:websocket\" \"npm:token-server\"",
     "dev:full:http": "concurrently \"npm:start:http\" \"npm:server:dev\" \"npm:websocket\" \"npm:token-server\" \"npm:livekit\"",
     "dev:voice": "concurrently \"npm:token-server\" \"npm:livekit\"",
     "docker:up": "docker-compose up",

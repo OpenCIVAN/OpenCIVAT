@@ -18,7 +18,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { CollapsibleHeaderSection, StatBadge, SectionHeader } from '@UI/react/components/molecules/HeaderSection';
+import { SectionHeader } from '@UI/react/components/molecules/HeaderSection';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import { LeaveRoomDialog } from '@UI/react/components/modals/confirmations';
 
@@ -57,7 +57,6 @@ const GROUP_ICONS = {
 export function RoomsTab({ workspaceId }) {
     const {
         rooms,
-        currentRoom,
         searchQuery,
         setSearchQuery,
         showCreateForm,
@@ -87,16 +86,6 @@ export function RoomsTab({ workspaceId }) {
         }
     }, [leaveRoomTarget, handleLeaveRoom]);
 
-    // Calculate stats for the header
-    const onlineCount = rooms.reduce((sum, r) => sum + r.members.length, 0);
-    const voiceCount = rooms.filter(r => r.hasVoice && r.members.length > 0)
-        .reduce((sum, r) => sum + r.members.length, 0);
-    const vrCount = 0; // Placeholder - would come from real data
-
-    // Get current project/workspace info (placeholder)
-    const currentProject = { name: 'Research Project' };
-    const currentWorkspace = { name: 'Default Workspace' };
-
     return (
         <div className="rooms-panel">
             {/* Panel Header */}
@@ -105,57 +94,6 @@ export function RoomsTab({ workspaceId }) {
                 <span className="panel-header__title">Rooms</span>
                 <div className="panel-header__spacer" />
                 <span className="panel-header__count">{rooms.length} rooms</span>
-            </div>
-
-            {/* Location Section - Current Location */}
-            <div className="rooms-panel__header">
-                <CollapsibleHeaderSection
-                    icon="mapPin"
-                    title="Your Location"
-                    color="purple"
-                    defaultExpanded={true}
-                >
-                    {/* Project name - centered subheader */}
-                    <div className="location-status__project">
-                        <Icon name="layers" size={14} />
-                        <span className="location-status__project-name">
-                            {currentProject?.name || 'No Project'}
-                        </span>
-                    </div>
-
-                    {/* Room and Workspace details */}
-                    <div className="location-status__details">
-                        <div className="location-status__detail">
-                            <Icon name="doorOpen" size={12} />
-                            <span className="location-status__label">Room</span>
-                            <span className="location-status__value">
-                                {currentRoom?.name || 'Main Room'}
-                            </span>
-                        </div>
-                        <div className="location-status__detail location-status__detail--subtle">
-                            <Icon name="grid3x3" size={12} />
-                            <span className="location-status__label">Workspace</span>
-                            <span className="location-status__value">
-                                {currentWorkspace?.name || 'Default'}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Stats row with divider */}
-                    <div className="location-status__stats">
-                        <StatBadge icon="users">{onlineCount} online</StatBadge>
-                        <div className="location-status__stats-right">
-                            <StatBadge icon="mic" color="var(--color-accent-green)">
-                                {voiceCount} in voice
-                            </StatBadge>
-                            {vrCount > 0 && (
-                                <StatBadge icon="eye" color="var(--color-accent-purple)">
-                                    {vrCount} in VR
-                                </StatBadge>
-                            )}
-                        </div>
-                    </div>
-                </CollapsibleHeaderSection>
             </div>
 
             {/* Rooms List Section */}

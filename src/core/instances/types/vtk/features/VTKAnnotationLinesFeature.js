@@ -37,13 +37,13 @@ import { FeatureInterface } from "@Core/instances/features/FeatureInterface.js";
 import { render as log } from "@Utils/logger.js";
 import { apiClient } from "@Services/apiClient.js";
 import { getAnnotationManager } from "@Init/appInitializer.js";
-import { hexToRgb } from "@Utils/colorHelpers.js";
+import { hexToRgb, rgbToHex } from "@Utils/colorHelpers.js";
+import { VRTextBillboard } from "@Core/vr/ui/VRTextBillboard.js";
 
 import vtkActor from "@kitware/vtk.js/Rendering/Core/Actor";
 import vtkMapper from "@kitware/vtk.js/Rendering/Core/Mapper";
 import vtkLineSource from "@kitware/vtk.js/Filters/Sources/LineSource";
 import vtkSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
-import vtkVectorText from "@kitware/vtk.js/Rendering/Core/VectorText";
 
 // =============================================================================
 // CONSTANTS
@@ -105,7 +105,7 @@ export function parseMeasurementAnnotation(annotation) {
  * type 'point', position [x,y,z] in data space, text, metadata.color).
  *
  * @param {object} annotation - Annotation model instance or server row
- * @returns {{ id: string, position: number[], text: string, color: number[]|null } | null}
+ * @returns {{ id: string, position: number[], text: string, color: number[]|null, authorName: string|null } | null}
  */
 export function parsePointAnnotation(annotation) {
   try {
@@ -117,6 +117,13 @@ export function parsePointAnnotation(annotation) {
       position: [annotation.position[0], annotation.position[1], annotation.position[2]],
       text: typeof annotation.text === "string" ? annotation.text : "",
       color: normalizeColor(annotation.metadata?.color),
+      // Display name only (see VRExplorationManager._persistVRAnnotation) —
+      // lets a persisted pin say who placed it without a separate user-id
+      // lookup. Absent on annotations created before this field existed.
+      authorName:
+        typeof annotation.metadata?.authorName === "string"
+          ? annotation.metadata.authorName
+          : null,
     };
   } catch (err) {
     log.warn(`Failed to parse point annotation: ${err.message}`);
@@ -201,9 +208,9 @@ export class VTKAnnotationLinesFeature extends FeatureInterface {
       ...DEFAULT_SETTINGS,
       sceneObjects,
       datasetId: datasetId || null,
-      // measurementId -> { actor, mapper, lineSource, labelActor, labelMapper, labelSource }
+      // measurementId -> { actor, mapper, lineSource, labelBillboard }
       lines: new Map(),
-      // pointAnnotationId -> { actor, mapper, sphereSource, labelActor, labelMapper, labelSource }
+      // pointAnnotationId -> { actor, mapper, sphereSource, labelBillboard }
       points: new Map(),
       unsubscribers: [],
     };
@@ -370,17 +377,19 @@ export class VTKAnnotationLinesFeature extends FeatureInterface {
       actor.getProperty().setColor(...state.lineColor);
       actor.getProperty().setLineWidth(state.lineWidth);
       actor.getProperty().setLighting(false);
+      // Persisted annotations are display-only; without this, raycastVR's
+      // pick list (VTKInstanceHandler._getVRPickTargets) treats this line as
+      // a live target and placing a second annotation nearby lands on it
+      // instead of on the data.
+      actor.setPickable(false);
 
       renderer.addActor(actor);
 
-      const entry = { actor, mapper, lineSource, labelActor: null, labelMapper: null, labelSource: null };
+      const entry = { actor, mapper, lineSource, labelBillboard: null };
 
       const label = this._createLabel(state, parsed);
       if (label) {
-        renderer.addActor(label.labelActor);
-        entry.labelActor = label.labelActor;
-        entry.labelMapper = label.labelMapper;
-        entry.labelSource = label.labelSource;
+        entry.labelBillboard = label.labelBillboard;
       }
 
       state.lines.set(parsed.id, entry);
@@ -392,38 +401,55 @@ export class VTKAnnotationLinesFeature extends FeatureInterface {
   }
 
   /**
-   * Build a small 3D text label (vtkVectorText) showing the distance,
+   * Build a floating text label (VRTextBillboard) showing the distance,
    * positioned at the line's midpoint. Returns null (never throws) if the
-   * label geometry can't be built -- the line itself still renders.
+   * label can't be built -- the line itself still renders.
+   *
+   * vtkVectorText is NOT used here: it requires an opentype.js-parsed font
+   * via setFont(), which nothing in this codebase (or its dependencies --
+   * opentype.js isn't even installed) ever supplies, so it silently renders
+   * empty, invisible geometry. See VRTextBillboard.js's header for the full
+   * writeup; this is the same failure VTKVRSpatialUI already worked around.
    */
   _createLabel(state, parsed) {
     try {
       const text = `${Number(parsed.distance).toFixed(3)} ${parsed.unit}`;
-
-      const labelSource = vtkVectorText.newInstance();
-      labelSource.setText(text);
-
-      const labelMapper = vtkMapper.newInstance();
-      labelMapper.setInputConnection(labelSource.getOutputPort());
-
-      const labelActor = vtkActor.newInstance();
-      labelActor.setMapper(labelMapper);
-      labelActor.getProperty().setColor(...state.labelColor);
-      labelActor.getProperty().setLighting(false);
 
       const mid = [
         (parsed.startPoint[0] + parsed.endPoint[0]) / 2,
         (parsed.startPoint[1] + parsed.endPoint[1]) / 2,
         (parsed.startPoint[2] + parsed.endPoint[2]) / 2,
       ];
-      labelActor.setPosition(...mid);
 
-      // Scale the label relative to the measured distance so text stays
-      // legible regardless of the dataset's coordinate magnitude.
-      const scale = Math.max(parsed.distance * state.labelScale, 1e-6);
-      labelActor.setScale(scale, scale, scale);
+      // Same data-space sizing intent as the old vtkVectorText actor-scale
+      // (distance * labelScale) -- VRTextBillboard takes that size directly
+      // as worldHeight instead of scaling a unit-sized glyph mesh.
+      const worldHeight = Math.max(parsed.distance * state.labelScale, 1e-6);
 
-      return { labelActor, labelMapper, labelSource };
+      const labelBillboard = new VRTextBillboard({
+        text,
+        worldHeight,
+        color: rgbToHex(state.labelColor),
+      });
+      labelBillboard.attach(state.sceneObjects.renderer);
+      if (!labelBillboard.getActor()) {
+        // attach() never throws; it degrades to a null actor on failure.
+        labelBillboard.dispose();
+        return null;
+      }
+
+      labelBillboard.setPosition(...mid);
+      // Never pickable -- see the setPickable(false) note on the line actor
+      // above; a label must not be able to absorb a raycast either.
+      labelBillboard.getActor().setPickable(false);
+      // Face the camera once at creation. This feature has no per-frame
+      // render hook; annotationUpdated tears down and rebuilds the whole
+      // entry (see _addOrUpdateLine), which re-runs this and re-faces for
+      // free. A label going edge-on as a desktop user orbits far away is
+      // acceptable -- a full billboard frame loop is out of scope here.
+      labelBillboard.faceCamera(state.sceneObjects.renderer);
+
+      return { labelBillboard };
     } catch (err) {
       log.warn(`Failed to create measurement label: ${err.message}`);
       return null;
@@ -457,20 +483,20 @@ export class VTKAnnotationLinesFeature extends FeatureInterface {
       actor.setMapper(mapper);
       actor.getProperty().setColor(...(parsed.color || state.pointColor));
       actor.getProperty().setLighting(false);
+      // See the matching setPickable(false) note in _addOrUpdateLine -- a
+      // persisted marker must not be a live raycast target either.
+      actor.setPickable(false);
 
       renderer.addActor(actor);
 
-      const entry = { actor, mapper, sphereSource, labelActor: null, labelMapper: null, labelSource: null };
+      const entry = { actor, mapper, sphereSource, labelBillboard: null };
 
       // Optional floating text label just above the marker (skips the default
       // 'VR marker' placeholder text to avoid cluttering the scene).
       if (parsed.text && parsed.text !== "VR marker") {
         const label = this._createPointLabel(state, parsed, radius);
         if (label) {
-          renderer.addActor(label.labelActor);
-          entry.labelActor = label.labelActor;
-          entry.labelMapper = label.labelMapper;
-          entry.labelSource = label.labelSource;
+          entry.labelBillboard = label.labelBillboard;
         }
       }
 
@@ -485,10 +511,25 @@ export class VTKAnnotationLinesFeature extends FeatureInterface {
   /**
    * Sphere radius scaled to the visible scene so markers stay legible across
    * datasets of different coordinate magnitudes. Never throws.
+   *
+   * Derived from the DATA actor's own bounds, not the renderer's. In VR the
+   * same renderer also holds the spatial menu panel and (soon) a 1.15m-wide
+   * keyboard panel, placed in data space at head-relative distances -- both
+   * are visible props, so computeVisiblePropBounds() would fold them into
+   * the diagonal and inflate every marker. Falls back to renderer bounds
+   * when there's no data actor to measure (e.g. an empty scene), then to the
+   * fixed default, exactly as before.
    */
   _computePointRadius(state) {
     try {
-      const bounds = state.sceneObjects.renderer.computeVisiblePropBounds?.();
+      const dataActor = state.sceneObjects.actor;
+      let bounds =
+        typeof dataActor?.getBounds === "function" ? dataActor.getBounds() : null;
+
+      if (!(Array.isArray(bounds) && bounds.length === 6 && bounds[0] <= bounds[1])) {
+        bounds = state.sceneObjects.renderer.computeVisiblePropBounds?.();
+      }
+
       if (Array.isArray(bounds) && bounds.length === 6 && bounds[0] <= bounds[1]) {
         const dx = bounds[1] - bounds[0];
         const dy = bounds[3] - bounds[2];
@@ -504,29 +545,41 @@ export class VTKAnnotationLinesFeature extends FeatureInterface {
     return state.pointRadiusFallback;
   }
 
+  /**
+   * Build a floating text label above a point marker. See _createLabel's
+   * comment for why this is a VRTextBillboard and not vtkVectorText.
+   * Returns null (never throws) if the label can't be built -- the marker
+   * itself still renders.
+   */
   _createPointLabel(state, parsed, radius) {
     try {
-      const labelSource = vtkVectorText.newInstance();
-      labelSource.setText(parsed.text);
+      // Same sizing intent as the old vtkVectorText actor-scale (radius) --
+      // worldHeight replaces scaling a unit-sized glyph mesh.
+      const worldHeight = Math.max(radius, 1e-6);
 
-      const labelMapper = vtkMapper.newInstance();
-      labelMapper.setInputConnection(labelSource.getOutputPort());
+      const labelBillboard = new VRTextBillboard({
+        // Author name, when the pin carries one, so OTHER participants see
+        // who left it — not just the note text. VRTextBillboard is
+        // single-line (Canvas2D fillText, no wrapping), hence one line.
+        text: parsed.authorName ? `${parsed.text} — ${parsed.authorName}` : parsed.text,
+        worldHeight,
+        color: rgbToHex(state.labelColor),
+      });
+      labelBillboard.attach(state.sceneObjects.renderer);
+      if (!labelBillboard.getActor()) {
+        labelBillboard.dispose();
+        return null;
+      }
 
-      const labelActor = vtkActor.newInstance();
-      labelActor.setMapper(labelMapper);
-      labelActor.getProperty().setColor(...state.labelColor);
-      labelActor.getProperty().setLighting(false);
-
-      labelActor.setPosition(
+      labelBillboard.setPosition(
         parsed.position[0],
         parsed.position[1] + radius * 1.5,
         parsed.position[2]
       );
+      labelBillboard.getActor().setPickable(false);
+      labelBillboard.faceCamera(state.sceneObjects.renderer);
 
-      const scale = Math.max(radius, 1e-6);
-      labelActor.setScale(scale, scale, scale);
-
-      return { labelActor, labelMapper, labelSource };
+      return { labelBillboard };
     } catch (err) {
       log.warn(`Failed to create point annotation label: ${err.message}`);
       return null;
@@ -539,17 +592,15 @@ export class VTKAnnotationLinesFeature extends FeatureInterface {
 
     const { renderer, renderWindow } = state.sceneObjects;
 
-    if (renderer) {
-      if (entry.actor) renderer.removeActor(entry.actor);
-      if (entry.labelActor) renderer.removeActor(entry.labelActor);
-    }
+    if (renderer && entry.actor) renderer.removeActor(entry.actor);
 
     entry.actor?.delete();
     entry.mapper?.delete();
     entry.sphereSource?.delete();
-    entry.labelActor?.delete();
-    entry.labelMapper?.delete();
-    entry.labelSource?.delete();
+    // dispose() removes the billboard's own actor from whatever renderer it
+    // attached to -- it must never be leaked into the renderer VR and
+    // desktop share.
+    entry.labelBillboard?.dispose();
 
     state.points.delete(annotationId);
     renderWindow?.render();
@@ -561,17 +612,14 @@ export class VTKAnnotationLinesFeature extends FeatureInterface {
 
     const { renderer, renderWindow } = state.sceneObjects;
 
-    if (renderer) {
-      if (entry.actor) renderer.removeActor(entry.actor);
-      if (entry.labelActor) renderer.removeActor(entry.labelActor);
-    }
+    if (renderer && entry.actor) renderer.removeActor(entry.actor);
 
     entry.actor?.delete();
     entry.mapper?.delete();
     entry.lineSource?.delete();
-    entry.labelActor?.delete();
-    entry.labelMapper?.delete();
-    entry.labelSource?.delete();
+    // See _removePoint's note: dispose() removes the billboard's actor from
+    // its renderer -- must never be skipped or a label leaks permanently.
+    entry.labelBillboard?.dispose();
 
     state.lines.delete(annotationId);
     renderWindow?.render();

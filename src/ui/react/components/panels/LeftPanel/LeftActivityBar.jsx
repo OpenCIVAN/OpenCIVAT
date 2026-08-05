@@ -5,11 +5,12 @@
 // Uses TabButton molecule with etched variant for consistent styling
 // UPDATED: Added peek/preview support for overlay panel system
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { TabButton } from '@UI/react/components/molecules';
 import { useLeftPanelContext, LEFT_PANEL_TABS } from './LeftPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 import { useNavigatorButton } from '@UI/react/components/panels/LayoutPanel';
+import { useScratchPadFloating } from '@UI/react/components/panels/FloatingPanel';
 import { useAdaptiveHover } from '@UI/react/hooks/useAdaptiveHover';
 import { DwellIndicator } from '@UI/react/components/atoms/DwellIndicator';
 import './LeftPanel.scss';
@@ -82,30 +83,9 @@ export function LeftActivityBar() {
     // Navigator state from context
     const { isFloating: navigatorOpen, toggleNavigator } = useNavigatorButton();
 
-    // Track scratchpad and canvasOps state via events
-    const [scratchpadOpen, setScratchpadOpen] = useState(false);
-    const [canvasOpsOpen, setCanvasOpsOpen] = useState(false);
-
-    // Listen for popout state changes from main app
-    useEffect(() => {
-        const handlePopoutChange = (e) => {
-            const { popoutId, isOpen } = e.detail || {};
-            if (popoutId === 'scratchpad') setScratchpadOpen(isOpen);
-            if (popoutId === 'canvasOps') setCanvasOpsOpen(isOpen);
-        };
-
-        window.addEventListener('cia:popout-state-change', handlePopoutChange);
-        return () => window.removeEventListener('cia:popout-state-change', handlePopoutChange);
-    }, []);
-
-    // Toggle popouts via events
-    const toggleScratchpad = useCallback(() => {
-        window.dispatchEvent(new CustomEvent('cia:toggle-popout', { detail: { popoutId: 'scratchpad' } }));
-    }, []);
-
-    const toggleCanvasOps = useCallback(() => {
-        window.dispatchEvent(new CustomEvent('cia:toggle-popout', { detail: { popoutId: 'canvasOps' } }));
-    }, []);
+    // Scratchpad floating panel — same FloatingPanelContext instance the panel
+    // itself renders through, so open-state and toggling stay in lockstep.
+    const { isOpen: scratchpadOpen, toggle: toggleScratchpad } = useScratchPadFloating();
 
     // Toggle the panel open/closed
     const onToggle = () => setLeftOpen(!isOpen);
@@ -177,16 +157,7 @@ export function LeftActivityBar() {
                     variant="etched"
                     iconOnly
                     active={scratchpadOpen}
-                    onClick={toggleScratchpad}
-                />
-                <TabButton
-                    icon="sliders"
-                    label="Canvas Operations"
-                    color="blue"
-                    variant="etched"
-                    iconOnly
-                    active={canvasOpsOpen}
-                    onClick={toggleCanvasOps}
+                    onClick={() => toggleScratchpad()}
                 />
 
                 <div className="left-panel__activity-divider" />

@@ -7,6 +7,10 @@ const router = express.Router();
 const { getUser, checkProjectAccess } = require("../middleware/auth");
 const { writeSyncEvent, buildSnapshot } = require("../services/syncEventService");
 const { diffObjects } = require("../utils/jsonDiff");
+const { isValidUUID } = require("../middleware/validateUUID");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("annotations");
 
 // ============================================================================
 // ANNOTATION ENDPOINTS
@@ -43,7 +47,11 @@ router.get("/", async (req, res, next) => {
     const values = [status];
     let paramIndex = 2;
 
-    // Filter by file
+    // Filter by file (built-in datasets use non-UUID ids like "builtin-lungs"
+    // and never have server-side annotations, so short-circuit to empty)
+    if (fileId && !isValidUUID(fileId)) {
+      return res.json({ annotations: [], count: 0, limit: parseInt(limit), offset: parseInt(offset) });
+    }
     if (fileId) {
       query += ` AND a.dataset_id = $${paramIndex++}`;
       values.push(fileId);
@@ -118,6 +126,33 @@ router.get("/:id", async (req, res, next) => {
     next(error);
   }
 });
+
+// Clients may omit projectId when creating an annotation (the VR path and the
+// desktop useAnnotations hook both do) — without resolving broadcast targets
+// from file_project_access the way DELETE already does, those annotations are
+// created but never broadcast, and only show up for other users on refetch.
+async function resolveBroadcastProjects(pool, fileId, bodyProjectId) {
+  const projectIds = new Set();
+  if (bodyProjectId) {
+    projectIds.add(bodyProjectId);
+  }
+  try {
+    const result = await pool.query(
+      "SELECT project_id FROM file_project_access WHERE file_id = $1",
+      [fileId]
+    );
+    for (const row of result.rows) {
+      if (row.project_id) {
+        projectIds.add(row.project_id);
+      }
+    }
+  } catch (err) {
+    // Non-fatal: the annotation is already committed. Worst case we fall back
+    // to broadcasting only to the caller-supplied projectId (today's behavior).
+    log.warn("resolveBroadcastProjects: file_project_access lookup failed", err);
+  }
+  return projectIds;
+}
 
 /**
  * POST /api/annotations
@@ -251,27 +286,36 @@ router.post("/", async (req, res, next) => {
     }
     client.release();
 
+    // Resolve every project that can see this file — projectId is often
+    // omitted (VR path, desktop useAnnotations hook), so we can't rely on it
+    // alone to know who to tell. Must run on pool (not client) after release,
+    // so a lookup failure can never roll back the already-committed insert.
+    const broadcastProjectIds = await resolveBroadcastProjects(pool, fileId, projectId);
+    const auditProjectId = projectId || [...broadcastProjectIds][0] || null;
+
     // Audit log
     if (req.audit) {
       await req.audit({
         action: "annotation:create",
         orgId,
-        projectId,
+        projectId: auditProjectId,
         entityType: "annotation",
         entityId: annotation.id,
         after: { type, fileId, visibility },
       });
     }
 
-    // Broadcast to project
-    if (projectId && wsManager) {
-      wsManager.annotationCreated(
-        projectId,
-        fileId,
-        annotation,
-        syncEvent?.id,
-        user.id
-      );
+    // Broadcast to every project that can see this file
+    if (wsManager) {
+      for (const pid of broadcastProjectIds) {
+        wsManager.annotationCreated(
+          pid,
+          fileId,
+          annotation,
+          syncEvent?.id,
+          user.id
+        );
+      }
     }
 
     res.status(201).json({
@@ -692,14 +736,19 @@ router.post("/batch", async (req, res, next) => {
       });
     }
 
-    // Broadcast all created annotations
-    if (projectId && wsManager) {
+    // Broadcast every created annotation to every project that can see its
+    // file. A batch can span multiple files, so cache resolved project ids
+    // per fileId to avoid re-querying file_project_access for repeats.
+    if (wsManager) {
+      const projectIdsByFile = new Map();
       for (const annotation of created) {
-        wsManager.annotationCreated(
-          projectId,
-          annotation.dataset_id,
-          annotation
-        );
+        const fid = annotation.dataset_id;
+        if (!projectIdsByFile.has(fid)) {
+          projectIdsByFile.set(fid, await resolveBroadcastProjects(pool, fid, projectId));
+        }
+        for (const pid of projectIdsByFile.get(fid)) {
+          wsManager.annotationCreated(pid, fid, annotation);
+        }
       }
     }
 
@@ -789,3 +838,4 @@ router.post("/:id/migrate", async (req, res, next) => {
 });
 
 module.exports = router;
+module.exports.resolveBroadcastProjects = resolveBroadcastProjects;

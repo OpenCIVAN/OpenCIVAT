@@ -94,6 +94,27 @@ describe('Disabled feature flag — zero network calls', () => {
   });
 });
 
+describe('Matrix connection state', () => {
+  test('only reports connected while the Matrix client is ready', () => {
+    const bridge = createMatrixBridge({ enabled: true, asToken: 'tok' });
+    const listeners = {};
+    bridge.client = {
+      on: jest.fn((event, listener) => {
+        listeners[event] = listener;
+      }),
+      getUserId: jest.fn(() => '@cia_bridge:matrix.cia-web.local'),
+    };
+
+    bridge._setupEventListeners();
+
+    listeners.sync('PREPARED');
+    expect(bridge.isConnected).toBe(true);
+
+    listeners.sync('ERROR');
+    expect(bridge.isConnected).toBe(false);
+  });
+});
+
 // ============================================================================
 // ECHO SUPPRESSION (outbound sync must never re-relay Matrix-origin messages)
 // ============================================================================

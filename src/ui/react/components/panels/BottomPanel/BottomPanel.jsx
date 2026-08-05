@@ -25,40 +25,7 @@ const TABS = [
         icon: "scrollText",
         component: LogsTab,
     },
-    {
-        id: BottomPanelTabs.COMPUTE,
-        label: "Compute",
-        icon: "cpu",
-        component: () => <ComputePlaceholder />,  // Future implementation
-    },
-    {
-        id: BottomPanelTabs.CONSOLE,
-        label: "Console",
-        icon: "terminal",
-        component: () => <ConsolePlaceholder />,  // Future implementation
-    },
 ];
-
-// Placeholder for future tabs
-function ComputePlaceholder() {
-    return (
-        <div className="bottom-panel__placeholder">
-            <Icon name="cpu" size={32} />
-            <p>Compute Jobs</p>
-            <span>Background processing status will appear here</span>
-        </div>
-    );
-}
-
-function ConsolePlaceholder() {
-    return (
-        <div className="bottom-panel__placeholder">
-            <Icon name="terminal" size={32} />
-            <p>Debug Console</p>
-            <span>Interactive debugging coming soon</span>
-        </div>
-    );
-}
 
 /**
  * BottomPanel - Expandable panel for system output
@@ -78,7 +45,6 @@ export function BottomPanel() {
             expand: panel.expand,
             collapse: panel.collapse,
             showLogs: panel.showLogs,
-            showCompute: panel.showCompute,
         });
     }, [panel]);
 

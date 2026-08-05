@@ -7,7 +7,10 @@
 // - WebSocket broadcasts keep clients in sync without polling
 import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
 import { initializeStorageProvider } from "@Services/storage/storageService.js";
-import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
+import {
+  DatasetManager,
+  isBuiltInDataset,
+} from "@Core/data/managers/DatasetManager.js";
 import { ViewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { subsetManager } from "@Core/data/managers/SubsetManager.js";
@@ -643,6 +646,13 @@ export async function initializePhase2() {
             "@Services/voice/voiceCommandHandlers.js"
           );
           initializeVoiceCommandHandlers();
+
+          // Bridge voice speaking-state -> avatar pulse / presence, and keep
+          // voice audio alive across VR enter/exit.
+          const { initializeVoiceAvatarBridge } = await import(
+            "@Services/voice/voiceAvatarBridge.js"
+          );
+          initializeVoiceAvatarBridge();
         },
         "warn"
       );
@@ -1029,6 +1039,13 @@ async function fetchDatasetsFromServer() {
   let orphanCount = 0;
 
   for (const localDataset of localDatasets) {
+    // Built-in sample datasets are served as static files and never appear on
+    // the server. Exempt them from the orphan sweep so the "Sample Datasets"
+    // catalog is not deleted on every boot.
+    if (isBuiltInDataset(localDataset)) {
+      continue;
+    }
+
     const hasServerId = serverIds.has(localDataset.id);
     const hasServerHash =
       localDataset.hash && serverHashes.has(localDataset.hash);

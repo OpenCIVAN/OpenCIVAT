@@ -71,6 +71,7 @@ describe("VRExplorationManager tool-result persistence", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     primeActiveContext();
+    vrExplorationManager._toolManager = null;
   });
 
   it("persists annotation-created through annotationManager.createAnnotation", async () => {
@@ -170,5 +171,120 @@ describe("VRExplorationManager tool-result persistence", () => {
       })
     ).not.toThrow();
     await flush();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Draft state machine wiring: fixing a point (annotation-pending) and
+// discarding it (annotation-cancelled) must never touch the server — only
+// Save (confirmAnnotationDraft -> annotation-created) may. Also covers the
+// in-flight-undo hole: undo racing ahead of an in-flight create POST.
+// ---------------------------------------------------------------------------
+describe("VR annotation draft persistence", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    primeActiveContext();
+    vrExplorationManager._toolManager = null;
+  });
+
+  it("annotation-pending does NOT call createAnnotation", async () => {
+    vrExplorationManager._handleToolAction({
+      type: "annotation-pending",
+      data: { id: "draft_1", position: { x: 1, y: 1, z: 1 } },
+    });
+    await flush();
+
+    expect(mockAnnotationManager.createAnnotation).not.toHaveBeenCalled();
+  });
+
+  it("annotation-cancelled does NOT call createAnnotation", async () => {
+    vrExplorationManager._handleToolAction({
+      type: "annotation-cancelled",
+      data: { id: "draft_1" },
+    });
+    await flush();
+
+    expect(mockAnnotationManager.createAnnotation).not.toHaveBeenCalled();
+  });
+
+  it("confirmAnnotationDraft() routes through _handleToolAction and persists the typed text", async () => {
+    mockAnnotationManager.createAnnotation.mockResolvedValue({ id: "srv-9" });
+
+    const annotation = {
+      id: "annot_local",
+      type: "marker",
+      position: { x: 1, y: 2, z: 3 },
+      normal: null,
+      timestamp: Date.now(),
+      text: "Crack in the hull",
+      color: [1, 0.5, 0],
+      size: 0.02,
+    };
+    const fakeTool = {
+      id: "annotate",
+      confirmDraft: vi.fn(() => ({ type: "annotation-created", data: annotation })),
+    };
+    vrExplorationManager._toolManager = { getActiveTool: () => fakeTool };
+
+    const result = vrExplorationManager.confirmAnnotationDraft();
+
+    expect(result).toBe(true);
+    expect(fakeTool.confirmDraft).toHaveBeenCalled();
+
+    await flush();
+
+    expect(mockAnnotationManager.createAnnotation).toHaveBeenCalledWith(
+      "ds-1",
+      expect.objectContaining({
+        position: [1, 2, 3],
+        text: "Crack in the hull",
+        type: "point",
+      }),
+      { projectId: "proj-1" }
+    );
+    // Persisted onto the SAME object confirmDraft() returned.
+    expect(annotation.serverId).toBe("srv-9");
+  });
+
+  it("no-ops safely when Annotate isn't the active tool (or no tool manager at all)", () => {
+    expect(vrExplorationManager.confirmAnnotationDraft()).toBe(false);
+    expect(vrExplorationManager.cancelAnnotationDraft()).toBe(false);
+    expect(vrExplorationManager.getAnnotationDraft()).toBeNull();
+    expect(vrExplorationManager.appendAnnotationDraft("x")).toBeNull();
+    expect(vrExplorationManager.backspaceAnnotationDraft()).toBeNull();
+
+    vrExplorationManager._toolManager = { getActiveTool: () => ({ id: "clip" }) };
+    expect(vrExplorationManager.confirmAnnotationDraft()).toBe(false);
+    expect(mockAnnotationManager.createAnnotation).not.toHaveBeenCalled();
+  });
+
+  it("in-flight undo: mark _deleted, resolve createAnnotation, assert deleteAnnotation fires", async () => {
+    let resolveCreate;
+    mockAnnotationManager.createAnnotation.mockImplementation(
+      () => new Promise((resolve) => { resolveCreate = resolve; })
+    );
+    mockAnnotationManager.deleteAnnotation.mockResolvedValue();
+
+    const data = {
+      id: "annot_local",
+      type: "marker",
+      position: { x: 1, y: 2, z: 3 },
+      normal: null,
+      text: "",
+    };
+
+    vrExplorationManager._handleToolAction({ type: "annotation-created", data });
+    // Let the create POST actually fire (and capture resolveCreate) before
+    // the user's undo lands — mirrors a keyboard user hitting Undo a beat
+    // before the network round-trip finishes.
+    await flush();
+
+    data._deleted = true; // VRAnnotationTool.undoLast()'s tombstone
+
+    resolveCreate({ id: "srv-42" });
+    await flush();
+
+    expect(data.serverId).toBe("srv-42");
+    expect(mockAnnotationManager.deleteAnnotation).toHaveBeenCalledWith("ds-1", "srv-42");
   });
 });

@@ -19,7 +19,6 @@ import "@UI/react/styles/global.scss";
 function checkBrowserCompatibility() {
   const required = {
     WebGL: !!document.createElement("canvas").getContext("webgl2"),
-    WebRTC: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
     WebSocket: "WebSocket" in window,
     IndexedDB: "indexedDB" in window,
   };

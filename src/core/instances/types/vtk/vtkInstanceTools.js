@@ -62,12 +62,37 @@ class InstanceToolsManager {
       opacityFunction: null,
     };
 
-    // Create widget manager (shared by all widgets)
+    // Create widget manager (shared by all widgets).
+    //
+    // NOTE ON instanceData.widgetManager: several features (VTKClippingFeature
+    // among them) read `instanceData.widgetManager` during their own
+    // initialize() to decide whether an interactive widget path is available.
+    // This method only receives `sceneObjects`, not the instance's
+    // `instanceData` object, so it cannot assign onto it directly — use
+    // `getWidgetManager(instanceId)` below to bridge it from the caller.
+    // See VTKInstanceHandler.js's initializeVTKInstance (around the call to
+    // `instanceTools.initializeTools(instanceId, instanceData.sceneObjects)`,
+    // just before the feature `.initialize()` loop) for the one-line bridge:
+    //   instanceData.widgetManager = instanceTools.getWidgetManager(instanceId);
+    //
+    // VR must NEVER use this widget manager — it always calls
+    // `enableClipping(instanceId, { manual: true })` instead, because
+    // vtkWidgetManager needs a mouse interactor and would add widget actors
+    // into the shared VR renderer (contaminating desktop bounds).
     tools.widgetManager = vtkWidgetManager.newInstance();
     tools.widgetManager.setRenderer(sceneObjects.renderer);
 
     this.instanceTools.set(instanceId, tools);
     log.debug(`Tools initialized for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get the shared vtkWidgetManager for an instance, so callers can bridge it
+   * onto instanceData (see the NOTE in initializeTools() above). Returns
+   * null/undefined if tools haven't been initialized for this instance yet.
+   */
+  getWidgetManager(instanceId) {
+    return this.instanceTools.get(instanceId)?.widgetManager;
   }
 
   // ==========================================================================

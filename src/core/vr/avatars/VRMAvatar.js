@@ -233,6 +233,12 @@ export class VRMAvatar {
     this._vtkActor.addTexture(this._vtkTexture);
     this._vtkActor.getProperty().setOpacity(1.0);
     this._vtkActor.setVisibility(false);
+    // The VR renderer IS the desktop renderer, and VR raycasting
+    // (VTKInstanceHandler._getVRPickTargets) filters candidates by
+    // pickability — an unpickable-by-default VRM avatar billboard would
+    // otherwise stand between the user and the data and absorb probe/
+    // measure/teleport hits.
+    this._vtkActor.setPickable(false);
 
     vtkRenderer.addActor(this._vtkActor);
   }

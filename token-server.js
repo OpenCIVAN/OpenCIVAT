@@ -1,3 +1,17 @@
+// MUST be the very first statement. Everything below reads process.env at
+// module-load time, and this file is started as a bare `node token-server.js`
+// (package.json "token-server") with nothing else loading .env for it.
+// Without this line THREE settings silently read as unset:
+//   - LIVEKIT_API_KEY / LIVEKIT_API_SECRET -> fall back to LiveKit's dev
+//     "devkey"/"secret", which LiveKit Cloud rejects on every token.
+//   - NODE_ENV and DEV_BYPASS_AUTH -> DEV_BYPASS_AUTH below evaluates false
+//     (it requires BOTH, see server/src/middleware/auth.js:152-154), so the
+//     token endpoint demands a real Keycloak JWT and 401s every voice join
+//     even though .env says the bypass is on.
+// In particular it must precede the auth middleware require: that module
+// computes DEV_BYPASS_AUTH once, at import time.
+require("dotenv").config();
+
 const express = require("express");
 const { AccessToken } = require("livekit-server-sdk");
 const cors = require("cors");
@@ -50,6 +64,11 @@ async function requireAuth(req, res, next) {
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "devkey";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "secret";
 
+// Whether we are still on LiveKit's --dev defaults. Reported at startup below
+// because the failure mode otherwise appears only as a rejected token on join.
+const usingDevCredentials =
+  !process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET;
+
 app.post("/token", requireAuth, async (req, res) => {
   try {
     const { roomName, userName } = req.body;
@@ -100,6 +119,26 @@ app.get("/health", (req, res) => {
 const PORT = 3002;
 app.listen(PORT, "0.0.0.0", () => {
   log.info("Token server running on port:", PORT);
-  log.debug("API Key:", LIVEKIT_API_KEY);
-  log.debug("API Secret:", LIVEKIT_API_SECRET ? "[SET]" : "[NOT SET]");
+  log.info(`  auth mode:    ${DEV_BYPASS_AUTH ? "DEV BYPASS (no JWT required)" : "Keycloak JWT required"}`);
+  log.info(`  LIVEKIT_URL:  ${process.env.LIVEKIT_URL || "(unset -> client falls back to ws://localhost:7880)"}`);
+  log.info(`  API key:      ${usingDevCredentials ? '"devkey" (LiveKit --dev default)' : LIVEKIT_API_KEY}`);
+
+  // These two combinations account for essentially every "voice just won't
+  // connect" report, and neither surfaces an obvious error at join time:
+  // Cloud rejects dev credentials, and a ws:// URL is blocked as mixed
+  // content from the HTTPS page a headset must use for WebXR.
+  if (usingDevCredentials) {
+    log.warn(
+      'LiveKit credentials are the built-in dev defaults. These work ONLY with a local ' +
+        '`livekit-server --dev`. LiveKit Cloud will reject every token generated with them — ' +
+        "set LIVEKIT_API_KEY and LIVEKIT_API_SECRET in .env."
+    );
+  }
+  const livekitUrl = process.env.LIVEKIT_URL;
+  if (livekitUrl && livekitUrl.startsWith("ws://")) {
+    log.warn(
+      `LIVEKIT_URL is ws:// (${livekitUrl}). A headset must load the app over HTTPS for WebXR, ` +
+        "and browsers block ws:// from an HTTPS page as mixed content. Use a wss:// URL."
+    );
+  }
 });

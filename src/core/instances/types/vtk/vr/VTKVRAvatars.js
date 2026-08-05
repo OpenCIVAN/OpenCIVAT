@@ -46,6 +46,24 @@ class VRAvatarSystem {
     this._manager?.setLocalAvatarUrl(url);
   }
 
+  /**
+   * Set the local user's speaking state (drives the avatar head pulse on remote
+   * clients). No-op when no VR session is active.
+   * @param {boolean} speaking
+   */
+  setLocalSpeaking(speaking) {
+    this._manager?.setLocalSpeaking(speaking);
+  }
+
+  /**
+   * Mark the local user as currently changing the shared data (halo + badge on
+   * their avatar for every other headset). No-op when no VR session is active.
+   * @param {string|null} target - 'dataset' | 'filter' | null
+   */
+  setLocalActivity(target) {
+    this._manager?.setLocalActivity(target);
+  }
+
   dispose() {
     this._manager?.dispose();
     this._manager = null;

@@ -40,6 +40,7 @@ vi.mock('@Utils/conflictStrategies.js', () => ({
       entityLabel: 'view',
       supportsDuplication: true,
       safeFields: new Set(['camera', 'name']),
+      identityFields: new Set(['dataset_id', 'project_id']),
       resolverId: 'viewConfigurationManager',
       mergeWarning: 'Cannot auto-merge layout fields',
       duplicationUnsupportedReason: null,
@@ -146,6 +147,47 @@ describe('ConflictResolutionDialog — generic behavior', () => {
     render(<ConflictResolutionDialog />);
     dispatchConflict(makeConflict({ entityType: 'unknown_entity' }));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  test('projects serverObject down to clientObject\'s keys before diffing, so DB-only fields (id, revision, timestamps) never appear as phantom overlaps', () => {
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict({
+      clientObject: { camera: { fov: 60 }, name: 'Mine' },
+      serverObject: {
+        id: 'view-1',
+        revision: 9,
+        created_at: '2024-06-01T00:00:00Z',
+        updated_at: '2024-06-01T00:00:00Z',
+        camera: { fov: 75 },
+        name: 'Mine',
+      },
+    }));
+
+    // First diff() call is serverDiff = diff(clientObject, serverObjectForDiff).
+    const [baseArg, nextArg] = diff.mock.calls[0];
+    expect(baseArg).toEqual({ camera: { fov: 60 }, name: 'Mine' });
+    // serverObjectForDiff must be projected to clientObject's key set only —
+    // id/revision/created_at/updated_at must not leak in as comparison noise.
+    expect(Object.keys(nextArg).sort()).toEqual(['camera', 'name']);
+    expect(nextArg.camera).toEqual({ fov: 75 });
+    expect(nextArg.name).toBe('Mine');
+  });
+
+  test('excludes identityFields (dataset_id/project_id) from the diff entirely, even when they differ', () => {
+    render(<ConflictResolutionDialog />);
+    dispatchConflict(makeConflict({
+      clientObject: { dataset_id: 'builtin-lungs', project_id: 'proj-1', camera: { fov: 60 } },
+      serverObject: { dataset_id: null, project_id: null, camera: { fov: 75 } },
+    }));
+
+    const [baseArg, nextArg] = diff.mock.calls[0];
+    // Neither side of the diff should carry dataset_id/project_id at all —
+    // built-in datasets are null server-side by design, not a real conflict.
+    expect(baseArg).not.toHaveProperty('dataset_id');
+    expect(baseArg).not.toHaveProperty('project_id');
+    expect(nextArg).not.toHaveProperty('dataset_id');
+    expect(nextArg).not.toHaveProperty('project_id');
+    expect(Object.keys(nextArg)).toEqual(['camera']);
   });
 
   test('"Use server version" calls resolveConflictUseServer', async () => {

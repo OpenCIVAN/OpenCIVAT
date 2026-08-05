@@ -24,7 +24,7 @@ The toolkit is **not** production-ready software. It is an initial open-source b
 | Category | Capability |
 |---|---|
 | **Visualization** | 3D surface rendering, volume rendering, isosurfaces, slicing (MPR), scalar coloring, glyphs, clipping, thresholding, time series — powered by VTK.js and server-side Python VTK |
-| **Immersive / XR** | WebXR support; works in Apple Vision Pro browser, desktop WebXR browsers, and standard browsers without XR hardware |
+| **Immersive / XR** | WebXR support for **Apple Vision Pro** (gripless transient-pointer/pinch input) and **Oculus/Meta Quest 2** (full controller input — thumbstick locomotion, snap turn, grip/trigger); falls back to standard browsers without XR hardware |
 | **Collaboration** | Synchronous multi-user sessions; shared cursor and camera presence via Y.js; voice communication via LiveKit |
 | **Data workflow** | Server-side VTK rendering (`.vtp`, `.vtu`, `.vti`); built-in sample datasets; browser VTK.js fallback |
 | **Architecture** | Python VTK render server (server-side rendering); Node.js API; React 18 frontend; Docker-based backend |
@@ -54,8 +54,9 @@ The toolkit is **not** production-ready software. It is an initial open-source b
 | Role | Platform |
 |------|----------|
 | Dev machine + render server | Windows + NVIDIA GPU (GPU-accelerated Docker rendering) |
-| Primary client | Apple Vision Pro browser (thin client, receives rendered frames) |
-| Secondary client | Desktop browser — Chrome, Firefox, Edge, Safari |
+| VR client | Apple Vision Pro browser (thin client, receives rendered frames) |
+| VR client | Oculus/Meta Quest 2 (Quest Browser, full WebXR controller input) |
+| Desktop client | Desktop browser — Chrome, Firefox, Edge, Safari |
 | macOS dev | macOS — CPU/Mesa rendering only, frontend and API work |
 
 ---
@@ -163,6 +164,9 @@ For server-side datasets: copy files to `server/datasets/` (auto-scanned by rend
 | [docs/getting-started.md](docs/getting-started.md) | Step-by-step run instructions for all workflows |
 | [docs/windows-gpu-setup.md](docs/windows-gpu-setup.md) | Windows + NVIDIA + WSL2 + Docker GPU setup |
 | [docs/apple-vision-pro.md](docs/apple-vision-pro.md) | Apple Vision Pro browser client guide |
+| [docs/quest-voice-setup.md](docs/quest-voice-setup.md) | Oculus/Meta Quest 2 multi-headset voice, avatars & sync setup |
+| [docs/avatars.md](docs/avatars.md) | VR avatar subsystem — representation, pose sync, coordinate transforms |
+| [docs/demo-runbook.md](docs/demo-runbook.md) | Live demo script for desktop + VR feature walkthroughs |
 | [docs/server-rendering.md](docs/server-rendering.md) | Server-side rendering architecture and protocol |
 | [docs/architecture.md](docs/architecture.md) | System architecture and design decisions |
 | [docs/installation.md](docs/installation.md) | Full installation and configuration reference |

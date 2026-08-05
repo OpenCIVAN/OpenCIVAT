@@ -4,7 +4,6 @@
 
 import React, { useState, useRef, memo } from 'react';
 import { Icon } from '@UI/react/components/atoms';
-import { VRButton } from '@UI/react/components/molecules';
 import { VRExploreButton } from '@UI/react/components/molecules/VRExploreButton';
 
 // ============================================================================
@@ -71,20 +70,18 @@ export const InstanceToolbar = memo(function InstanceToolbar({
                     >
                         <Icon name="wrench" size={16} />
                     </button>
-                    {/* Use VRExploreButton when dataset available, fallback to VRButton */}
-                    {dataset ? (
-                        <VRExploreButton
-                            instanceId={instanceId}
-                            dataset={dataset}
-                            viewConfig={viewConfig}
-                            projectId={projectId}
-                            selection={selection}
-                            activeSessions={activeSessions}
-                            size="sm"
-                        />
-                    ) : (
-                        <VRButton instanceId={instanceId} size="sm" />
-                    )}
+                    {/* VRExploreButton renders itself disabled with a tooltip
+                        when no dataset is loaded yet — no separate fallback
+                        button that would open an empty VR session. */}
+                    <VRExploreButton
+                        instanceId={instanceId}
+                        dataset={dataset}
+                        viewConfig={viewConfig}
+                        projectId={projectId}
+                        selection={selection}
+                        activeSessions={activeSessions}
+                        size="sm"
+                    />
                 </div>
             </div>
         </div>

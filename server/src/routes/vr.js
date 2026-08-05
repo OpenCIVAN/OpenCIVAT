@@ -4,10 +4,26 @@
 const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const { createLogger } = require("../utils/logger");
+const { isValidUUID } = require("../middleware/validateUUID");
 const vrPreprocessing = require("../services/vrPreprocessing");
 
 const router = express.Router({ mergeParams: true });
 const log = createLogger("vr");
+
+// Client-supplied ids bound into UUID columns are sometimes not UUIDs at all —
+// built-in demo datasets (e.g. "builtin-lungs") are client-side-only and have
+// no row in `datasets`, so Postgres rejects the cast and the whole insert
+// aborts (see the "invalid input syntax for type uuid" failure this guards
+// against). Mirrors the client's own builtin-id guard in
+// ViewConfigurationManager.createView(); null is always safe here since every
+// UUID column these ids feed is nullable (ON DELETE SET NULL / no NOT NULL).
+function asUuidOrNull(value) {
+  if (isValidUUID(value)) return value;
+  if (value != null) {
+    log.debug(`Non-UUID id "${value}" nulled before UUID column bind`);
+  }
+  return null;
+}
 
 // =============================================================================
 // SESSION CRUD
@@ -54,9 +70,9 @@ router.post("/sessions", async (req, res) => {
       RETURNING *`,
       [
         sessionId,
-        viewConfigurationId,
-        datasetId,
-        projectId,
+        asUuidOrNull(viewConfigurationId),
+        asUuidOrNull(datasetId),
+        asUuidOrNull(projectId),
         userId,
         userName,
         selectionType || "full",
@@ -457,7 +473,9 @@ router.post("/sessions/:id/snapshots", async (req, res) => {
         uuidv4(),
         req.params.id,
         name || `Snapshot ${new Date().toLocaleTimeString()}`,
-        viewSnapshotId,
+        // view_snapshot_id is UUID too and hits the same "invalid input
+        // syntax" failure if a non-UUID slips through from the client.
+        asUuidOrNull(viewSnapshotId),
         userId,
         userName,
         participantStates ? JSON.stringify(participantStates) : null,
@@ -735,3 +753,4 @@ router.post("/preprocessing/internal/failed", async (req, res) => {
 });
 
 module.exports = router;
+module.exports.asUuidOrNull = asUuidOrNull;

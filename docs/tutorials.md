@@ -106,20 +106,57 @@ Filter state is shared with all users in the room — changing a filter updates 
 1. Click **Enter VR** in the top bar. The browser requests permission to enter immersive VR.
 2. The session switches to stereo rendering. Your desktop collaborators see your avatar.
 
-### Controls (Quest 2)
+### The in-headset menu
+
+There is no wrist menu. A **floating spatial panel** sits in front of you, slightly
+below eye level, and follows your gaze with a lazy re-anchor. Tap **Hide** to dismiss
+it; a small **Menu** tab remains, and tapping that brings the panel back.
+
+Two buttons open *drawers* — extra rows above the panel:
+
+- **Style** — Surface / Wireframe / Points, and the reference grid's plane
+- **Filters** — Threshold and Isosurface
+
+Both drawers share one **Target / − / + / Reset** stepper row. `Target` chooses which
+number the stepper drives (point size, line width, threshold bounds, isovalue,
+opacity); a dimmed button means that control cannot do anything for the current
+dataset. Selecting a tool also reveals a contextual row of its own options.
+
+### Controls — Quest 2
 
 | Action | Input |
 |---|---|
-| Teleport | Point right controller, hold trigger, release |
-| Turn | Left thumbstick left/right |
-| Fly forward/back | Right thumbstick up/down |
-| Open wrist menu | Look at your left wrist |
-| Select tool | Gaze at wrist menu item, hold trigger |
-| Place annotation | Point at surface, press trigger |
+| Select a menu button | Point, then trigger |
+| Pull the world toward you | Hold grip and move your hand |
+| Move | Left thumbstick |
+| Snap turn | Right thumbstick left/right |
+| Place a point (measure / annotate / probe) | Point at the surface, trigger |
+| Aim the clip plane | Hold trigger and sweep |
+| Undo | Menu **Undo**, or A while a tool is active |
+
+### Controls — Apple Vision Pro
+
+Vision Pro has no grip, no thumbstick, and no face buttons — the pinch is the only
+input. Everything else lives on the panel, so there is no loss of capability.
+
+| Action | Input |
+|---|---|
+| Select a menu button | Look at it and pinch |
+| Place a point | Look at the surface and pinch |
+| Aim the clip plane | Pinch and sweep; **Axis** snaps the cut to X/Y/Z |
+| Move / turn / undo | Panel buttons |
+
+### Measuring
+
+Measurement is a **chained path**: pinch once to drop a point, again to close a
+segment, and each further pick continues from the last point. Every segment shows its
+own distance and the panel shows a running total. **Undo** removes one point at a
+time; **New Path** (on the contextual row) starts a disconnected measurement.
 
 ### Return to desktop
 
-Look at your left wrist → wrist menu → **Exit VR**, or remove the headset (the browser automatically exits the XR session).
+**Exit VR** on the panel, or simply remove the headset — the browser ends the XR
+session automatically.
 
 ---
 

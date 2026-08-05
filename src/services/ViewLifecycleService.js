@@ -509,16 +509,27 @@ class ViewLifecycleService {
     // Resolve position using flow-aware search
     let { row, col } = options;
     let needsExpansion = false;
-
-    if (row === undefined || col === undefined) {
-      const nextCell = this._findNextEmptyCell(canvas);
-      row = row ?? nextCell.row;
-      col = col ?? nextCell.col;
-      needsExpansion = nextCell.expanded || false;
-    }
-
     const rowSpan = options.rowSpan || 1;
     const colSpan = options.colSpan || 1;
+
+    // An explicit {row, col} (e.g. the header "Load Data" button always
+    // passes {0, 0}) is only honored if that cell is actually free — callers
+    // don't know what's already placed there. Without this check, loading a
+    // second dataset onto an already-occupied cell silently stacks both
+    // placements at the same coordinates instead of one replacing the other,
+    // and both views' VTK instances end up rendering into the same cell.
+    const explicitPositionTaken =
+      row !== undefined &&
+      col !== undefined &&
+      canvas.isPositionAvailable &&
+      !canvas.isPositionAvailable(row, col, rowSpan, colSpan);
+
+    if (row === undefined || col === undefined || explicitPositionTaken) {
+      const nextCell = this._findNextEmptyCell(canvas);
+      row = explicitPositionTaken ? nextCell.row : row ?? nextCell.row;
+      col = explicitPositionTaken ? nextCell.col : col ?? nextCell.col;
+      needsExpansion = nextCell.expanded || false;
+    }
 
     // Auto-expand canvas if needed
     if (needsExpansion) {

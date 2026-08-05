@@ -6,6 +6,7 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   voiceRoomService,
   VoiceConnectionState,
+  getVoiceRoomName,
 } from "@Services/voice/voiceRoomService.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 
@@ -123,13 +124,15 @@ export function useVoiceControls({
 
     setIsJoining(true);
     try {
-      const voiceRoomName = roomId ? `room-${roomId}` : "main-room";
+      // Canonical room derived from the collaboration session (same id as Y.js),
+      // so everyone in this session lands in the same LiveKit room.
+      const voiceRoomName = getVoiceRoomName();
       await voiceRoomService.joinRoom(voiceRoomName, userName);
 
       presenceSystem.updateVoiceState({
         inVoice: true,
         isMuted: voiceRoomService.isMuted,
-        roomId: roomId,
+        roomId: voiceRoomName,
       });
 
       setMuted(voiceRoomService.isMuted);

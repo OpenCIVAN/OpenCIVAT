@@ -18,6 +18,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   voiceRoomService,
   VoiceConnectionState,
+  getVoiceRoomName,
 } from "@Services/voice/voiceRoomService.js";
 import { getUserName } from "@Collaboration/presence/userManagement.js";
 import { toast } from "@UI/react/store/toastStore.js";
@@ -244,11 +245,14 @@ export function useVoiceTab(options = {}) {
   const handleJoin = useCallback(async () => {
     try {
       const userName = getUserName() || "Anonymous User";
-      const roomId = currentChannel || channels[0]?.id || "main";
-      await voiceRoomService.joinRoom(roomId, userName);
+      const channel = currentChannel || channels[0]?.id || "main";
+      // Derive the LiveKit room from the session + channel so the Voice tab
+      // joins the same room as the voice bar and voice commands.
+      const roomName = getVoiceRoomName(channel);
+      await voiceRoomService.joinRoom(roomName, userName);
       setMuted(voiceRoomService.isMuted);
       toast.success(
-        `Joined ${channels.find((c) => c.id === roomId)?.name || roomId}`
+        `Joined ${channels.find((c) => c.id === channel)?.name || channel}`
       );
     } catch (error) {
       toast.error("Failed to join voice. Make sure LiveKit is running.");

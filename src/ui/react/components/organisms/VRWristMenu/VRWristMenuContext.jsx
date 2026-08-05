@@ -72,9 +72,6 @@ export function VRWristMenuProvider({ children }) {
         setIsOpen(true);
         setActiveSegment(null);
         setSubMenuStack([]);
-
-        // Emit event for other systems
-        window.dispatchEvent(new CustomEvent('cia:wrist-menu-opened'));
     }, []);
 
     // Close the menu
@@ -83,9 +80,6 @@ export function VRWristMenuProvider({ children }) {
         setActiveSegment(null);
         setSubMenuStack([]);
         setHoveredSegment(null);
-
-        // Emit event for other systems
-        window.dispatchEvent(new CustomEvent('cia:wrist-menu-closed'));
     }, []);
 
     // Toggle menu
@@ -100,11 +94,6 @@ export function VRWristMenuProvider({ children }) {
     // Select a segment
     const selectSegment = useCallback((segmentId) => {
         setActiveSegment(segmentId);
-
-        // Emit event
-        window.dispatchEvent(new CustomEvent('cia:wrist-menu-segment-selected', {
-            detail: { segmentId }
-        }));
     }, []);
 
     // Hover a segment
@@ -122,13 +111,11 @@ export function VRWristMenuProvider({ children }) {
         setSubMenuStack(prev => prev.slice(0, -1));
     }, []);
 
-    // Execute an action and optionally close menu
+    // Execute an action and optionally close menu.
+    // NOTE: in-headset actions run through the VTK spatial menu
+    // (VRSpatialMenuModel), not this DOM component — this 2D fallback only
+    // manages its own open/close state.
     const executeAction = useCallback((actionId, closeAfter = true) => {
-        // Emit action event
-        window.dispatchEvent(new CustomEvent('cia:wrist-menu-action', {
-            detail: { actionId }
-        }));
-
         if (closeAfter) {
             closeMenu();
         }

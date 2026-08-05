@@ -33,6 +33,7 @@ import cameraSharePolicy from "@Core/session/cameraSharePolicy.js";
 import { authService } from "@Services/authService.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { sync as log } from "@Utils/logger.js";
+import { resolveWsUrl } from "@Utils/resolveWsUrl.js";
 
 // ============================================================================
 // Core Y.js Document and Awareness
@@ -77,6 +78,16 @@ export const yVRControllers = ydoc.getMap("vrControllers");
 // NOTE: Planning migration to Matrix-CRDT for federation and E2EE
 export const yText = ydoc.getArray("chatMessages");
 
+// VR session registry: viewConfigurationId -> { sessionId, viewConfigurationId,
+// hostUserId, hostUserName, datasetId, projectId, createdAt, lastHeartbeat,
+// participantCount }
+// Room-scoped so two "Enter VR" taps on the SAME view converge on one shared
+// Y.js session id instead of each minting its own vrsession_<ts>_<rand> and
+// opening a DIFFERENT `vr-participants-<sessionId>` map. Server discovery
+// (GET /vr/sessions) can't fix this — it filters on projectId, which is
+// undefined for locally loaded datasets.
+export const yVRSessions = ydoc.getMap("vr-sessions");
+
 // ============================================================================
 // Provider Initialization
 // ============================================================================
@@ -110,7 +121,7 @@ export async function initializeYjsProvider() {
   }
 
   const roomId = sessionManager.getRoomId();
-  const wsUrl = clientConfig.yjsWebSocketUrl;
+  const wsUrl = resolveWsUrl(clientConfig.yjsWebSocketUrl);
   let token = null;
 
   try {
@@ -363,6 +374,113 @@ export function syncActiveDatasetToYjs(roomId, userId, datasetInfo) {
     console.log('[CIA Collab] → activeDataset broadcast', datasetInfo.datasetId, 'v' + version);
   } catch (error) {
     log.error("Failed to sync active dataset to Y.js:", error);
+  }
+}
+
+// ============================================================================
+// VR SESSION REGISTRY (Phase 1 — session convergence)
+// ============================================================================
+
+/**
+ * A registry record whose lastHeartbeat is older than this is treated as
+ * abandoned (e.g. the host's tab closed without a clean leave) — a fresh
+ * "Enter VR" on that view claims the slot instead of adopting a dead session.
+ */
+export const VR_SESSION_STALE_MS = 15000;
+
+function isLiveVRSessionRecord(record, nowMs = Date.now()) {
+  if (!record) return false;
+  return nowMs - (record.lastHeartbeat || 0) <= VR_SESSION_STALE_MS;
+}
+
+/**
+ * Look up the live VR session registered for a view, if any.
+ * @param {string} viewConfigurationId
+ * @returns {object|null} the record, or null if missing/stale
+ */
+export function getVRSessionForView(viewConfigurationId) {
+  if (!viewConfigurationId) return null;
+  const record = yVRSessions.get(viewConfigurationId);
+  return isLiveVRSessionRecord(record) ? record : null;
+}
+
+/**
+ * Try to claim the VR session slot for a view. If a live record already
+ * exists there — another client claimed it first — that record is returned
+ * UNCHANGED and the caller must adopt it rather than overwrite it. Otherwise
+ * our record is written and returned.
+ *
+ * Two clients can call this "simultaneously" (neither sees a live record
+ * yet) and both write; Y.js Map is last-writer-wins, so every client
+ * eventually converges on ONE surviving value once the transactions
+ * propagate. The loser of that race has to notice its own value lost (see
+ * VRExplorationManager's post-claim observer) and re-key rather than trying
+ * to tie-break locally — there is no way to pick a winner synchronously
+ * across two clients that can't see each other yet.
+ *
+ * @param {string} viewConfigurationId
+ * @param {{sessionId:string, hostUserId:string, hostUserName:string, datasetId?:string, projectId?:string, participantCount?:number}} record
+ * @returns {object} the record that won the claim — ours, or the pre-existing live one
+ */
+export function claimVRSession(viewConfigurationId, record) {
+  let winner = record;
+  try {
+    ydoc.transact(() => {
+      const existing = yVRSessions.get(viewConfigurationId);
+      if (isLiveVRSessionRecord(existing)) {
+        winner = existing;
+        return;
+      }
+      const now = Date.now();
+      winner = {
+        ...record,
+        viewConfigurationId,
+        createdAt: record.createdAt || now,
+        lastHeartbeat: now,
+        participantCount: record.participantCount || 1,
+      };
+      yVRSessions.set(viewConfigurationId, winner);
+    });
+  } catch (error) {
+    log.error("Failed to claim VR session:", error);
+  }
+  return winner;
+}
+
+/**
+ * Refresh lastHeartbeat so the record doesn't go stale while its session is
+ * active. Any participant may call this, not just the host — no-op if there
+ * is no record for the view (e.g. it was already released).
+ * @param {string} viewConfigurationId
+ * @param {string} userId - unused today; kept for parity with releaseVRSession's signature
+ */
+export function heartbeatVRSession(viewConfigurationId, userId) {
+  try {
+    const existing = yVRSessions.get(viewConfigurationId);
+    if (!existing) return;
+    yVRSessions.set(viewConfigurationId, {
+      ...existing,
+      lastHeartbeat: Date.now(),
+    });
+  } catch (error) {
+    log.error("Failed to heartbeat VR session:", error);
+  }
+}
+
+/**
+ * Release the VR session slot for a view. Host-only: a non-host calling this
+ * is a no-op, so a joiner losing network briefly can never delete the
+ * registry entry out from under the host.
+ * @param {string} viewConfigurationId
+ * @param {string} userId - caller's user id
+ */
+export function releaseVRSession(viewConfigurationId, userId) {
+  try {
+    const existing = yVRSessions.get(viewConfigurationId);
+    if (!existing || existing.hostUserId !== userId) return;
+    yVRSessions.delete(viewConfigurationId);
+  } catch (error) {
+    log.error("Failed to release VR session:", error);
   }
 }
 

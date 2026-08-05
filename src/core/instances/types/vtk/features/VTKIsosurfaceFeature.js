@@ -215,8 +215,11 @@ export class VTKIsosurfaceFeature extends FeatureInterface {
     state.isoActor = isoActor;
     state.enabled = true;
 
-    // Reset camera and render
-    renderer.resetCamera();
+    // Update clipping range and render — do not reset the camera. Adding an
+    // isosurface to an existing view should not yank the camera home (wrong
+    // on desktop too), and in VR resetCamera() corrupts the stereo
+    // projection by overwriting physicalScale (Renderer.js:398).
+    renderer.resetCameraClippingRange();
     renderWindow?.render();
 
     log.debug(`Isosurface enabled at value: ${state.isovalue}`);

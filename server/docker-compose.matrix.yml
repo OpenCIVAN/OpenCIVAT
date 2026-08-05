@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Matrix Federation Infrastructure for CIA Web
 #
 # This compose file sets up:

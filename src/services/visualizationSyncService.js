@@ -28,6 +28,56 @@ const NO_PERMISSION = { persisted: false, reason: "permission-denied" };
 
 const _roleFetchInFlight = new Set();
 
+// ---------------------------------------------------------------------------
+// Ephemeral Y.js send throttling
+//
+// The durable REST persist (ViewConfigurationManager) already throttles to
+// 100ms, but the ephemeral Y.js send was called once per React onChange tick —
+// a slider drag flooded the CRDT + relay with an update per pixel. Throttle the
+// Y.js send per view with a leading edge + a guaranteed trailing flush so the
+// final value is never dropped, at ~20 updates/sec (matches VRCursorSync).
+// Patches are merged per view (shallow) so distinct fields queued within a
+// window are all delivered in one send.
+// ---------------------------------------------------------------------------
+const YJS_SEND_THROTTLE_MS = 50;
+
+function createViewPatchThrottle(sendFn, throttleMs = YJS_SEND_THROTTLE_MS) {
+  const state = new Map(); // viewId -> { lastSent, timer, pending, userId }
+
+  const flush = (viewId) => {
+    const e = state.get(viewId);
+    if (!e || !e.pending) return;
+    const patch = e.pending;
+    e.pending = null;
+    e.lastSent = Date.now();
+    if (e.timer) {
+      clearTimeout(e.timer);
+      e.timer = null;
+    }
+    if (e.userId) sendFn(viewId, e.userId, patch);
+  };
+
+  return (viewId, userId, patch) => {
+    let e = state.get(viewId);
+    if (!e) {
+      e = { lastSent: 0, timer: null, pending: null, userId };
+      state.set(viewId, e);
+    }
+    e.userId = userId;
+    e.pending = { ...(e.pending || {}), ...patch };
+
+    const elapsed = Date.now() - e.lastSent;
+    if (elapsed >= throttleMs) {
+      flush(viewId);
+    } else if (!e.timer) {
+      e.timer = setTimeout(() => flush(viewId), throttleMs - elapsed);
+    }
+  };
+}
+
+const _throttledCameraSend = createViewPatchThrottle(syncCameraToYjs);
+const _throttledVizSend = createViewPatchThrottle(syncVisualizationToYjs);
+
 /**
  * Resolve the workspaceId for the currently active collaboration workspace.
  * Returns null if none is active (e.g. not yet loaded).
@@ -75,7 +125,7 @@ export function pushSharedCameraUpdate(viewId, cameraPatch) {
   if (!canModifyActiveView()) return NO_PERMISSION;
 
   const userId = getUserId();
-  if (userId) syncCameraToYjs(viewId, userId, cameraPatch);
+  if (userId) _throttledCameraSend(viewId, userId, cameraPatch);
   getViewConfigurationManager()?.updateCamera(viewId, cameraPatch);
 
   return { persisted: true };
@@ -93,7 +143,7 @@ export function pushSharedVisualizationUpdate(viewId, patch) {
   if (!canModifyActiveView()) return NO_PERMISSION;
 
   const userId = getUserId();
-  if (userId) syncVisualizationToYjs(viewId, userId, patch);
+  if (userId) _throttledVizSend(viewId, userId, patch);
   getViewConfigurationManager()?.updateVisualization(viewId, patch);
 
   return { persisted: true };

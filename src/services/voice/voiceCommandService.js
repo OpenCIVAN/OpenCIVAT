@@ -66,9 +66,6 @@ const COMMAND_GRAMMAR = {
   // VR specific
   "enter VR": { action: "vr:enter", params: {} },
   "exit VR": { action: "vr:exit", params: {} },
-  grab: { action: "vr:grab", params: {} },
-  release: { action: "vr:release", params: {} },
-  teleport: { action: "vr:teleport", params: {} },
 
   // Voice room (separate from commands, but controllable via commands)
   "mute microphone": { action: "voice-room:mute", params: {} },

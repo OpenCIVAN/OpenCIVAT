@@ -69,27 +69,43 @@ describe("VRExplorationManager isolation mode", () => {
     };
   });
 
-  it("enterIsolation scales the model to ~2.5m and repositions the user", () => {
+  it("enterIsolation auto-fits the model and rests it on the pedestal", () => {
     const ok = vrExplorationManager.enterIsolation();
 
     expect(ok).toBe(true);
-    // diagonal = 3 → scale = 2.5 / 3
-    expect(ctx.vrScale).toBeCloseTo(2.5 / 3, 5);
-    // origin: center (1,1,0.5), chest-height and 2m-back offsets divided by scale
+
+    // Auto-fit: the bounding diagonal spans the standard physical fit size.
+    // Asserted via the invariant rather than a hard-coded scale so the fit
+    // geometry can be retuned without rewriting this test.
+    expect(3 * ctx.vrScale).toBeCloseTo(1.36, 1);
+
+    // Centred in X, placed in front along Z.
     expect(ctx.vrOrigin[0]).toBeCloseTo(1, 5);
-    expect(ctx.vrOrigin[1]).toBeCloseTo(1 - 1.4 / (2.5 / 3), 5);
-    expect(ctx.vrOrigin[2]).toBeCloseTo(0.5 + 2.0 / (2.5 / 3), 5);
+    expect((0.5 - ctx.vrOrigin[2]) * ctx.vrScale).toBeLessThan(-2);
+
+    // GROUNDED: the data-space bottom (dataBounds[2] = 0) maps to physical
+    // y = PEDESTAL_HEIGHT_M (0.5), not the literal floor — see
+    // VRExplorationManager.js's PEDESTAL_HEIGHT_M. This is what stops a
+    // two-hand zoom lifting the model overhead.
+    expect((ctx.dataBounds[2] - ctx.vrOrigin[1]) * ctx.vrScale).toBeCloseTo(0.5, 10);
+
     expect(mockVrManager.enterIsolationMode).toHaveBeenCalledWith("view-1");
     expect(vrExplorationManager.isIsolated()).toBe(true);
   });
 
-  it("exitIsolation restores the exact previous scale and origin", () => {
+  it("exitIsolation restores the previous scale and horizontal position, re-grounded", () => {
     vrExplorationManager.enterIsolation();
     const ok = vrExplorationManager.exitIsolation();
 
     expect(ok).toBe(true);
     expect(ctx.vrScale).toBe(0.4);
-    expect(ctx.vrOrigin).toEqual([5, 6, 7]);
+    // X/Z restored verbatim. Y is deliberately RE-GROUNDED rather than
+    // restored: dataBounds can change while isolated (a filter swapping the
+    // actor), which would make the backed-up Y stale and leave the dataset
+    // floating or sunk on exit.
+    expect(ctx.vrOrigin[0]).toBe(5);
+    expect(ctx.vrOrigin[2]).toBe(7);
+    expect((ctx.dataBounds[2] - ctx.vrOrigin[1]) * ctx.vrScale).toBeCloseTo(0.5, 10);
     expect(mockVrManager.exitIsolationMode).toHaveBeenCalled();
     expect(vrExplorationManager.isIsolated()).toBe(false);
   });

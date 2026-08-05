@@ -4,13 +4,21 @@
 import { vr as log } from "@Utils/logger.js";
 
 export class VRTeleportMode {
+  /**
+   * @param {Object} vrContext
+   * @param {Object} [options]
+   * @param {Function} [options.raycastToScene] - (originXR, directionXR) =>
+   *   {position, valid} | null. Injected by VRNavigationController so a
+   *   teleport target can land on the actual dataset surface, not just an
+   *   infinite physical floor plane. See VRNavigationController._raycastToScene.
+   */
   constructor(vrContext, options = {}) {
     this._vrContext = vrContext;
     this._options = {
       maxDistance: 50.0, // Maximum teleport distance in meters
       arcSegments: 30, // Number of segments in teleport arc
       arcHeight: 2.0, // Arc height for parabolic trajectory
-      snapRotation: Math.PI / 4, // 45 degree snap rotation
+      raycastToScene: null,
       ...options,
     };
 
@@ -20,7 +28,6 @@ export class VRTeleportMode {
     this._targetPosition = null;
     this._targetValid = false;
     this._arcPoints = [];
-    this._snapRotationAngle = 0;
   }
 
   activate() {
@@ -40,11 +47,15 @@ export class VRTeleportMode {
     this._targetPosition = null;
     this._targetValid = false;
     this._arcPoints = [];
-    this._snapRotationAngle = 0;
   }
 
   /**
-   * Update teleport based on input
+   * Update teleport based on input.
+   *
+   * Two aim/commit gestures depending on the input source: thumbstick
+   * push/release for tracked controllers, or pinch-hold/release for
+   * Vision Pro's gripless "transient-pointer" source (no thumbstick — see
+   * docs/apple-vision-pro.md).
    *
    * @param {Object} inputState - Controller input state
    * @param {XRFrame} frame - XR frame
@@ -61,33 +72,35 @@ export class VRTeleportMode {
       return { position: null, orientation: null, teleporting: false };
     }
 
-    const thumbstickY = rightController.thumbstick?.y || 0;
-    const thumbstickX = rightController.thumbstick?.x || 0;
     const wasAiming = this._isAiming;
+    const isGripless = rightController.targetRayMode === "transient-pointer";
+    let shouldRelease = false;
 
-    // Start aiming when thumbstick pushed forward
-    if (thumbstickY < -0.7 && !this._isAiming) {
-      this._startAiming(rightController);
-    }
-
-    // Update aim while holding
-    if (this._isAiming && thumbstickY < -0.3) {
-      this._updateAim(rightController, inputState);
-
-      // Handle snap rotation with thumbstick X
-      if (Math.abs(thumbstickX) > 0.7) {
-        this._snapRotationAngle =
-          thumbstickX > 0
-            ? -this._options.snapRotation
-            : this._options.snapRotation;
-      } else {
-        this._snapRotationAngle = 0;
+    if (isGripless) {
+      if (rightController.triggerPressed) {
+        if (!this._isAiming) this._startAiming(rightController);
+        this._updateAim(rightController, inputState);
       }
+      shouldRelease = wasAiming && !rightController.triggerPressed;
+    } else {
+      const thumbstickY = rightController.thumbstick?.y || 0;
+
+      // Start aiming when thumbstick pushed forward
+      if (thumbstickY < -0.7 && !this._isAiming) {
+        this._startAiming(rightController);
+      }
+
+      // Update aim while holding
+      if (this._isAiming && thumbstickY < -0.3) {
+        this._updateAim(rightController, inputState);
+      }
+
+      shouldRelease = wasAiming && thumbstickY > -0.3;
     }
 
     // Release to teleport
-    if (wasAiming && thumbstickY > -0.3) {
-      const result = this._executeTeleport();
+    if (shouldRelease) {
+      const result = this._executeTeleport(inputState);
       this._resetState();
       return result;
     }
@@ -101,7 +114,6 @@ export class VRTeleportMode {
       targetPosition: this._targetPosition,
       targetValid: this._targetValid,
       arcPoints: this._arcPoints,
-      snapRotation: this._snapRotationAngle,
     };
   }
 
@@ -204,12 +216,48 @@ export class VRTeleportMode {
   }
 
   /**
-   * Find intersection of arc with valid teleport surface
+   * Find intersection of arc with valid teleport surface: tries the actual
+   * dataset first (via the injected raycastToScene, bounded to each arc
+   * segment's length), then falls back to the physical floor plane so
+   * teleporting off the edge of the dataset still lands somewhere.
    * @private
    */
   _findIntersection(arcPoints) {
-    // Simple ground plane intersection for now
-    // In a real implementation, this would raycast against the scene
+    const raycastToScene = this._options.raycastToScene;
+    if (raycastToScene) {
+      for (let i = 1; i < arcPoints.length; i++) {
+        const prev = arcPoints[i - 1];
+        const curr = arcPoints[i];
+        const seg = {
+          x: curr.x - prev.x,
+          y: curr.y - prev.y,
+          z: curr.z - prev.z,
+        };
+        const segLength = Math.sqrt(seg.x * seg.x + seg.y * seg.y + seg.z * seg.z);
+        if (segLength < 1e-6) continue;
+
+        const direction = {
+          x: seg.x / segLength,
+          y: seg.y / segLength,
+          z: seg.z / segLength,
+        };
+
+        let hit;
+        try {
+          hit = raycastToScene(prev, direction);
+        } catch (e) {
+          hit = null;
+        }
+
+        // Only accept hits within this segment — a farther hit will be (or
+        // already was) found more accurately by a later/earlier segment.
+        if (hit?.valid && hit.distance <= segLength) {
+          return hit;
+        }
+      }
+    }
+
+    // Fall back to the physical floor plane (local-floor space, y=0).
     const groundY = 0;
 
     for (let i = 1; i < arcPoints.length; i++) {
@@ -235,10 +283,20 @@ export class VRTeleportMode {
   }
 
   /**
-   * Execute the teleport
+   * Execute the teleport.
+   *
+   * this._targetPosition is in XR (physical) space — but the thing we
+   * actually control is vrOrigin (a DATA-space offset, see
+   * VTKInstanceHandler._updateCameraFromVRPose's dataPos = xrPos/vrScale +
+   * vrOrigin). We don't teleport the user's physical body; we shift the
+   * data-space mapping so the physical floor position they're currently
+   * standing at (approximated from head x/z at floor height) now
+   * corresponds to the target point in data space.
+   *
+   * @param {Object} [inputState] - current frame's input state, for head position
    * @private
    */
-  _executeTeleport() {
+  _executeTeleport(inputState) {
     if (!this._targetValid || !this._targetPosition) {
       log.debug("Teleport cancelled - invalid target");
       return { position: null, orientation: null, teleporting: false };
@@ -246,16 +304,22 @@ export class VRTeleportMode {
 
     log.debug("Executing teleport to:", this._targetPosition);
 
-    // Trigger haptic feedback
-    window.dispatchEvent(
-      new CustomEvent("cia:vr-haptic", {
-        detail: { type: "teleport", intensity: 0.7, duration: 50 },
-      })
-    );
+    const vrScale = this._vrContext.vrScale || 1.0;
+    const vrOrigin = this._vrContext.vrOrigin || [0, 0, 0];
+    const headPos = inputState?.headPose?.position;
+    const userFloorXR = headPos
+      ? { x: headPos.x, y: 0, z: headPos.z }
+      : { x: 0, y: 0, z: 0 };
+
+    const position = {
+      x: vrOrigin[0] + (this._targetPosition.x - userFloorXR.x) / vrScale,
+      y: vrOrigin[1] + (this._targetPosition.y - userFloorXR.y) / vrScale,
+      z: vrOrigin[2] + (this._targetPosition.z - userFloorXR.z) / vrScale,
+    };
 
     return {
-      position: this._targetPosition,
-      orientation: this._snapRotationAngle !== 0 ? this._snapRotationAngle : null,
+      position,
+      orientation: null,
       teleporting: true,
     };
   }

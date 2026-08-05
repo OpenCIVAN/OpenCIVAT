@@ -28,11 +28,19 @@ async function checkWebXRAvailability() {
 
   try {
     // Check if immersive-vr session is supported
+    // Vision Pro and other browsers may not support this
+    if (typeof navigator.xr.isSessionSupported !== 'function') {
+      return {
+        available: false,
+        reason: "VR not supported",
+      };
+    }
+
     const isSupported = await navigator.xr.isSessionSupported("immersive-vr");
     if (!isSupported) {
       return {
         available: false,
-        reason: "VR headset not detected",
+        reason: "VR not available",
       };
     }
 
@@ -40,7 +48,7 @@ async function checkWebXRAvailability() {
   } catch (error) {
     return {
       available: false,
-      reason: `WebXR check failed: ${error.message}`,
+      reason: "VR unavailable",
     };
   }
 }

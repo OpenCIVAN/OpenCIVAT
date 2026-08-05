@@ -67,11 +67,6 @@ const VRWristMenu = memo(function VRWristMenu({
     // Handle segment selection
     const handleSegmentSelect = useCallback((segmentId) => {
         selectSegment(segmentId);
-
-        // Emit segment action event
-        window.dispatchEvent(new CustomEvent('cia:wrist-menu-segment-action', {
-            detail: { segmentId }
-        }));
     }, [selectSegment]);
 
     // Handle center button click

@@ -14,6 +14,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import { VR_A11Y_STORAGE_KEY } from '@Core/vr/vrAccessibilityStore.js';
 
 // =============================================================================
 // DEFAULT SETTINGS
@@ -121,7 +122,7 @@ export const DEFAULT_VR_ACCESSIBILITY = {
 // STORAGE KEY
 // =============================================================================
 
-const STORAGE_KEY = 'cia-vr-accessibility-settings';
+const STORAGE_KEY = VR_A11Y_STORAGE_KEY;
 
 // =============================================================================
 // CONTEXT

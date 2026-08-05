@@ -26,7 +26,6 @@ import React, {
     useCallback,
     useEffect,
 } from 'react';
-import { Icon } from '@UI/react/components/atoms/Icon';
 
 // =============================================================================
 // TAB CONTENT COMPONENTS - Lazy imports to avoid circular dependencies
@@ -193,21 +192,17 @@ export function isLeftPanelTabRegistered(tabId) {
 // =============================================================================
 
 /**
- * PlaceholderContent - Shown for tabs without registered components
+ * PlaceholderContent - Defensive fallback for a declared tab whose content
+ * component was not registered (should not happen in normal operation, since
+ * every tab in LEFT_PANEL_TABS is expected to register itself). Renders
+ * nothing user-facing; logs a warning to aid debugging.
  */
 function PlaceholderContent({ tabId }) {
-    const tab = LEFT_PANEL_TABS.find(t => t.id === tabId) || LEFT_PANEL_TABS[0];
-    const iconName = tab.icon;
+    useEffect(() => {
+        console.warn(`[LeftPanel] No content component registered for tab "${tabId}"`);
+    }, [tabId]);
 
-    return (
-        <div className="left-panel__placeholder">
-            <Icon name={iconName} size={32} className="left-panel__placeholder-icon" data-color={tab.color} />
-            <h3 className="left-panel__placeholder-title">{tab.label}</h3>
-            <p className="left-panel__placeholder-text">
-                This tab is coming soon. It will contain {tab.label.toLowerCase()} management features.
-            </p>
-        </div>
-    );
+    return null;
 }
 
 // =============================================================================

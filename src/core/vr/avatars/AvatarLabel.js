@@ -6,14 +6,21 @@ import vtkActor from '@kitware/vtk.js/Rendering/Core/Actor';
 import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
 import vtkPlaneSource from '@kitware/vtk.js/Filters/Sources/PlaneSource';
 import vtkTexture from '@kitware/vtk.js/Rendering/Core/Texture';
-import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
-import vtkDataArray from '@kitware/vtk.js/Common/Core/DataArray';
+// Shared with the spatial menu and every tool label — see
+// src/core/vr/ui/VRTextBillboard.js. roundRectPath in particular replaces the
+// native ctx.roundRect this file used to call, which jsdom does not implement
+// (so any test touching _redraw threw).
+import { roundRectPath, uploadCanvasTexture } from '@Core/vr/ui/VRTextBillboard.js';
 
 const LABEL_W = 256;
 const LABEL_H = 64;
 const LABEL_WORLD_WIDTH = 0.32;  // meters wide in VR
 const LABEL_WORLD_HEIGHT = 0.08; // meters tall
 const LABEL_Y_OFFSET = 0.28;     // meters above head center
+// "EDITING" badge drawn at the right edge when the user is manipulating the
+// shared data (see setActivity).
+const BADGE_W = 66;
+const BADGE_H = 26;
 
 /**
  * Renders a 3D name label in VR space.
@@ -29,7 +36,15 @@ export class AvatarLabel {
     this._displayName = '';
     this._color = '#ffffff';
     this._speaking = false;
+    // What this user is manipulating ('dataset' | 'filter' | null) — drives the
+    // amber badge drawn on the right of the name. Presence-rate, see
+    // SimpleAvatarFallback.setActivity.
+    this._activity = null;
     this._renderer = null;
+    // Local viewer's 1/vrScale. The plane is authored in physical metres but
+    // lives in scene units, so without this the name tag grows and shrinks
+    // with the viewer's zoom. See setScale.
+    this._scale = 1;
   }
 
   /**
@@ -65,6 +80,12 @@ export class AvatarLabel {
     this._actor.addTexture(this._texture);
     this._actor.getProperty().setOpacity(1.0);
     this._actor.setVisibility(false);
+    // The VR renderer IS the desktop renderer, and VR raycasting
+    // (VTKInstanceHandler._getVRPickTargets) filters candidates by
+    // pickability — an unpickable-by-default name-label billboard would
+    // otherwise stand between the user and the data and absorb probe/
+    // measure/teleport hits.
+    this._actor.setPickable(false);
 
     renderer.addActor(this._actor);
 
@@ -74,13 +95,31 @@ export class AvatarLabel {
   }
 
   /**
+   * Hold a constant apparent size regardless of the local viewer's zoom.
+   *
+   * LABEL_WORLD_WIDTH/HEIGHT/Y_OFFSET are authored in physical metres, but the
+   * actor lives in scene units, which are physical metres divided by the local
+   * viewer's vrScale. Without this the peer's name tag balloons when you zoom
+   * into a detail and shrinks to nothing at room scale.
+   *
+   * @param {number} scale - the local viewer's 1/vrScale
+   */
+  setScale(scale) {
+    const s = scale || 1;
+    this._scale = s;
+    this._actor?.setScale(s, s, s);
+  }
+
+  /**
    * Position the label above the head.
    * @param {number} x
    * @param {number} y - head Y in scene space
    * @param {number} z
    */
   setPosition(x, y, z) {
-    this._actor?.setPosition(x, y + LABEL_Y_OFFSET, z);
+    // The vertical offset is a physical-metre quantity too, so it has to track
+    // the same scale as the plane or the tag drifts off the head when zoomed.
+    this._actor?.setPosition(x, y + LABEL_Y_OFFSET * this._scale, z);
   }
 
   /** Face the label toward a world-space point (local user's head). */
@@ -97,6 +136,19 @@ export class AvatarLabel {
   setSpeaking(speaking) {
     if (this._speaking === speaking) return;
     this._speaking = speaking;
+    this._redraw();
+  }
+
+  /**
+   * Show/hide the "changing the data" badge. Dirty-checked like setSpeaking —
+   * _redraw() ends in a GPU texture upload, so it must only run on an actual
+   * change.
+   * @param {string|null} activity
+   */
+  setActivity(activity) {
+    const next = activity || null;
+    if (this._activity === next) return;
+    this._activity = next;
     this._redraw();
   }
 
@@ -126,16 +178,14 @@ export class AvatarLabel {
     // Background
     const bg = this._speaking ? 'rgba(60,220,120,0.85)' : 'rgba(20,20,20,0.82)';
     ctx.fillStyle = bg;
-    ctx.beginPath();
-    ctx.roundRect(2, 2, LABEL_W - 4, LABEL_H - 4, 10);
+    roundRectPath(ctx, 2, 2, LABEL_W - 4, LABEL_H - 4, 10);
     ctx.fill();
 
     // Border (speaking highlight)
     if (this._speaking) {
       ctx.strokeStyle = '#3dec78';
       ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.roundRect(2, 2, LABEL_W - 4, LABEL_H - 4, 10);
+      roundRectPath(ctx, 2, 2, LABEL_W - 4, LABEL_H - 4, 10);
       ctx.stroke();
     }
 
@@ -145,14 +195,32 @@ export class AvatarLabel {
     ctx.arc(22, LABEL_H / 2, 9, 0, Math.PI * 2);
     ctx.fill();
 
-    // Name text
+    // Name text. The badge (when present) eats into the width available for
+    // the name, so the truncation budget shrinks with it rather than letting
+    // a long name run underneath the badge.
+    const badgeW = this._activity ? BADGE_W : 0;
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 22px Arial, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const maxW = LABEL_W - 48;
+    const maxW = LABEL_W - 48 - badgeW;
     const text = this._truncate(ctx, this._displayName, maxW);
     ctx.fillText(text, 40, LABEL_H / 2);
+
+    // Activity badge: this person is changing the shared data right now. Amber,
+    // matching the roster's holder card and the head halo, so the three read as
+    // one signal.
+    if (this._activity) {
+      const bx = LABEL_W - BADGE_W - 8;
+      const by = (LABEL_H - BADGE_H) / 2;
+      ctx.fillStyle = 'rgba(255,183,72,0.95)';
+      roundRectPath(ctx, bx, by, BADGE_W, BADGE_H, 8);
+      ctx.fill();
+      ctx.fillStyle = '#241703';
+      ctx.font = 'bold 14px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('EDITING', bx + BADGE_W / 2, LABEL_H / 2);
+    }
 
     this._uploadTexture();
   }
@@ -166,31 +234,7 @@ export class AvatarLabel {
   }
 
   _uploadTexture() {
-    const imgData = this._ctx.getImageData(0, 0, LABEL_W, LABEL_H);
-
-    // Flip Y — WebGL origin is bottom-left, canvas is top-left
-    const flipped = new Uint8Array(LABEL_W * LABEL_H * 4);
-    for (let row = 0; row < LABEL_H; row++) {
-      const src = (LABEL_H - 1 - row) * LABEL_W * 4;
-      const dst = row * LABEL_W * 4;
-      flipped.set(imgData.data.subarray(src, src + LABEL_W * 4), dst);
-    }
-
-    const image = vtkImageData.newInstance();
-    image.setDimensions(LABEL_W, LABEL_H, 1);
-    image.setSpacing(1, 1, 1);
-    image.setOrigin(0, 0, 0);
-
-    const scalars = vtkDataArray.newInstance({
-      numberOfComponents: 4,
-      values: flipped,
-      dataType: 'Uint8Array',
-    });
-    scalars.setName('scalars');
-    image.getPointData().setScalars(scalars);
-
-    this._texture.setInputData(image);
-    this._texture.modified();
+    uploadCanvasTexture(this._canvas, this._ctx, this._texture);
   }
 }
 

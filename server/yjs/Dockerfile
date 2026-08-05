@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -12,7 +12,9 @@ COPY server.js ./server.js
 COPY server/src/utils/logger.js ./server/src/utils/logger.js
 COPY server/src/services/yjsPersistence.js ./server/src/services/yjsPersistence.js
 COPY server/src/services/matrixBridge.js ./server/src/services/matrixBridge.js
+COPY server/src/services/matrixUserResolver.js ./server/src/services/matrixUserResolver.js
 COPY server/src/middleware/auth.js ./server/src/middleware/auth.js
+COPY server/src/utils/permissions.js ./server/src/utils/permissions.js
 
 # Install dependencies:
 # - ws: WebSocket server

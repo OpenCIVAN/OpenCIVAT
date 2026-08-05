@@ -43,8 +43,14 @@ export function SessionPanel({ currentRoomId, roomMembers = [], onClose }) {
         };
 
         try {
-            // Read initial status synchronously (no debounce for first paint)
-            setConnStatus(provider.wsconnectionstatus || 'connecting');
+            // Read initial status synchronously (no debounce for first paint).
+            // y-websocket exposes wsconnected/wsconnecting booleans, not a
+            // combined status string — the provider usually already connected
+            // before this panel mounts, so this has to reflect current state
+            // rather than wait for a future 'status' event that already fired.
+            setConnStatus(
+                provider.wsconnected ? 'connected' : provider.wsconnecting ? 'connecting' : 'disconnected'
+            );
             const handleStatus = (event) => {
                 console.log('[CIA Session] Connection status:', event.status);
                 applyStatus(event.status);

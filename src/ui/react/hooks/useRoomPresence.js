@@ -66,6 +66,14 @@ export function useRoomPresence(roomId = null) {
     return roomUsers.filter((user) => !user.inVoice);
   }, [roomUsers]);
 
+  // Users currently in a VR headset (presenceSystem.setVRPresence, written by
+  // VRExplorationManager.startExploration/leaveSession). RoomSubtab has always
+  // destructured this field for its "In VR" section — it was simply never
+  // returned, so that section could never render.
+  const inVR = useMemo(() => {
+    return roomUsers.filter((user) => user.inVR);
+  }, [roomUsers]);
+
   // Group by status
   const byStatus = useMemo(
     () => ({
@@ -80,9 +88,11 @@ export function useRoomPresence(roomId = null) {
     users: roomUsers,
     inVoice,
     notInVoice,
+    inVR,
     byStatus,
     onlineCount: roomUsers.length,
     voiceCount: inVoice.length,
+    vrCount: inVR.length,
     roomId: currentRoomId,
   };
 }

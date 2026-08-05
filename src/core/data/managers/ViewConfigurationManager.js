@@ -25,6 +25,11 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 import cameraSharePolicy from "@Core/session/cameraSharePolicy.js";
 import { apiClient } from "@Services/apiClient.js";
 import { BaseManager } from "@Core/data/managers/BaseManager.js";
+import { isBuiltInDataset } from "@Core/data/managers/DatasetManager.js";
+
+// Cap on silent same-user retries in _runSync before falling back to the
+// conflict dialog — see the 409 handler for why these retries are safe.
+export const MAX_SAME_USER_CONFLICT_RETRIES = 3;
 
 export class ViewConfigurationManager extends BaseManager {
   constructor(config = {}) {
@@ -44,6 +49,21 @@ export class ViewConfigurationManager extends BaseManager {
 
     this._viewConfigs = new Map();
     this._pendingSyncs = new Map();
+    // Guards against overlapping in-flight PUT /views/:id requests per view —
+    // without this, a second sync fired while the first is still awaiting its
+    // response races it: both capture the same base_revision, one wins, and
+    // the other gets a spurious 409 against a base_revision it read back off
+    // the (already-mutated-by-its-sibling) live view object.
+    this._syncInFlight = new Set();
+    this._syncQueued = new Set();
+    // Consumed by the next _runSync attempt for a view to force_overwrite
+    // instead of sending base_revision — used for the silent same-user retry
+    // below, never set by normal user-initiated saves.
+    this._retryWithForceOverwrite = new Set();
+    // Caps the silent same-user retry loop below in case of unexpected,
+    // persistent contention — after this many silent retries for a view, fall
+    // back to surfacing the conflict dialog rather than looping forever.
+    this._sameUserRetryCounts = new Map();
     this._syncThrottleMs = config.syncThrottleMs || 100;
     this._presenceThrottleMs = config.presenceThrottleMs || 50;
     this._lastPresenceUpdate = new Map(); // viewId -> timestamp
@@ -204,12 +224,69 @@ export class ViewConfigurationManager extends BaseManager {
   }
 
   /**
+   * Recover the datasetId for a view whose server row has a null dataset_id.
+   *
+   * Built-in sample datasets are persisted with dataset_id = NULL. The original
+   * builtin id is stashed in the `visualization.builtinDatasetId` field on
+   * create. For legacy rows written before that mechanism existed, fall back to
+   * matching the view name (case-insensitive, trailing ".vtp" stripped) against
+   * the names of registered built-in datasets. This heals existing corrupt rows
+   * without any SQL migration.
+   *
+   * @param {Object} serverView - Raw server view row (snake_case)
+   * @returns {string|null} A builtin dataset id, or null if none could be found
+   * @private
+   */
+  _recoverBuiltinDatasetId(serverView) {
+    // Primary: explicit id stashed in visualization JSONB on create.
+    const stashed = serverView.visualization?.builtinDatasetId;
+    if (typeof stashed === "string" && stashed) {
+      return stashed;
+    }
+
+    // Legacy fallback: match by name against registered built-in datasets.
+    const datasetManager =
+      (typeof window !== "undefined" &&
+        (window.CIA?.datasetManager ||
+          window.__CIA_MANAGERS?.datasetManager)) ||
+      null;
+    if (!datasetManager?.getAllDatasets) return null;
+
+    const rawName = serverView.name;
+    if (typeof rawName !== "string" || !rawName) return null;
+    const target = rawName.replace(/\.vtp$/i, "").trim().toLowerCase();
+
+    for (const dataset of datasetManager.getAllDatasets()) {
+      if (!isBuiltInDataset(dataset)) continue;
+      const candidate = (dataset.name || "")
+        .replace(/\.vtp$/i, "")
+        .trim()
+        .toLowerCase();
+      if (candidate && candidate === target) {
+        log.info(
+          `Recovered builtin datasetId ${dataset.id} for view "${rawName}" by name match`
+        );
+        return dataset.id;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Convert server response (snake_case) to client model (camelCase)
    */
   _serverToClientFormat(serverView) {
+    // Built-in datasets are stored with dataset_id = NULL. Restore the client
+    // datasetId so the viewport can locate the dataset (see loadViewData).
+    let datasetId = serverView.dataset_id;
+    if (!datasetId) {
+      datasetId = this._recoverBuiltinDatasetId(serverView);
+    }
+
     return {
       id: serverView.id,
-      datasetId: serverView.dataset_id,
+      datasetId,
       projectId: serverView.project_id,
       name: serverView.name,
       description: serverView.description,
@@ -329,6 +406,18 @@ export class ViewConfigurationManager extends BaseManager {
       }
     }
 
+    // Built-in datasets (id starts with "builtin-") are persisted server-side
+    // with dataset_id = NULL because they are not database rows. Stash the
+    // original builtin id inside the `visualization` JSONB so the round-trip
+    // can restore datasetId on rehydration (see _serverToClientFormat).
+    let visualization = viewConfig.visualization || null;
+    if (typeof datasetId === "string" && datasetId.startsWith("builtin-")) {
+      visualization = {
+        ...(viewConfig.visualization || {}),
+        builtinDatasetId: datasetId,
+      };
+    }
+
     // Prepare request body for server (using server's expected field names)
     const requestBody = {
       fileId: datasetId, // Server expects fileId, not datasetId
@@ -336,6 +425,7 @@ export class ViewConfigurationManager extends BaseManager {
       name: viewConfig.name || "Untitled View",
       description: viewConfig.description || "",
       camera,
+      visualization,
       filters: viewConfig.filters || [],
       widgets: viewConfig.widgets || [],
       colorMaps,
@@ -1513,42 +1603,91 @@ export class ViewConfigurationManager extends BaseManager {
     }
 
     // Throttle syncs to avoid excessive API calls
-    const timeout = setTimeout(async () => {
+    const timeout = setTimeout(() => {
       this._pendingSyncs.delete(view.id);
+      this._runSync(view);
+    }, this._syncThrottleMs);
 
-      try {
-        const updateData = this._clientToServerFormat(view);
+    this._pendingSyncs.set(view.id, timeout);
+    view.pendingServerSync = true;
+  }
 
+  /**
+   * Perform the actual PUT for a view, serialized so at most one request per
+   * view is in flight at a time. A sync requested while one is already in
+   * flight is queued and re-run (against the then-current view state) once
+   * the in-flight request settles, instead of firing a second overlapping
+   * request that would race the first for the same base_revision.
+   */
+  async _runSync(view) {
+    if (this._syncInFlight.has(view.id)) {
+      this._syncQueued.add(view.id);
+      return;
+    }
+    this._syncInFlight.add(view.id);
+
+    // Consumed here so the flag only affects the one attempt it was set for.
+    const forceOverwrite = this._retryWithForceOverwrite.delete(view.id);
+
+    // Freeze the base revision actually sent with this request — the catch
+    // block below must report this value, not a live re-read of view.revision,
+    // which a differently-timed request for the same view could have already
+    // mutated by the time this one's response comes back.
+    const baseRevision = view.revision != null ? view.revision : null;
+
+    try {
+      const updateData = this._clientToServerFormat(view);
+
+      if (forceOverwrite) {
+        updateData.force_overwrite = true;
+      } else if (baseRevision != null) {
         // Include the base revision for optimistic concurrency control.
         // The server will reject stale writes with 409 Conflict.
-        if (view.revision != null) {
-          updateData.base_revision = view.revision;
-        }
+        updateData.base_revision = baseRevision;
+      }
 
-        const { view: serverView } = await apiClient.put(
-          `/views/${view.id}`,
-          updateData
-        );
+      const { view: serverView } = await apiClient.put(
+        `/views/${view.id}`,
+        updateData
+      );
 
-        // Accept the new revision from the server
-        if (serverView?.revision != null) {
-          view.revision = Number(serverView.revision);
-        }
-        if (serverView?.server_version) {
-          view.serverVersion = serverView.server_version;
-        }
-        view.lastSyncedToServer = Date.now();
-        view.pendingServerSync = false;
-      } catch (error) {
-        if (error?.status === 409 || error?.statusCode === 409) {
-          // Conflict: another user changed this view since our last fetch
-          const details = error?.details || error?.data || {};
+      // Accept the new revision from the server
+      if (serverView?.revision != null) {
+        view.revision = Number(serverView.revision);
+      }
+      if (serverView?.server_version) {
+        view.serverVersion = serverView.server_version;
+      }
+      view.lastSyncedToServer = Date.now();
+      view.pendingServerSync = false;
+      this._sameUserRetryCounts.delete(view.id);
+    } catch (error) {
+      if (error?.status === 409 || error?.statusCode === 409) {
+        const details = error?.details || error?.data || {};
+
+        // PUT /views/:id is owner-gated (server/src/routes/views.js) — only
+        // the view's owner can ever write to it, and revision is only ever
+        // bumped by that same endpoint. So a 409 here is never a different
+        // person's edit; it's this same user's own other tab/session/save
+        // racing this one. Retry with the current local state and
+        // force_overwrite instead of bothering the user, capped so genuinely
+        // stuck contention still surfaces rather than looping forever.
+        const retryCount = this._sameUserRetryCounts.get(view.id) || 0;
+        if (retryCount < MAX_SAME_USER_CONFLICT_RETRIES) {
+          this._sameUserRetryCounts.set(view.id, retryCount + 1);
+          view.pendingServerSync = false;
+          log.debug(
+            `Same-user revision race on view ${view.id} (base ${baseRevision} vs server ${details.serverRevision}) — retrying silently (attempt ${retryCount + 1}).`
+          );
+          this._retryWithForceOverwrite.add(view.id);
+          this._syncQueued.add(view.id);
+        } else {
           view.hasConflict = true;
           view.pendingServerSync = false;
           view.conflict = {
             entityType: "view_configuration",
             entityId: view.id,
-            clientBaseRevision: view.revision,
+            clientBaseRevision: baseRevision,
             serverRevision: details.serverRevision,
             serverObject: details.serverObject,
             updatedBy: details.updatedBy || null,
@@ -1564,15 +1703,20 @@ export class ViewConfigurationManager extends BaseManager {
             );
           }
           log.warn(`Conflict detected on view ${view.id}:`, view.conflict);
-        } else {
-          log.error(`Failed to sync view ${view.id} to server:`, error);
-          view.pendingServerSync = true;
         }
+      } else {
+        log.error(`Failed to sync view ${view.id} to server:`, error);
+        view.pendingServerSync = true;
       }
-    }, this._syncThrottleMs);
-
-    this._pendingSyncs.set(view.id, timeout);
-    view.pendingServerSync = true;
+    } finally {
+      this._syncInFlight.delete(view.id);
+      if (this._syncQueued.delete(view.id) && !view.hasConflict) {
+        // A sync was requested mid-flight — re-run against current state.
+        // Skip if this request just detected a conflict; the queued sync
+        // reflects pre-resolution local edits that must wait for the user.
+        this._runSync(view);
+      }
+    }
   }
 
   /**

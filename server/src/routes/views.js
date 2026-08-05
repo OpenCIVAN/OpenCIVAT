@@ -181,6 +181,7 @@ router.post("/", async (req, res, next) => {
       name = "Untitled View",
       description,
       camera,
+      visualization,
       filters,
       widgets,
       colorMaps,
@@ -230,11 +231,11 @@ router.post("/", async (req, res, next) => {
       INSERT INTO view_configurations (
         dataset_id, file_version_id, branch_id,
         name, description,
-        camera, filters, widgets, color_maps,
+        camera, visualization, filters, widgets, color_maps,
         annotations_visible, visibility, is_shared,
         owner_user_id, saved_by_user, forked_from
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true, $14)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, $15)
       RETURNING *
     `,
       [
@@ -244,6 +245,9 @@ router.post("/", async (req, res, next) => {
         name,
         description || null,
         camera ? JSON.stringify(camera) : null,
+        visualization && typeof visualization === "object"
+          ? JSON.stringify(visualization)
+          : null,
         filters ? JSON.stringify(filters) : null,
         widgets ? JSON.stringify(widgets) : null,
         colorMaps ? JSON.stringify(colorMaps) : null,

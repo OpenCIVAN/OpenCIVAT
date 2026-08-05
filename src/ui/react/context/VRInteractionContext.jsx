@@ -588,8 +588,17 @@ export function useResizeInteraction({ initialSize, onResize, onResizeEnd, minSi
 }
 
 /**
- * useVRControllerInput - Hook to handle VR controller events
- * Placeholder - actual implementation depends on WebXR framework
+ * useVRControllerInput - Hook to handle VR controller events.
+ *
+ * Still a placeholder — intentionally NOT wired to real WebXR events. Real
+ * VR ray pointing/selection (annotate, measure, slice, teleport, spatial
+ * menu taps, etc.) already flows through a separate, working path:
+ * VRControllerRenderer (ray/reticle visuals) + VTKInstanceHandler.raycastVR
+ * (hit-testing) + the VR tools (VRAnnotationTool, VRMeasureTool, ...),
+ * orchestrated by VRExplorationManager. This hook is for a DIFFERENT
+ * concern — abstracting desktop drag-and-drop (reorder/link/move/resize)
+ * into VR "intents" via this context's desktop-vs-VR handler split — and
+ * remains future work; do not wire it up as a shortcut for VR ray input.
  */
 export function useVRControllerInput(handlers) {
     const { isVR } = useVRInteraction();

@@ -104,12 +104,52 @@ module.exports = {
         changeOrigin: true,
         pathRewrite: { "^/render-api": "" },
       },
+      // Y.js collaboration WebSocket — same-origin so HTTPS pages (and LAN/tunnel
+      // clients like Apple Vision Pro) can connect without a mixed-content block.
+      // The room name is the first path segment on the Y.js server, so the mount
+      // prefix must be stripped: /yjs-ws/<roomId> -> /<roomId>.
+      {
+        context: ["/yjs-ws"],
+        target: "ws://localhost:9001",
+        ws: true,
+        changeOrigin: true,
+        pathRewrite: { "^/yjs-ws": "" },
+      },
+      // LiveKit token server — same-origin so HTTPS pages (and LAN/tunnel clients
+      // like Oculus Quest / Apple Vision Pro) can fetch a voice token without a
+      // mixed-content block. The token server exposes /token and /health at its
+      // root, so the mount prefix is stripped: /livekit-token/token -> /token.
+      // NOTE: only the token fetch rides this proxy. The LiveKit media SFU
+      // (LIVEKIT_URL, wss://) cannot be proxied — WebRTC media is direct/ICE and
+      // must reach a TLS + TURN reachable SFU (LiveKit Cloud or self-host).
+      {
+        context: ["/livekit-token"],
+        target: "http://localhost:3002",
+        changeOrigin: true,
+        secure: false,
+        pathRewrite: { "^/livekit-token": "" },
+      },
       // Node.js API server
       {
         context: ["/api"],
         target: "http://localhost:3001",
         changeOrigin: true,
         secure: false,
+      },
+      // Node.js API server's live broadcast WebSocket (annotations, view/camera
+      // state) — same-origin for the same reason as /yjs-ws above, so LAN/tunnel
+      // clients like Apple Vision Pro can reach it without a mixed-content block.
+      // Mounted at /app-ws (not /ws) because webpack-dev-server's own HMR socket
+      // already defaults to /ws — reusing that path would swallow this proxy.
+      // The backend's actual WebSocketServer still listens at /ws (unchanged);
+      // only the public dev-server mount point differs.
+      {
+        context: ["/app-ws"],
+        target: "http://localhost:3001",
+        ws: true,
+        changeOrigin: true,
+        secure: false,
+        pathRewrite: { "^/app-ws": "/ws" },
       },
     ],
   },
@@ -182,16 +222,14 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       "process.env.YJS_WEBSOCKET_URL": JSON.stringify(
-        process.env.YJS_WEBSOCKET_URL || "ws://localhost:9001"
+        process.env.YJS_WEBSOCKET_URL || "/yjs-ws"
       ),
       "process.env.NODE_ENV": JSON.stringify(
         process.env.NODE_ENV || "development"
       ),
-      __API_BASE_URL__: JSON.stringify(
-        process.env.API_BASE_URL || "http://localhost:3001/api"
-      ),
+      __API_BASE_URL__: JSON.stringify(process.env.API_BASE_URL || "/api"),
       __YJS_WS_URL__: JSON.stringify(
-        process.env.YJS_WEBSOCKET_URL || "ws://localhost:9001"
+        process.env.YJS_WEBSOCKET_URL || "/yjs-ws"
       ),
       __KEYCLOAK_URL__: JSON.stringify(
         process.env.KEYCLOAK_URL || "http://localhost:8080"
@@ -205,8 +243,11 @@ module.exports = {
       __LIVEKIT_URL__: JSON.stringify(
         process.env.LIVEKIT_URL || "ws://localhost:7880"
       ),
+      // Default is the same-origin proxy path (see devServer proxy above), so
+      // it rides the page's TLS/host on LAN/tunnel. Override with an absolute
+      // URL only if the token server is hosted separately.
       __LIVEKIT_TOKEN_URL__: JSON.stringify(
-        process.env.LIVEKIT_TOKEN_URL || "http://localhost:3002"
+        process.env.LIVEKIT_TOKEN_URL || "/livekit-token"
       ),
       __DEV_BYPASS_AUTH__: JSON.stringify(
         process.env.DEV_BYPASS_AUTH === "true"

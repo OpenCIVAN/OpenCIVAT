@@ -20,7 +20,6 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { Icon } from '@UI/react/components/atoms/Icon';
 
 // =============================================================================
 // TAB CONFIGURATION - SINGLE SOURCE OF TRUTH
@@ -161,27 +160,17 @@ export function isRightPanelTabRegistered(tabId) {
 // =============================================================================
 
 /**
- * PlaceholderContent - Shown for tabs without registered components
+ * PlaceholderContent - Defensive fallback for a declared tab whose content
+ * component was not registered (should not happen in normal operation, since
+ * every tab in RIGHT_PANEL_TABS is expected to register itself). Renders
+ * nothing user-facing; logs a warning to aid debugging.
  */
 function PlaceholderContent({ tabId }) {
-    const tab = RIGHT_PANEL_TABS.find(t => t.id === tabId);
-    const iconName = tab?.icon;
+    useEffect(() => {
+        console.warn(`[RightPanel] No content component registered for tab "${tabId}"`);
+    }, [tabId]);
 
-    return (
-        <div className="right-panel__placeholder">
-            {iconName && (
-                <div className="right-panel__placeholder-icon" data-color={tab?.color}>
-                    <Icon name={iconName} size={32} />
-                </div>
-            )}
-            <div className="right-panel__placeholder-title">
-                {tab?.label || 'Unknown'}
-            </div>
-            <div className="right-panel__placeholder-text">
-                This panel is coming soon
-            </div>
-        </div>
-    );
+    return null;
 }
 
 // =============================================================================

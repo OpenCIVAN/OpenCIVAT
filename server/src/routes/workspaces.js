@@ -85,12 +85,17 @@ router.get("/personal", async (req, res, next) => {
     const userId = getUserId(req);
     const { pool } = req.app.locals;
 
-    // Check for existing personal workspace
+    // Check for existing personal workspace.
+    // Deterministic pick: prefer one that already has an active canvas, then the
+    // oldest, and LIMIT 1. Without this, duplicate personal rows (see migration
+    // 018) made this endpoint return a different workspace on each call.
     let result = await pool.query(
       `SELECT w.*,
               (SELECT COALESCE(array_agg(id), ARRAY[]::uuid[]) FROM canvases WHERE workspace_id = w.id AND is_active = true) as canvas_ids
        FROM workspaces w
-       WHERE w.type = 'personal' AND w.owner_id = $1 AND w.is_archived = false`,
+       WHERE w.type = 'personal' AND w.owner_id = $1 AND w.is_archived = false
+       ORDER BY (w.active_canvas_id IS NOT NULL) DESC, w.created_at ASC
+       LIMIT 1`,
       [userId]
     );
 
@@ -232,21 +237,65 @@ router.post("/", async (req, res, next) => {
       }
     }
 
-    const result = await pool.query(
-      `INSERT INTO workspaces (name, description, type, project_id, room_id, owner_id, created_by, expires_at, auto_merge)
-       VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8)
-       RETURNING *`,
-      [
-        name || "Untitled Workspace",
-        description || "",
-        type || "project",
-        project_id || null,
-        room_id || null,
-        userId,
-        expires_at || null,
-        auto_merge || false,
-      ]
-    );
+    // Personal workspaces are singletons per (owner, project). If one already
+    // exists, return it instead of inserting a duplicate — this is what let the
+    // client's auto-create loop balloon into hundreds of thousands of rows.
+    const isPersonal = (type || "project") === "personal";
+    if (isPersonal) {
+      const existing = await pool.query(
+        `SELECT * FROM workspaces
+         WHERE type = 'personal'
+           AND owner_id = $1
+           AND is_archived = false
+           AND COALESCE(project_id, '00000000-0000-0000-0000-000000000000'::uuid)
+               = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+         ORDER BY (active_canvas_id IS NOT NULL) DESC, created_at ASC
+         LIMIT 1`,
+        [userId, project_id || null]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(200).json(existing.rows[0]);
+      }
+    }
+
+    let result;
+    try {
+      result = await pool.query(
+        `INSERT INTO workspaces (name, description, type, project_id, room_id, owner_id, created_by, expires_at, auto_merge)
+         VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8)
+         RETURNING *`,
+        [
+          name || "Untitled Workspace",
+          description || "",
+          type || "project",
+          project_id || null,
+          room_id || null,
+          userId,
+          expires_at || null,
+          auto_merge || false,
+        ]
+      );
+    } catch (err) {
+      // Unique-violation on the partial personal-workspace index (migration 018)
+      // means a concurrent request already created it — re-select and return it.
+      if (err.code === "23505" && isPersonal) {
+        const raced = await pool.query(
+          `SELECT * FROM workspaces
+           WHERE type = 'personal'
+             AND owner_id = $1
+             AND is_archived = false
+             AND COALESCE(project_id, '00000000-0000-0000-0000-000000000000'::uuid)
+                 = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+           ORDER BY (active_canvas_id IS NOT NULL) DESC, created_at ASC
+           LIMIT 1`,
+          [userId, project_id || null]
+        );
+        if (raced.rows.length > 0) {
+          return res.status(200).json(raced.rows[0]);
+        }
+      }
+      throw err;
+    }
 
     res.status(201).json(result.rows[0]);
   } catch (error) {

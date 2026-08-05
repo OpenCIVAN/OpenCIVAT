@@ -192,6 +192,16 @@ export const MemberRow = memo(function MemberRow({
                             <Icon name="crown" size={10} className="member-row__crown" />
                         </Tooltip>
                     )}
+                    {/* `inVR` comes from presenceSystem.setVRPresence, which
+                        VRExplorationManager writes on entering/leaving VR. The
+                        richer VR session card below needs a `vrSession` object
+                        that only the session-aware surfaces supply — this badge
+                        is what everyone else sees. */}
+                    {inVR && (
+                        <Tooltip content="In a VR session">
+                            <span className="member-row__vr-badge">VR</span>
+                        </Tooltip>
+                    )}
                 </div>
 
                 {/* Voice status */}

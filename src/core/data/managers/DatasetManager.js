@@ -15,6 +15,26 @@ import {
 import { BaseManager } from "@Core/data/managers/BaseManager.js";
 
 /**
+ * Determine whether a dataset is a built-in sample dataset.
+ *
+ * Built-in datasets (from public/vtp_files/manifest.json) are served as static
+ * files and never exist as rows in the server database. Their ids/hashes will
+ * never match server state, so the orphan/reconciliation sweeps must exempt
+ * them — otherwise every boot deletes the "Sample Datasets" catalog.
+ *
+ * @param {Object} d - A Dataset (or plain object with the same shape)
+ * @returns {boolean} true when the dataset is a built-in sample
+ */
+export function isBuiltInDataset(d) {
+  if (!d) return false;
+  return (
+    d.cacheKey === "builtin" ||
+    d.metadata?.isBuiltIn === true ||
+    (typeof d.id === "string" && d.id.startsWith("builtin-"))
+  );
+}
+
+/**
  * DatasetManager - Format-agnostic dataset management
  *
  * This manager handles dataset metadata and storage references.
@@ -1435,6 +1455,14 @@ export class DatasetManager extends BaseManager {
       const valid = [];
 
       for (const local of localDatasets) {
+        // Built-in sample datasets never exist on the server. They are always
+        // valid — never orphans (would strip the Sample catalog) and never
+        // candidates for ID migration (would strip their Sample identity).
+        if (isBuiltInDataset(local)) {
+          valid.push(local);
+          continue;
+        }
+
         const serverById_match = serverById.get(local.id);
         const serverByHash_match = local.hash
           ? serverByHash.get(local.hash)

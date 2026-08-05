@@ -9,15 +9,16 @@
 // - Every component considers VR from the start
 //
 // Components:
-// - VRManager: Session lifecycle, mode switching
-// - VRSceneRenderer: WebXR stereo rendering for VTK.js
+// - VRManager: sole owner of WebXR session lifecycle, input, and the XR frame loop
+// - VRExplorationManager: what happens once a session is live (navigation,
+//   tools, avatars, spatial UI); drives VTKInstanceHandler's stereo render
+//   off VRManager's frame event
+// - VRControllerRenderer: controller/ray visuals for the exploration path
 // - VRGridLayout: Flat grid positioning in VR space
 // - VRCursorSync: Cross-platform cursor visibility
-// - VRExplorationManager: Exploration session lifecycle
 // - VRNavigationController: Navigation modes (fly, teleport, walk)
 
 export { VRManager, vrManager } from "./VRManager.js";
-export { VRSceneRenderer } from "./VRSceneRenderer.js";
 export { VRControllerRenderer } from "./VRControllerRenderer.js";
 export { VRGridLayout, vrGridLayout } from "./VRGridLayout.js";
 export { VRMultiViewGrid, vrMultiViewGrid, computeGridPlacements } from "./VRMultiViewGrid.js";

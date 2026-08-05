@@ -85,9 +85,6 @@ export {
     ColormapGrid,
 } from './InstanceToolOptions';
 
-// VRButton - VR-optimized button
-export { VRButton } from './VRButton';
-
 // ViewItem - View list item
 export { ViewItem } from './ViewItem';
 

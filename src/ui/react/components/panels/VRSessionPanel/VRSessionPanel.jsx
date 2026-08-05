@@ -51,6 +51,12 @@ const NAVIGATION_MODES = [
  * @param {Function} props.onLeaveSession - Callback to leave session
  * @param {Function} props.onUpdateSettings - Callback to update session settings
  * @param {Function} props.onCreateSnapshot - Callback to create snapshot
+ * @param {Object} [props.manipulationHolder] - Current data-control token holder
+ *   ({ holderUserId, holderUserName }) from useVRSession, or null
+ * @param {Object<string, string>} [props.activityByUserId] - userId → what that
+ *   user is manipulating right now ('dataset' | 'filter')
+ * @param {Function} [props.onGrantControl] - (userId, userName) => void; hand
+ *   the data-control token to a participant
  * @param {string} props.className - Additional CSS class
  */
 function VRSessionPanel({
@@ -62,12 +68,15 @@ function VRSessionPanel({
   onLeaveSession,
   onUpdateSettings,
   onCreateSnapshot,
+  manipulationHolder = null,
+  activityByUserId = null,
+  onGrantControl,
   className = "",
 }) {
   // Local state
   const [navigationMode, setNavigationMode] = useState(session?.defaultExplorationMode || "fly");
   const [scaleVisibility, setScaleVisibility] = useState("my-scale");
-  const [vrScale, setVrScale] = useState(session?.defaultVrScale || 1.0);
+  const [vrScale, setVrScale] = useState(session?.defaultVRScale || 1.0);
   const [isExpanded, setIsExpanded] = useState(true);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
 
@@ -75,7 +84,7 @@ function VRSessionPanel({
   useEffect(() => {
     if (session) {
       setNavigationMode(session.defaultExplorationMode || "fly");
-      setVrScale(session.defaultVrScale || 1.0);
+      setVrScale(session.defaultVRScale || 1.0);
     }
   }, [session]);
 
@@ -170,6 +179,26 @@ function VRSessionPanel({
     return null;
   }
 
+  const holderUserId = manipulationHolder?.holderUserId || null;
+  // Only the current token holder and the session host can hand it on — same
+  // rule VRManipulationLock.grantTo enforces. Showing the action to anyone
+  // else would offer a button that silently fails.
+  const canGrantControl =
+    !!onGrantControl && (holderUserId === currentUserId || session.ownerUserId === currentUserId);
+
+  const renderParticipant = (participant) => (
+    <ParticipantRow
+      key={participant.id}
+      participant={participant}
+      isCurrentUser={participant.odUserId === currentUserId}
+      isOwner={participant.odUserId === session.ownerUserId}
+      isHolder={!!holderUserId && participant.odUserId === holderUserId}
+      activity={activityByUserId?.[participant.odUserId] || null}
+      canGrantControl={canGrantControl && participant.odUserId !== holderUserId}
+      onGrantControl={onGrantControl}
+    />
+  );
+
   return (
     <div className={`vr-session-panel ${className}`}>
       {/* Header */}
@@ -239,14 +268,7 @@ function VRSessionPanel({
                     <Icon name="vr" size={12} />
                     <span>In VR</span>
                   </div>
-                  {vrParticipants.map((participant) => (
-                    <ParticipantRow
-                      key={participant.id}
-                      participant={participant}
-                      isCurrentUser={participant.odUserId === currentUserId}
-                      isOwner={participant.odUserId === session.ownerUserId}
-                    />
-                  ))}
+                  {vrParticipants.map(renderParticipant)}
                 </div>
               )}
 
@@ -257,14 +279,7 @@ function VRSessionPanel({
                     <Icon name="monitor" size={12} />
                     <span>Desktop</span>
                   </div>
-                  {desktopParticipants.map((participant) => (
-                    <ParticipantRow
-                      key={participant.id}
-                      participant={participant}
-                      isCurrentUser={participant.odUserId === currentUserId}
-                      isOwner={participant.odUserId === session.ownerUserId}
-                    />
-                  ))}
+                  {desktopParticipants.map(renderParticipant)}
                 </div>
               )}
             </div>
@@ -323,16 +338,38 @@ function VRSessionPanel({
 
 /**
  * ParticipantRow - Individual participant display
+ *
+ * @param {Object} props
+ * @param {Object} props.participant
+ * @param {boolean} props.isCurrentUser
+ * @param {boolean} props.isOwner - session host (crown)
+ * @param {boolean} [props.isHolder] - holds the data-manipulation token
+ * @param {string|null} [props.activity] - what they are manipulating right now
+ * @param {boolean} [props.canGrantControl] - whether the viewer may hand them
+ *   the token (holder or host only, and never for the holder's own row)
+ * @param {Function} [props.onGrantControl]
  */
 const ParticipantRow = memo(function ParticipantRow({
   participant,
   isCurrentUser,
   isOwner,
+  isHolder = false,
+  activity = null,
+  canGrantControl = false,
+  onGrantControl,
 }) {
   const modeInfo = PARTICIPANT_MODES[participant.mode] || PARTICIPANT_MODES["desktop-observer"];
 
+  const handleGrantControl = useCallback(
+    (e) => {
+      e.stopPropagation();
+      onGrantControl?.(participant.odUserId, participant.userName);
+    },
+    [onGrantControl, participant.odUserId, participant.userName]
+  );
+
   return (
-    <div className={`vr-session-panel__participant ${isCurrentUser ? "vr-session-panel__participant--current" : ""}`}>
+    <div className={`vr-session-panel__participant ${isCurrentUser ? "vr-session-panel__participant--current" : ""} ${isHolder ? "vr-session-panel__participant--holder" : ""}`}>
       <UserAvatar
         name={participant.userName}
         size="xs"
@@ -343,6 +380,16 @@ const ParticipantRow = memo(function ParticipantRow({
           {participant.userName}
           {isCurrentUser && <span className="vr-session-panel__you">(you)</span>}
           {isOwner && <Icon name="crown" size={10} className="vr-session-panel__owner-badge" title="Session owner" />}
+          {/* Distinct from the crown: the host OWNS the session, the holder
+              controls the DATA, and after a grant those are different people. */}
+          {isHolder && (
+            <span
+              className="vr-session-panel__control-chip"
+              title="Has data control — only this person can change what everyone sees"
+            >
+              Controlling
+            </span>
+          )}
         </span>
         <span className="vr-session-panel__participant-mode">
           <Icon name={modeInfo.icon} size={10} />
@@ -351,8 +398,23 @@ const ParticipantRow = memo(function ParticipantRow({
               {participant.vrScale >= 1 ? `${participant.vrScale.toFixed(1)}x` : `1:${(1 / participant.vrScale).toFixed(1)}`}
             </span>
           )}
+          {activity && (
+            <span className="vr-session-panel__participant-activity">
+              editing {activity}
+            </span>
+          )}
         </span>
       </div>
+      {canGrantControl && (
+        <button
+          type="button"
+          className="vr-session-panel__grant-control"
+          onClick={handleGrantControl}
+          title={`Give data control to ${participant.userName}`}
+        >
+          Give control
+        </button>
+      )}
     </div>
   );
 });

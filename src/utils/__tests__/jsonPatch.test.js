@@ -36,6 +36,26 @@ describe('diff', () => {
     expect(ops.some((o) => o.op === 'replace' && o.path === '/arr')).toBe(true);
   });
 
+  test('does not report a change for two empty arrays that are different instances', () => {
+    // Regression: base.arr === next.arr would be false (different references)
+    // even though both are [] — diff() must not flag this as a replace.
+    expect(diff({ arr: [] }, { arr: [] })).toEqual([]);
+  });
+
+  test('does not report a change for two content-equal non-empty arrays', () => {
+    expect(diff({ arr: [1, 'a', { x: 1 }] }, { arr: [1, 'a', { x: 1 }] })).toEqual([]);
+  });
+
+  test('does not report a change for equal arrays nested inside an object', () => {
+    // Regression: e.g. { filter: { userIds: [] } } vs { filter: { userIds: [] } }
+    // from two independently-constructed objects must diff to nothing.
+    const ops = diff(
+      { annotation_display: { filter: { userIds: [], tags: [] }, enabled: true } },
+      { annotation_display: { filter: { tags: [], userIds: [] }, enabled: true } }
+    );
+    expect(ops).toEqual([]);
+  });
+
   test('handles null values', () => {
     const ops = diff({ a: null }, { a: 5 });
     expect(ops).toContainEqual({ op: 'replace', path: '/a', value: 5 });

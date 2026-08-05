@@ -4,7 +4,7 @@
 // Layout: minimal header + full-screen VTK canvas.
 // VR wrist menu handles in-headset controls.
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { ui as log } from "@Utils/logger.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { authService } from "@Services/authService.js";
@@ -54,6 +54,10 @@ import { ServerRenderOverlay } from "@/rendering/ServerRenderOverlay.jsx";
 // Toast
 import { ToastContainer } from "@UI/react/components/molecules/Toast";
 import { toast } from "@UI/react/store/toastStore";
+import { appToasts } from "@UI/react/store/appToasts";
+
+// Load-failure surfacing (ViewLifecycleService has no other way to reach the UI)
+import { eventBus, BUS_EVENTS } from "@Core/events/EventBus.js";
 
 // Config
 import { config } from "@Core/config/clientConfig.js";
@@ -64,7 +68,8 @@ import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 import { useWebXRAvailability } from "@UI/react/components/organisms";
 import { useVoiceControls } from "@UI/react/hooks/useVoiceBar.js";
 import { useRoomIndicator } from "@UI/react/hooks/useRoomIndicator.js";
-import { vrManager } from "@Core/vr/VRManager.js";
+import { vrExplorationManager } from "@Core/vr/VRExplorationManager.js";
+import { workspaceManager } from "@Core/instances/workspaceManager.js";
 
 import "./CIAWebApp.scss";
 
@@ -102,6 +107,7 @@ export function CIAWebApp({ username, userId, projectId }) {
     selectWorkspace,
     updateWorkspace,
     isLoading: isWorkspacesLoading,
+    error: workspacesError,
     createPersonalWorkspace,
   // Note: do NOT pass roomId here. The Y.js session UUID (roomId from sessionManager)
   // is the collaboration channel key and is NOT a server-side rooms table record.
@@ -109,14 +115,24 @@ export function CIAWebApp({ username, userId, projectId }) {
   // Y.js already uses sessionManager.getRoomId() independently via yjsSetup.js.
   } = useWorkspaces({ userId, projectId });
 
-  // Auto-create a personal workspace on first run (no workspace in this project/room yet)
+  // Auto-create a personal workspace on first run (no workspace in this
+  // project/room yet). This is only a guarded fallback: useWorkspaces already
+  // get-or-creates a personal workspace during loadWorkspaces. We guard it hard
+  // to avoid the creation loop that produced hundreds of thousands of rows:
+  //   - fire at most once per session (autoCreateAttemptedRef), and
+  //   - skip when the workspace list failed to load — a failed list is not an
+  //     empty list, and creating on error would spam the server.
+  const autoCreateAttemptedRef = useRef(false);
   useEffect(() => {
     if (isWorkspacesLoading || !userId || !projectId) return;
+    if (workspacesError) return;
     if ((workspaces || []).length > 0) return;
+    if (autoCreateAttemptedRef.current) return;
+    autoCreateAttemptedRef.current = true;
     createPersonalWorkspace?.('My Workspace').catch((err) => {
       log.warn('Auto-create workspace failed:', err.message);
     });
-  }, [isWorkspacesLoading, workspaces, userId, projectId, createPersonalWorkspace]);
+  }, [isWorkspacesLoading, workspaces, userId, projectId, workspacesError, createPersonalWorkspace]);
 
   // Ensure the active workspace has a canvas
   const ensureCanvas = useCallback(
@@ -212,15 +228,23 @@ export function CIAWebApp({ username, userId, projectId }) {
 
   const handleEnterVR = useCallback(async () => {
     try {
-      await vrManager.enterVR();
+      const instance = canvasId ? workspaceManager.getActiveInstanceForCanvas(canvasId) : null;
+      if (!instance?.instanceData?.hasData) {
+        toast.error("Open a dataset first");
+        return;
+      }
+      await vrExplorationManager.startExploration(instance.instanceId, {});
     } catch (err) {
       log.error("Enter VR failed:", err);
       toast.error(`VR unavailable: ${err.message}`);
     }
-  }, []);
+  }, [canvasId]);
 
   // ── Voice ─────────────────────────────────────────────────────────────────
-  const voice = useVoiceControls();
+  // Pass the resolved collaboration room id so the voice room is tied to the
+  // session (the actual LiveKit room name is derived from sessionManager via
+  // getVoiceRoomName; roomId here also drives presence/display context).
+  const voice = useVoiceControls({ roomId: resolvedWorkspaceRoomId });
 
   // ── Modal state ───────────────────────────────────────────────────────────
   const [datasetSelectorTarget, setDatasetSelectorTarget] = useState(null);
@@ -264,17 +288,31 @@ export function CIAWebApp({ username, userId, projectId }) {
       setActiveManipulator(manipulator?.target ? manipulator : null);
     };
 
+    // ViewLifecycleService has no UI of its own — it only emits VIEW_ERROR on
+    // the core event bus when a requested dataset/view fails to load or
+    // place. Without this bridge the failure is console-only and whatever
+    // triggered it (e.g. a sample-dataset "Load" button) is left with a
+    // spinner that clears on its own timeout with no explanation.
+    const onViewError = ({ error } = {}) => {
+      toast.error(appToasts.loadFailed(error).message, {
+        description: appToasts.loadFailed(error).description,
+        duration: appToasts.loadFailed(error).duration,
+      });
+    };
+
     window.addEventListener("cia:open-dataset-selector", onOpenDataset);
     window.addEventListener("cia:delete-view", onDeleteView);
     window.addEventListener("cia:toast", onToast);
     window.addEventListener("cia:switch-room", onSwitchRoom);
     window.addEventListener("cia:manipulator-changed", onManipulatorChanged);
+    const unsubViewError = eventBus.on(BUS_EVENTS.VIEW_ERROR, onViewError);
     return () => {
       window.removeEventListener("cia:open-dataset-selector", onOpenDataset);
       window.removeEventListener("cia:delete-view", onDeleteView);
       window.removeEventListener("cia:toast", onToast);
       window.removeEventListener("cia:switch-room", onSwitchRoom);
       window.removeEventListener("cia:manipulator-changed", onManipulatorChanged);
+      unsubViewError?.();
     };
   }, [switchRoom]);
 

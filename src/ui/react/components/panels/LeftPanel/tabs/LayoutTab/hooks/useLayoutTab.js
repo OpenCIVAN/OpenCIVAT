@@ -133,6 +133,61 @@ const INITIAL_SAVED_TEMPLATES = [
 ];
 
 // =============================================================================
+// LOCAL STORAGE PERSISTENCE
+// =============================================================================
+
+const LAYOUT_TEMPLATES_STORAGE_KEY = 'cia:layout-templates-v2';
+
+/**
+ * Load persisted templates/custom layouts from localStorage.
+ * Falls back to the provided defaults on any error or missing data.
+ * @returns {{ savedTemplates: Array, customLayouts: Array }}
+ */
+function loadPersistedLayoutData() {
+    try {
+        const raw = window.localStorage.getItem(LAYOUT_TEMPLATES_STORAGE_KEY);
+        if (!raw) {
+            return { savedTemplates: INITIAL_SAVED_TEMPLATES, customLayouts: INITIAL_CUSTOM_LAYOUTS };
+        }
+        const parsed = JSON.parse(raw);
+        return {
+            savedTemplates: Array.isArray(parsed?.savedTemplates) ? parsed.savedTemplates : INITIAL_SAVED_TEMPLATES,
+            customLayouts: Array.isArray(parsed?.customLayouts) ? parsed.customLayouts : INITIAL_CUSTOM_LAYOUTS,
+        };
+    } catch {
+        return { savedTemplates: INITIAL_SAVED_TEMPLATES, customLayouts: INITIAL_CUSTOM_LAYOUTS };
+    }
+}
+
+/**
+ * Persist templates/custom layouts to localStorage.
+ * @param {Array} savedTemplates
+ * @param {Array} customLayouts
+ */
+function persistLayoutData(savedTemplates, customLayouts) {
+    try {
+        window.localStorage.setItem(
+            LAYOUT_TEMPLATES_STORAGE_KEY,
+            JSON.stringify({ savedTemplates, customLayouts })
+        );
+    } catch {
+        /* ignore (e.g. storage disabled/full) */
+    }
+}
+
+/**
+ * Dispatch the app-standard toast notification event.
+ * @param {string} message
+ * @param {'success'|'error'} [type]
+ */
+function dispatchToast(message, type = 'success') {
+    if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+    window.dispatchEvent(new CustomEvent('cia:toast', {
+        detail: { message, type },
+    }));
+}
+
+// =============================================================================
 // HOOK
 // =============================================================================
 
@@ -163,8 +218,8 @@ export function useLayoutTab({
     const [viewGroups, setViewGroups] = useState(mockViewGroups ?? INITIAL_VIEWGROUPS);
     const [canvas, setCanvas] = useState(mockCanvas ?? INITIAL_CANVAS);
     const [viewports, setViewports] = useState(mockViewports ?? INITIAL_VIEWPORTS);
-    const [customLayouts, setCustomLayouts] = useState(INITIAL_CUSTOM_LAYOUTS);
-    const [savedTemplates, setSavedTemplates] = useState(INITIAL_SAVED_TEMPLATES);
+    const [customLayouts, setCustomLayouts] = useState(() => loadPersistedLayoutData().customLayouts);
+    const [savedTemplates, setSavedTemplates] = useState(() => loadPersistedLayoutData().savedTemplates);
 
     // =========================================================================
     // SELECTION STATE
@@ -172,6 +227,7 @@ export function useLayoutTab({
 
     const [selectedViewGroupId, setSelectedViewGroupId] = useState(null);
     const [selectedViewportId, setSelectedViewportId] = useState(null);
+    const [selectedViewId, setSelectedViewId] = useState(null);
     const [drillInViewGroupId, setDrillInViewGroupId] = useState(null);
 
     // =========================================================================
@@ -229,6 +285,10 @@ export function useLayoutTab({
         setActiveTab('viewports');
     }, []);
 
+    const handleSelectView = useCallback((id) => {
+        setSelectedViewId(prev => (prev === id ? null : id));
+    }, []);
+
     // =========================================================================
     // DRILL-IN HANDLERS
     // =========================================================================
@@ -239,10 +299,12 @@ export function useLayoutTab({
         setActiveTab('viewgroups');
         setMultiSelectMode(false);
         setSelectedViewGroupIds([]);
+        setSelectedViewId(null);
     }, []);
 
     const handleDrillOut = useCallback(() => {
         setDrillInViewGroupId(null);
+        setSelectedViewId(null);
     }, []);
 
     // =========================================================================
@@ -502,27 +564,72 @@ export function useLayoutTab({
     // =========================================================================
 
     const handleSaveAsCustomLayout = useCallback(() => {
-        // TODO: Open save dialog
-        console.log('Save as custom layout');
-    }, []);
+        const newLayout = {
+            id: `custom-${Date.now()}`,
+            name: `Custom ${canvas.cols}×${canvas.rows}`,
+            rows: canvas.rows,
+            cols: canvas.cols,
+            isCustom: true,
+        };
+        setCustomLayouts(prev => {
+            const next = [...prev, newLayout];
+            persistLayoutData(savedTemplates, next);
+            return next;
+        });
+        dispatchToast(`Saved layout "${newLayout.name}"`, 'success');
+    }, [canvas, savedTemplates]);
 
     const handleDeleteCustomLayout = useCallback((layoutId) => {
-        setCustomLayouts(prev => prev.filter(l => l.id !== layoutId));
-    }, []);
+        setCustomLayouts(prev => {
+            const next = prev.filter(l => l.id !== layoutId);
+            persistLayoutData(savedTemplates, next);
+            return next;
+        });
+    }, [savedTemplates]);
 
     // =========================================================================
     // TEMPLATE HANDLERS
     // =========================================================================
 
     const handleLoadTemplate = useCallback((template) => {
-        // TODO: Implement template loading
-        console.log('Load template:', template);
+        // Legacy/mock templates may not carry a full snapshot (viewGroups/canvas).
+        // Guard against those so applying them is a safe no-op instead of a crash.
+        if (!template?.viewGroups || !template?.canvas) {
+            dispatchToast(`Cannot apply "${template?.name || 'template'}" — no saved layout data`, 'error');
+            return;
+        }
+        setViewGroups(template.viewGroups);
+        setCanvas(template.canvas);
+        dispatchToast(`Applied "${template.name}"`, 'success');
     }, []);
 
     const handleSaveCurrentAsTemplate = useCallback(() => {
-        // TODO: Implement template saving
-        console.log('Save current as template');
-    }, []);
+        const newTemplate = {
+            id: `tpl-${Date.now()}`,
+            name: `Layout Template ${new Date().toLocaleString()}`,
+            type: 'full',
+            scope: 'personal',
+            preview: viewGroups.map(vg => vg.layoutId),
+            viewGroups,
+            canvas,
+            createdAt: new Date().toISOString(),
+        };
+        setSavedTemplates(prev => {
+            const next = [...prev, newTemplate];
+            persistLayoutData(next, customLayouts);
+            return next;
+        });
+        dispatchToast(`Template "${newTemplate.name}" saved`, 'success');
+    }, [viewGroups, canvas, customLayouts]);
+
+    const handleDeleteTemplate = useCallback((template) => {
+        setSavedTemplates(prev => {
+            const next = prev.filter(t => t.id !== template.id);
+            persistLayoutData(next, customLayouts);
+            return next;
+        });
+        dispatchToast(`Deleted "${template?.name || 'template'}"`, 'success');
+    }, [customLayouts]);
 
     const handleApplyLayoutToViewGroup = useCallback((layout) => {
         if (!drillInViewGroupId || !drillInViewGroup) return;
@@ -549,6 +656,7 @@ export function useLayoutTab({
         // Selection state
         selectedViewGroupId,
         selectedViewportId,
+        selectedViewId,
         drillInViewGroupId,
 
         // Multi-select state
@@ -578,6 +686,7 @@ export function useLayoutTab({
         // Selection handlers
         handleSelectViewGroup,
         handleSelectViewport,
+        handleSelectView,
 
         // Drill-in handlers
         handleDrillIn,
@@ -617,6 +726,7 @@ export function useLayoutTab({
         // Template handlers
         handleLoadTemplate,
         handleSaveCurrentAsTemplate,
+        handleDeleteTemplate,
         handleApplyLayoutToViewGroup,
     };
 }

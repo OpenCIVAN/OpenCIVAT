@@ -17,7 +17,6 @@ import { useInstanceToolsPanel } from './InstanceToolsPanel.logic';
 import { TOOL_SECTIONS, PANEL_TABS } from './constants';
 
 // Components
-import { ViewGroupStrip } from './components/ViewGroupStrip/ViewGroupStrip';
 import { InstanceHeader } from './components/InstanceHeader/InstanceHeader';
 import { DotNavigation } from './components/DotNavigation/DotNavigation';
 import { CameraSection } from './components/ToolSections/CameraSection';
@@ -459,7 +458,6 @@ const AnnotationsTabContent = memo(function AnnotationsTabContent({ logic }) {
  */
 export const InstanceToolsPanel = memo(function InstanceToolsPanel({
   workspaceId,
-  viewGroup, // Optional: pass viewGroup for strip display
 }) {
   const logic = useInstanceToolsPanel({ workspaceId });
 
@@ -496,14 +494,6 @@ export const InstanceToolsPanel = memo(function InstanceToolsPanel({
         <NoInstancePlaceholder />
       ) : (
         <>
-          {/* ViewGroup Strip (if provided) */}
-          {viewGroup && (
-            <ViewGroupStrip
-              viewGroup={viewGroup}
-              onViewSelect={(id) => console.log('View selected:', id)}
-            />
-          )}
-
           {/* Instance Header */}
           <InstanceHeader instanceInfo={instanceInfo} />
 

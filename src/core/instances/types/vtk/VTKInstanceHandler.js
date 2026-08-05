@@ -87,8 +87,10 @@ import {
   worldToScreen,
 } from "@VTK/utils/vtkRaycaster.js";
 import { vrManager } from "@Core/vr/VRManager.js";
+import { vrExplorationManager } from "@Core/vr/VRExplorationManager.js";
 import { VRControllerRenderer } from "@Core/vr/VRControllerRenderer.js";
-import { vrControllers } from "@VTK/vr/VTKVRController.js";
+import { VR_CLEAR_COLOR } from "@Core/vr/environment/VREnvironment.js";
+import { buildYawPivotMatrix, mapXRPointToData } from "@Core/vr/tools/vrPlaneMath.js";
 import {
   updateCursorWorldPosition,
   clearCursorWorldPosition,
@@ -122,7 +124,6 @@ import vtkSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
 import vtkConeSource from "@kitware/vtk.js/Filters/Sources/ConeSource";
 import vtkCubeSource from "@kitware/vtk.js/Filters/Sources/CubeSource";
 import vtkCylinderSource from "@kitware/vtk.js/Filters/Sources/CylinderSource";
-import vtkPlaneSource from "@kitware/vtk.js/Filters/Sources/PlaneSource";
 import vtkCellPicker from "@kitware/vtk.js/Rendering/Core/CellPicker";
 import "@kitware/vtk.js/Rendering/Profiles/Geometry";
 
@@ -132,6 +133,15 @@ if (!DataAccessHelper.has("zip")) {
     JSZipDataAccessHelper.create(options)
   );
 }
+
+// VR raycast pick tolerance. NOT world units — this is a MULTIPLIER. vtk.js
+// computes a world-space tolerance from the window diagonal and then scales it
+// by this value: `computeTolerance(...) * model.tolerance` (Picker.js:265,
+// :282). The previous 1e-6 was set believing it was an absolute world
+// distance, which collapsed the effective tolerance to ~zero and made thin or
+// edge-on surfaces unhittable. vtk.js's own default is 0.025 (Picker.js:292);
+// the desktop raycaster uses 0.01 (vtkRaycaster.js DEFAULT_TOLERANCE).
+const VR_PICK_TOLERANCE = 0.01;
 
 /**
  * VTKInstanceHandler
@@ -841,6 +851,22 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // Initialize instance tools (needed for widgets and rendering controls)
     // Use instanceData.sceneObjects which is now guaranteed to be set
     instanceTools.initializeTools(instanceId, instanceData.sceneObjects);
+
+    // Bridge the shared vtkWidgetManager onto instanceData. Six features
+    // (VTKClippingFeature, VTKMeasurementWidgetsFeature, VTKAnnotationWidgets-
+    // Feature, VTKImageCroppingFeature, VTKResliceCursorFeature,
+    // VTKImplicitPlaneFeature) read `instanceData.widgetManager` in their own
+    // initialize() to decide whether an interactive widget path is available.
+    // Nothing ever assigned it, so all six silently degraded — the desktop
+    // clipping menu in particular rendered but did nothing. instanceTools owns
+    // the only vtkWidgetManager, and it receives sceneObjects rather than
+    // instanceData, so this is the correct seam to connect the two.
+    //
+    // VR deliberately does NOT use this: it calls
+    // vtkClippingFeature.enableClipping(id, { manual: true }), because
+    // vtkWidgetManager needs a mouse interactor and would add widget actors
+    // into the renderer VR shares with the desktop canvas.
+    instanceData.widgetManager = instanceTools.getWidgetManager(instanceId);
     log.debug(`Instance tools initialized`);
 
     // Initialize orientation widget (always create it, but start enabled)
@@ -4330,7 +4356,19 @@ console.log('Tools:', tools);
         }
 
         if (state.visualization.representation !== undefined) {
-          property.setRepresentation(state.visualization.representation);
+          // Route through instanceTools, which maps the STRING the menus and
+          // VR push ('surface'|'wireframe'|'points') to the integer vtk.js
+          // wants ({surface:2, wireframe:1, points:0}). Calling
+          // property.setRepresentation directly with the string silently did
+          // nothing, so a representation change made on one client never
+          // appeared on any other. instanceTools.setRepresentation also
+          // renders, and tolerates the raw integer form older peers may send.
+          const rep = state.visualization.representation;
+          if (typeof rep === "number") {
+            property.setRepresentation(rep);
+          } else {
+            instanceTools.setRepresentation(instanceId, rep);
+          }
         }
 
         if (state.visualization.pointSize !== undefined) {
@@ -4565,36 +4603,9 @@ console.log('Tools:', tools);
   /**
    * Check if this instance type supports VR
    */
-  supportsInstanceVR() {
-    return true; // VTK supports VR through WebXR
-  }
-
   /**
-   * Get VR capabilities
-   */
-  getVRCapabilities() {
-    return {
-      instanceVR: true,
-      applicationVR: false,
-
-      requirements: {
-        controllers: true,
-        handTracking: false,
-        roomScale: true,
-        minFPS: 90,
-      },
-
-      optional: {
-        eyeTracking: false,
-        haptics: true,
-        spatialAudio: false,
-      },
-    };
-  }
-
-  /**
-   * Get the WebGL context for this instance
-   * Used by VRButton to pass to VRManager
+   * Get the WebGL context for this instance.
+   * Used by vrExplorationManager.startExploration() to pass to VRManager.enterVR().
    */
   getWebGLContext(instanceId) {
     const instanceData = this.instances.get(instanceId);
@@ -4616,269 +4627,6 @@ console.log('Tools:', tools);
     return gl;
   }
 
-  /**
-   * Enter VR mode for this instance
-   *
-   * Sets up stereo rendering and controller visualization for WebXR
-   *
-   * @param {Object} instanceData - The instance data object
-   * @param {XRSession} xrSession - The active XR session from VRManager
-   * @returns {Object} VR context data
-   */
-  async enterInstanceVR(instanceData, xrSession) {
-    const { instanceId, sceneObjects } = instanceData;
-    log.info(`Entering VR for VTK instance ${instanceId}`);
-
-    if (!sceneObjects) {
-      throw new Error("Cannot enter VR: instance not initialized");
-    }
-
-    const { renderer, renderWindow, openGLRenderWindow, camera } = sceneObjects;
-
-    // Store original camera state for restoration
-    const originalCameraState = {
-      position: camera.getPosition(),
-      focalPoint: camera.getFocalPoint(),
-      viewUp: camera.getViewUp(),
-      parallelScale: camera.getParallelScale(),
-      clippingRange: camera.getClippingRange(),
-      viewAngle: camera.getViewAngle(),
-    };
-
-    // Get WebGL context
-    const canvas = openGLRenderWindow.getCanvas();
-    const gl =
-      canvas.getContext("webgl2", { xrCompatible: true }) ||
-      canvas.getContext("webgl", { xrCompatible: true });
-
-    if (!gl) {
-      throw new Error("Could not get WebGL context for VR");
-    }
-
-    // Make context XR compatible
-    await gl.makeXRCompatible();
-
-    // Create XR WebGL layer
-    const xrLayer = new XRWebGLLayer(xrSession, gl);
-
-    // Update session render state
-    await xrSession.updateRenderState({
-      baseLayer: xrLayer,
-    });
-
-    // Get reference space
-    const referenceSpace = vrManager.getReferenceSpace();
-
-    // Create VR data context
-    const vrData = {
-      xrSession,
-      xrLayer,
-      gl,
-      referenceSpace,
-      originalCameraState,
-      isActive: true,
-      frameHandler: null,
-      scaleMultiplier: 1.0, // Adjust if scene units != meters
-    };
-
-    // Calculate scene scale (VTK units to meters)
-    // If your data is in millimeters, set scaleMultiplier = 0.001
-    const bounds = renderer.computeVisiblePropBounds();
-    const diagonal = Math.sqrt(
-      Math.pow(bounds[1] - bounds[0], 2) +
-        Math.pow(bounds[3] - bounds[2], 2) +
-        Math.pow(bounds[5] - bounds[4], 2)
-    );
-
-    // Auto-scale: try to make the model about 1 meter in VR
-    if (diagonal > 0) {
-      vrData.scaleMultiplier = 1.0 / diagonal;
-      log.debug(
-        `VR scale multiplier: ${vrData.scaleMultiplier} (diagonal: ${diagonal})`
-      );
-    }
-
-    // Initialize controllers for this instance
-    vrControllers.initialize(instanceId, sceneObjects, xrSession);
-
-    // Store VR data on instance
-    instanceData.vrData = vrData;
-
-    // Subscribe to VRManager frame events
-    vrData.frameHandler = (frameData) => {
-      this._renderVRFrame(instanceData, vrData, frameData);
-    };
-    vrManager.on("frame", vrData.frameHandler);
-
-    log.info(`VR initialized for instance ${instanceId}`);
-    return vrData;
-  }
-
-  /**
-   * Render a VR frame (called ~90 times per second)
-   *
-   * Handles stereo rendering by rendering the scene twice,
-   * once for each eye with appropriate camera transforms.
-   *
-   * @private
-   */
-  _renderVRFrame(instanceData, vrData, frameData) {
-    if (!vrData.isActive) return;
-
-    const { frame, viewerPose, referenceSpace } = frameData;
-    const { xrSession, xrLayer, gl, scaleMultiplier } = vrData;
-    const { renderer, renderWindow, camera } = instanceData.sceneObjects;
-
-    if (!viewerPose) {
-      // No tracking - can't render
-      return;
-    }
-
-    // Bind XR framebuffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, xrLayer.framebuffer);
-
-    // Clear the framebuffer
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    // Render for each eye (left and right)
-    for (const view of viewerPose.views) {
-      const viewport = xrLayer.getViewport(view);
-
-      // Set viewport for this eye
-      gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
-
-      // Update VTK camera for this XR view
-      this._updateCameraForVRView(camera, view, scaleMultiplier);
-
-      // Render the scene
-      renderer.render();
-    }
-
-    // Update controller visualizations
-    vrControllers.updatePoses(instanceData.instanceId, frame, referenceSpace);
-  }
-
-  /**
-   * Update VTK camera to match an XR view (eye)
-   *
-   * Extracts position and orientation from the XR view transform
-   * and applies it to the VTK camera.
-   *
-   * @private
-   */
-  _updateCameraForVRView(camera, xrView, scaleMultiplier = 1.0) {
-    // Get the view transform (inverse gives us the camera position/orientation)
-    const viewMatrix = xrView.transform.inverse.matrix;
-
-    // Extract position from the 4x4 matrix
-    // Column-major order: position is at indices 12, 13, 14
-    const position = [
-      viewMatrix[12] / scaleMultiplier,
-      viewMatrix[13] / scaleMultiplier,
-      viewMatrix[14] / scaleMultiplier,
-    ];
-
-    // Extract forward direction from the matrix
-    // Forward is negative Z in WebXR (-column 2)
-    const forward = [-viewMatrix[8], -viewMatrix[9], -viewMatrix[10]];
-
-    // Extract up direction (column 1)
-    const up = [viewMatrix[4], viewMatrix[5], viewMatrix[6]];
-
-    // Calculate focal point (position + forward direction)
-    const focalDistance = camera.getDistance() || 1.0;
-    const focalPoint = [
-      position[0] + forward[0] * focalDistance,
-      position[1] + forward[1] * focalDistance,
-      position[2] + forward[2] * focalDistance,
-    ];
-
-    // Apply to VTK camera
-    camera.setPosition(...position);
-    camera.setFocalPoint(...focalPoint);
-    camera.setViewUp(...up);
-
-    // Set projection matrix from XR
-    // Note: VTK uses a different matrix format, so we need to convert
-    const projMatrix = xrView.projectionMatrix;
-    camera.setProjectionMatrix(projMatrix);
-  }
-
-  /**
-   * Exit VR mode for this instance
-   *
-   * Restores original camera state and cleans up VR resources
-   */
-  async exitInstanceVR(instanceData) {
-    const { instanceId, vrData, sceneObjects } = instanceData;
-
-    if (!vrData) {
-      log.warn(`No VR data to clean up for instance ${instanceId}`);
-      return;
-    }
-
-    log.info(`Exiting VR for VTK instance ${instanceId}`);
-
-    // Stop frame updates
-    vrData.isActive = false;
-
-    // Unsubscribe from VRManager frame events
-    if (vrData.frameHandler) {
-      vrManager.off("frame", vrData.frameHandler);
-      vrData.frameHandler = null;
-    }
-
-    // Clean up controllers
-    vrControllers.cleanup(instanceId);
-
-    // Restore original camera state
-    if (sceneObjects?.camera && vrData.originalCameraState) {
-      const camera = sceneObjects.camera;
-      const orig = vrData.originalCameraState;
-
-      camera.setPosition(...orig.position);
-      camera.setFocalPoint(...orig.focalPoint);
-      camera.setViewUp(...orig.viewUp);
-      camera.setParallelScale(orig.parallelScale);
-      camera.setClippingRange(...orig.clippingRange);
-      camera.setViewAngle(orig.viewAngle);
-
-      // Clear the projection matrix so VTK computes it normally
-      camera.setProjectionMatrix(null);
-    }
-
-    // Re-render to desktop view
-    this._requestRender(instanceData, "vr-exit");
-
-    // Clear VR data
-    instanceData.vrData = null;
-
-    log.info(`VR exited for instance ${instanceId}`);
-  }
-
-  /**
-   * Update VR state (called every frame while in VR)
-   * Most work is done in _renderVRFrame, but this can be used
-   * for additional per-frame updates
-   */
-  async updateInstanceVR(instanceData, vrData, frame) {
-    // Additional per-frame updates can go here
-    // The main rendering is handled by _renderVRFrame
-  }
-
-  /**
-   * Called when application enters VR mode
-   * Prepares instance for VR context (optimize rendering, etc.)
-   */
-  async onApplicationVREnter(instanceData, vrContext) {
-    log.debug(`Application VR enter for instance ${instanceData.instanceId}`);
-    // Could add optimizations here like:
-    // - Reduce polygon count
-    // - Disable expensive effects
-    // - Adjust LOD settings
-    return null;
-  }
-
   // ===========================================================================
   // VR EXPLORATION IMPLEMENTATION
   // ===========================================================================
@@ -4897,7 +4645,7 @@ console.log('Tools:', tools);
     return {
       supported: true,
       explorationModes: ["fly", "teleport", "walk", "scale"],
-      tools: ["slice", "measure", "annotate", "clip", "probe"],
+      tools: ["measure", "annotate", "clip", "probe"],
       maxRegionSize: null,
       supportsLiveSync: true,
       requiresPreprocessing: ["lod-generation"],
@@ -4931,9 +4679,18 @@ console.log('Tools:', tools);
   }
 
   /**
-   * Enter VR exploration mode
+   * Enter VR exploration mode.
+   *
+   * @param {Object} instanceData
+   * @param {Object} session
+   * @param {XRSession} xrSession - the session VRManager already opened
+   * @param {Object} xrResources - { gl, xrLayer, referenceSpace } already
+   *   set up by VRManager._setupWebGLLayer/enterVR — this handler no longer
+   *   creates its own WebGL context/XRWebGLLayer, since doing so raced a
+   *   second, unused XRWebGLLayer against the one VRManager already bound
+   *   as the session's baseLayer.
    */
-  async enterVRExploration(instanceData, session, xrSession) {
+  async enterVRExploration(instanceData, session, xrSession, xrResources) {
     const { instanceId, sceneObjects } = instanceData;
 
     log.info(`Entering VR exploration for instance ${instanceId}`);
@@ -4942,11 +4699,62 @@ console.log('Tools:', tools);
       throw new Error("Cannot enter VR exploration: instance not initialized");
     }
 
-    const { renderer, renderWindow, openGLRenderWindow, camera } = sceneObjects;
+    const { gl, xrLayer, referenceSpace } = xrResources || {};
+    if (!gl || !xrLayer || !referenceSpace) {
+      throw new Error(
+        "enterVRExploration requires { gl, xrLayer, referenceSpace } from VRManager"
+      );
+    }
 
-    // Get dataset bounds
-    const bounds = renderer.computeVisiblePropBounds();
-    const dataBounds = bounds || [-1, 1, -1, 1, -1, 1];
+    const { renderer, camera, openGLRenderWindow } = sceneObjects;
+
+    // Defensive: ensure the renderer's own erase pass is ON so it repaints its
+    // (bright) background each render rather than leaving whatever was in the
+    // eye viewport. Combined with VREnvironment's bright background + the
+    // per-eye scissored re-clear in updateVRExploration, this is belt-and-
+    // suspenders against the reported black surround (R3).
+    renderer.setErase?.(true);
+
+    // Capture the pre-VR desktop GL drawing-buffer size so exitVRExploration
+    // can restore it — per-eye rendering resizes the OpenGL render window to
+    // each XR viewport, which would otherwise persist until the next resize.
+    const originalGLSize =
+      typeof openGLRenderWindow?.getSize === "function"
+        ? openGLRenderWindow.getSize()
+        : null;
+
+    // Get dataset bounds, scoped to the DATA ACTOR ONLY — not
+    // renderer.computeVisiblePropBounds(), which aggregates every visible
+    // actor in the renderer (confirmed against vtk.js's Renderer.js: it has
+    // no pickability filter, so even setPickable(false) floor/wall/menu
+    // actors still count). Environment/menu actors are added to this SAME
+    // long-lived renderer on every VR entry; if a prior session's teardown
+    // ever failed to remove them (see VRExplorationManager.leaveSession
+    // hardening), computeVisiblePropBounds() would include their ~20-24m
+    // geometry and inflate the diagonal, collapsing the auto-fit vrScale
+    // toward zero — the "tiny object, giant menu panels" bug. Scoping to
+    // just the data actor makes sizing structurally immune to that
+    // regardless of teardown correctness. computeVisiblePropBounds() is only
+    // a last-resort fallback if the actor itself has no valid bounds yet
+    // (e.g. actors not fully registered on the Vision Pro entry timing).
+    const isValidBounds = (b) =>
+      Array.isArray(b) &&
+      b.length === 6 &&
+      b.every((v) => Number.isFinite(v)) &&
+      b[1] >= b[0] &&
+      b[3] >= b[2] &&
+      b[5] >= b[4] &&
+      (b[1] - b[0] > 1e-6 || b[3] - b[2] > 1e-6 || b[5] - b[4] > 1e-6);
+
+    let bounds =
+      typeof sceneObjects.actor?.getBounds === "function"
+        ? sceneObjects.actor.getBounds()
+        : null;
+    if (!isValidBounds(bounds)) {
+      const rendererBounds = renderer.computeVisiblePropBounds();
+      if (isValidBounds(rendererBounds)) bounds = rendererBounds;
+    }
+    const dataBounds = isValidBounds(bounds) ? bounds : [-1, 1, -1, 1, -1, 1];
 
     // Store original camera state
     const originalCameraState = {
@@ -4958,26 +4766,31 @@ console.log('Tools:', tools);
       viewAngle: camera.getViewAngle(),
     };
 
-    // Get WebGL context
-    const canvas = openGLRenderWindow.getCanvas();
-    const gl =
-      canvas.getContext("webgl2", { xrCompatible: true }) ||
-      canvas.getContext("webgl", { xrCompatible: true });
+    // World-space center of the dataset — the pivot the two-hand twist yaws
+    // the actor about (turntable spin), and the reference probeDataVR undoes
+    // that yaw around. Captured once at entry from the (validated) bounds.
+    // computeVisiblePropBounds()/actor.getBounds() are WORLD-space (post any
+    // existing actor transform), which is exactly what actor.setUserMatrix's
+    // pivot needs — see _applyVRDataRotation.
+    const dataCenter = [
+      (dataBounds[0] + dataBounds[1]) / 2,
+      (dataBounds[2] + dataBounds[3]) / 2,
+      (dataBounds[4] + dataBounds[5]) / 2,
+    ];
 
-    if (!gl) {
-      throw new Error("Could not get WebGL context for VR exploration");
-    }
-
-    // Make context XR compatible
-    await gl.makeXRCompatible();
-
-    // Create XR WebGL layer
-    const xrLayer = new XRWebGLLayer(xrSession, gl);
-
-    // Update session render state
-    await xrSession.updateRenderState({
-      baseLayer: xrLayer,
-    });
+    // Preserve the data actor's UserMatrix so _applyVRDataRotation can spin it
+    // in VR (as an outer world-space rotation, independent of the actor's own
+    // Position/Origin/Orientation/Scale — see _applyVRDataRotation for why)
+    // and exitVRExploration can restore it exactly. getUserMatrix() returns a
+    // LIVE mutable reference into the actor's internal state — setUserMatrix
+    // mutates that same array in place, so this must be a defensive copy, not
+    // the reference itself, or the "original" snapshot would be corrupted the
+    // moment VR sets a new matrix.
+    const dataActor = sceneObjects.actor;
+    const originalActorUserMatrix =
+      typeof dataActor?.getUserMatrix === "function"
+        ? Array.from(dataActor.getUserMatrix())
+        : null;
 
     // Create VR exploration context
     const vrContext = {
@@ -4986,16 +4799,23 @@ console.log('Tools:', tools);
       xrSession,
       xrLayer,
       gl,
+      referenceSpace,
+      handler: this,
       sceneObjects,
       dataBounds,
+      dataCenter,
       originalCameraState,
+      originalGLSize,
+      originalActorUserMatrix,
 
-      // VR state
+      // VR state — placement is finalized by
+      // VRExplorationManager._applyInitialPlacement right after this call
+      // returns; these are just safe pre-placement defaults.
       vrScale: session.defaultVRScale || 1.0,
       vrOrigin: [0, 0, 0],
-
-      // Slice planes
-      slicePlanes: new Map(),
+      // Two-hand twist yaw (radians) applied to the data actor each frame.
+      vrRotation: 0,
+      _appliedVRRotation: null,
 
       // Measurements
       measurements: [],
@@ -5010,59 +4830,152 @@ console.log('Tools:', tools);
     // Initialize VR controllers visualization
     await this._initVRExplorationControllers(vrContext);
 
+    // Suppress all stray renderWindow.render() calls for the duration of the
+    // session. ~162 call sites (every VTK*Feature, vtkInstanceTools, the Y.js
+    // collaboration observers in VTKRemoteVRRays/VTKInstanceCursors, and
+    // _requestRender) can fire mid-XR-frame; each is a full extra scene
+    // traversal into the bound XR framebuffer and shows up as judder.
+    // RenderWindow.render() delegates to interactor.render(), which no-ops
+    // while isAnimating() (RenderWindowInteractor.js:805-809, :451). The XR
+    // loop draws via openGLRenderWindow.traverseAllPasses() instead. This is
+    // the same mechanism vtk.js's own WebXR RenderWindowHelper uses.
+    try {
+      sceneObjects.interactor?.switchToXRAnimation?.();
+    } catch (e) {
+      log.warn(`Could not switch interactor to XR animation: ${e?.message}`);
+    }
+
     log.info(`VR exploration started for instance ${instanceId}`);
 
     return vrContext;
   }
 
   /**
-   * Update VR exploration frame
+   * Update VR exploration frame. Synchronous — this runs once per XR frame
+   * (~90Hz), so it must never await; the reference space and viewerPose are
+   * already resolved by VRManager's frame loop and passed in.
    */
-  async updateVRExploration(vrContext, frame, inputState) {
-    const { sceneObjects, xrSession, xrLayer, gl, vrScale, vrOrigin } =
+  updateVRExploration(vrContext, frame, inputState, viewerPose) {
+    const { sceneObjects, xrLayer, gl, vrScale, vrOrigin, referenceSpace } =
       vrContext;
-    const { renderer, renderWindow, camera } = sceneObjects;
+    const { renderer, openGLRenderWindow, camera } = sceneObjects;
 
     if (!frame) return;
 
-    // Get reference space
-    let refSpace;
-    try {
-      refSpace = await xrSession.requestReferenceSpace("local-floor");
-    } catch (e) {
-      refSpace = await xrSession.requestReferenceSpace("local");
-    }
+    const pose = viewerPose || frame.getViewerPose(referenceSpace);
+    if (!pose) return;
 
-    const viewerPose = frame.getViewerPose(refSpace);
-    if (!viewerPose) return;
+    // Apply the two-hand twist as a yaw on the data actor (turntable spin)
+    // before rendering this frame. Cheap dirty-check inside — no-ops when the
+    // rotation hasn't changed.
+    this._applyVRDataRotation(vrContext);
 
-    // Bind XR framebuffer
+    // Update controller visuals (hand/ray transforms + visibility) BEFORE the
+    // eye loop draws. This only mutates actor transforms/visibility — it does
+    // not read anything the eye loop computes (no renderer.getViewport() or
+    // other per-eye state) — so it's safe to run here. Doing it here instead
+    // of after the eye loop means the controller models and pointer ray use
+    // THIS frame's poses on THIS frame's draw; previously the call sat after
+    // the loop, so the actor transforms were only picked up by the NEXT
+    // frame's traverseAllPasses(), making the pointer ray render a full frame
+    // (~14 ms at 72 Hz) behind the hand the user is aiming with.
+    this._updateVRExplorationControllers(vrContext, inputState);
+
+    // Bind the XR framebuffer and clear it once for both eyes. The clear
+    // color matches VREnvironment's bright BG_BOTTOM so the surround reads as
+    // a light room rather than the default black gl.clear().
     gl.bindFramebuffer(gl.FRAMEBUFFER, xrLayer.framebuffer);
+    gl.clearColor(...VR_CLEAR_COLOR, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
 
-    // Render for each eye
-    for (const view of viewerPose.views) {
+    // vtk.js derives gl.viewport internally from the renderer's fractional
+    // viewport × the OpenGL render window size, so a manual gl.viewport()
+    // would just be overwritten. The render window must be sized to the FULL
+    // stereo framebuffer (not a per-eye sub-rectangle) — each eye's rectangle
+    // is expressed below as fractional (xmin, ymin, xmax, ymax) against that
+    // same full size. Sizing to the per-eye viewport instead corrupts vtk.js's
+    // fractional-to-pixel math for both eyes (they end up drawn into the wrong,
+    // overlapping region of the real XR framebuffer).
+    openGLRenderWindow.setSize(xrLayer.framebufferWidth, xrLayer.framebufferHeight);
+
+    // Render for each eye (typically left and right).
+    for (const view of pose.views) {
       const viewport = xrLayer.getViewport(view);
-      gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
 
-      // Update camera from VR view
+      // Update camera from this eye's XR view (position + projection matrix).
       this._updateCameraFromVRPose(camera, view, vrScale, vrOrigin);
 
-      // Render the scene
-      renderer.render();
+      renderer.setViewport(
+        viewport.x / xrLayer.framebufferWidth,
+        viewport.y / xrLayer.framebufferHeight,
+        (viewport.x + viewport.width) / xrLayer.framebufferWidth,
+        (viewport.y + viewport.height) / xrLayer.framebufferHeight
+      );
+
+      // vtk.js render passes can rebind framebuffers internally; re-bind the
+      // XR framebuffer immediately before rendering as cheap insurance.
+      gl.bindFramebuffer(gl.FRAMEBUFFER, xrLayer.framebuffer);
+
+      // NEVER-BLACK (R3): scissored bright re-clear of THIS eye's viewport
+      // immediately before rendering it. The single full-framebuffer clear at
+      // the top covers both eyes, but vtk.js's own erase pass repaints each eye
+      // rectangle with the renderer background, and that path has been observed
+      // to leave black under the custom XR projection. A per-eye scissored
+      // clear to the same bright VR_CLEAR_COLOR guarantees the surround is
+      // bright no matter what the renderer's erase does. Scissor is scoped
+      // tightly (enable → clear → disable) so it can't leak into vtk.js's own
+      // WebGL state, which it re-establishes each render() anyway.
+      gl.enable(gl.SCISSOR_TEST);
+      gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
+      gl.clearColor(...VR_CLEAR_COLOR, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.disable(gl.SCISSOR_TEST);
+
+      // renderWindow.render() would now no-op — the interactor is in XR
+      // animation mode for the whole session (see enterVRExploration), which
+      // makes RenderWindowInteractor.render() a no-op (RenderWindowInteractor.js
+      // :805-809, :451). Draw directly via the OpenGL render window instead,
+      // matching vtk.js's own WebXR RenderWindowHelper.js:172.
+      openGLRenderWindow.traverseAllPasses();
     }
 
-    // Update controller visuals
-    this._updateVRExplorationControllers(vrContext, inputState);
+    // Defensively disable the scissor test after the loop in case a render
+    // pass left it enabled — the desktop path assumes full-viewport clears.
+    gl.disable(gl.SCISSOR_TEST);
+
+    // Reset the renderer viewport so nothing downstream inherits a half-screen
+    // (per-eye) viewport.
+    renderer.setViewport(0, 0, 1, 1);
   }
 
   /**
    * Exit VR exploration
    */
   async exitVRExploration(vrContext) {
-    const { instanceId, sceneObjects, originalCameraState, slicePlanes } =
-      vrContext;
-    const { camera, renderer, renderWindow } = sceneObjects;
+    const { instanceId, sceneObjects, originalCameraState } = vrContext;
+    const { camera, renderer, renderWindow, openGLRenderWindow } = sceneObjects;
+
+    // FIRST, before anything that can throw: restore normal rendering. This
+    // function is wrapped in _safeCleanupStep (VRExplorationManager.js:506),
+    // so if an exception got here first the desktop renderer would stay frozen
+    // forever — every render() would silently no-op with no visible error.
+    try {
+      sceneObjects.interactor?.returnFromXRAnimation?.();
+    } catch (e) {
+      log.warn(`Could not return interactor from XR animation: ${e?.message}`);
+    }
+
+    // Clear a stranded pending-render flag. _requestRender (line ~217) sets
+    // instanceData._pendingRender = true then schedules a
+    // window.requestAnimationFrame that Quest suspends during an immersive
+    // session, so it can strand and cause one subsequent _requestRender call
+    // to early-return as "already scheduled".
+    const instanceData = this.instances.get(instanceId);
+    if (instanceData) {
+      instanceData._pendingRender = false;
+    }
 
     log.info(`Exiting VR exploration for instance ${instanceId}`);
 
@@ -5075,151 +4988,53 @@ console.log('Tools:', tools);
       camera.setClippingRange(...originalCameraState.clippingRange);
       camera.setViewAngle(originalCameraState.viewAngle);
       camera.setProjectionMatrix(null);
+      // Undo the VR data-units -> metres conversion applied every frame by
+      // _updateCameraFromVRPose (see Phase 2a there).
+      camera.setPhysicalScale(1);
     }
 
-    // Clean up slice planes
-    for (const [id, planeData] of slicePlanes) {
-      if (planeData.actor) {
-        renderer.removeActor(planeData.actor);
-      }
+    // Restore the data actor's UserMatrix, undoing any two-hand twist yaw
+    // applied to it during VR (_applyVRDataRotation). The actor's own
+    // Position/Origin/Orientation/Scale were never touched, so nothing else
+    // needs restoring here.
+    const dataActor = sceneObjects.actor;
+    if (
+      dataActor &&
+      vrContext.originalActorUserMatrix &&
+      typeof dataActor.setUserMatrix === "function"
+    ) {
+      dataActor.setUserMatrix(vrContext.originalActorUserMatrix);
     }
-    slicePlanes.clear();
 
     // Clean up controller visuals
     this._cleanupVRExplorationControllers(vrContext);
+
+    // Dispose the cached VR raycast picker (see _getVRPicker) so it doesn't
+    // outlive the session it was created for. vtk.js macro objects don't all
+    // implement delete(), hence the optional chaining — this is a best-effort
+    // release, not a required one (the picker itself holds no GL resources).
+    vrContext._vrPicker?.delete?.();
+    vrContext._vrPicker = null;
+
+    // Restore the desktop viewport and GL drawing-buffer size, both of which
+    // were mutated per-eye during VR rendering. Without this the desktop
+    // canvas would stay at the last eye's viewport/resolution until the next
+    // resize event.
+    renderer.setViewport(0, 0, 1, 1);
+    if (
+      vrContext.originalGLSize &&
+      typeof openGLRenderWindow?.setSize === "function"
+    ) {
+      openGLRenderWindow.setSize(...vrContext.originalGLSize);
+    }
 
     renderWindow.render();
 
     log.info(`VR exploration ended for instance ${instanceId}`);
 
     return {
-      finalSlicePlanes: Array.from(slicePlanes.values()),
       measurements: vrContext.measurements,
     };
-  }
-
-  // ===========================================================================
-  // VR SLICE PLANE SUPPORT
-  // ===========================================================================
-
-  /**
-   * Add a slice plane
-   */
-  async addSlicePlane(vrContext, plane) {
-    const { sceneObjects, slicePlanes, dataBounds } = vrContext;
-    const { renderer, renderWindow } = sceneObjects;
-
-    // Create VTK plane source
-    const planeSource = vtkPlaneSource.newInstance();
-
-    // Size plane based on data bounds
-    const size = this._computePlaneSize(dataBounds);
-    const halfSize = size / 2;
-
-    // Calculate plane corners based on origin and normal
-    const origin = plane.origin;
-    const normal = plane.normal;
-
-    // Create orthogonal vectors to the normal
-    const up = Math.abs(normal[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
-    const right = this._crossProduct(normal, up);
-    this._normalizeVector(right);
-    const actualUp = this._crossProduct(right, normal);
-    this._normalizeVector(actualUp);
-
-    // Set plane corners
-    planeSource.setOrigin(
-      origin[0] - right[0] * halfSize - actualUp[0] * halfSize,
-      origin[1] - right[1] * halfSize - actualUp[1] * halfSize,
-      origin[2] - right[2] * halfSize - actualUp[2] * halfSize
-    );
-    planeSource.setPoint1(
-      origin[0] + right[0] * halfSize - actualUp[0] * halfSize,
-      origin[1] + right[1] * halfSize - actualUp[1] * halfSize,
-      origin[2] + right[2] * halfSize - actualUp[2] * halfSize
-    );
-    planeSource.setPoint2(
-      origin[0] - right[0] * halfSize + actualUp[0] * halfSize,
-      origin[1] - right[1] * halfSize + actualUp[1] * halfSize,
-      origin[2] - right[2] * halfSize + actualUp[2] * halfSize
-    );
-
-    const mapper = vtkMapper.newInstance();
-    mapper.setInputConnection(planeSource.getOutputPort());
-
-    const actor = vtkActor.newInstance();
-    actor.setMapper(mapper);
-    actor.getProperty().setColor(...(plane.color || [1, 0.5, 0]));
-    actor.getProperty().setOpacity(plane.opacity || 0.5);
-    actor.getProperty().setRepresentationToSurface();
-
-    renderer.addActor(actor);
-
-    slicePlanes.set(plane.id, {
-      ...plane,
-      source: planeSource,
-      mapper,
-      actor,
-    });
-
-    renderWindow.render();
-  }
-
-  /**
-   * Update a slice plane
-   */
-  async updateSlicePlane(vrContext, plane) {
-    const planeData = vrContext.slicePlanes.get(plane.id);
-    if (!planeData) return;
-
-    const { dataBounds } = vrContext;
-    const size = this._computePlaneSize(dataBounds);
-    const halfSize = size / 2;
-
-    const origin = plane.origin;
-    const normal = plane.normal;
-
-    // Recalculate orthogonal vectors
-    const up = Math.abs(normal[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
-    const right = this._crossProduct(normal, up);
-    this._normalizeVector(right);
-    const actualUp = this._crossProduct(right, normal);
-    this._normalizeVector(actualUp);
-
-    // Update plane corners
-    planeData.source.setOrigin(
-      origin[0] - right[0] * halfSize - actualUp[0] * halfSize,
-      origin[1] - right[1] * halfSize - actualUp[1] * halfSize,
-      origin[2] - right[2] * halfSize - actualUp[2] * halfSize
-    );
-    planeData.source.setPoint1(
-      origin[0] + right[0] * halfSize - actualUp[0] * halfSize,
-      origin[1] + right[1] * halfSize - actualUp[1] * halfSize,
-      origin[2] + right[2] * halfSize - actualUp[2] * halfSize
-    );
-    planeData.source.setPoint2(
-      origin[0] - right[0] * halfSize + actualUp[0] * halfSize,
-      origin[1] - right[1] * halfSize + actualUp[1] * halfSize,
-      origin[2] - right[2] * halfSize + actualUp[2] * halfSize
-    );
-
-    planeData.source.modified();
-    Object.assign(planeData, plane);
-
-    vrContext.sceneObjects.renderWindow.render();
-  }
-
-  /**
-   * Remove a slice plane
-   */
-  async removeSlicePlane(vrContext, planeId) {
-    const planeData = vrContext.slicePlanes.get(planeId);
-    if (!planeData) return;
-
-    vrContext.sceneObjects.renderer.removeActor(planeData.actor);
-    vrContext.slicePlanes.delete(planeId);
-
-    vrContext.sceneObjects.renderWindow.render();
   }
 
   // ===========================================================================
@@ -5246,51 +5061,303 @@ console.log('Tools:', tools);
     }
     if (!origin || !dir) return null;
 
-    // Create VTK picker
-    const picker = vtkCellPicker.newInstance();
-    picker.setTolerance(0.001);
+    // Cached, pick-list-scoped, world-space cell picker. See the three
+    // helpers below for why each of these matters.
+    const picker = this._getVRPicker(vrContext);
+    const pickTargets = this._getVRPickTargets(vrContext);
+    picker.setTolerance(VR_PICK_TOLERANCE);
+    picker.setPickFromList(true);
+    picker.setPickList(pickTargets);
 
-    // Convert ray to VTK format
-    const p1 = [origin.x, origin.y, origin.z];
-    const direction = [dir.x, dir.y, dir.z];
+    // XR -> DATA SPACE. `origin` arrives in physical headset metres (it comes
+    // from controller.targetRay), but VR here remaps the CAMERA and leaves
+    // the actors in data space — so the picker, which intersects those actors,
+    // must be given the ray in data space too. Same mapping the camera itself
+    // uses (dataPos = xrPos / vrScale + vrOrigin) via the shared helper
+    // VRClipBoxTool already relies on for exactly this reason.
+    //
+    // Omitting this made every pick start at a point unrelated to the
+    // geometry, so getCellId() returned -1 and annotate/measure/probe and the
+    // pointer reticle all silently did nothing. It was invisible in tests
+    // because vrScale=1/vrOrigin=[0,0,0] makes the mapping an identity, and a
+    // real session is never at identity (_applyInitialPlacement auto-fits on
+    // entry).
+    // NOTE THE TRAILING 1.0 — it is load-bearing, not decoration.
+    // vtkPicker.pick3DPoint hands these arrays straight to pick3DInternal
+    // WITHOUT appending a homogeneous w (Picker.js:268-284), unlike
+    // publicAPI.pick which sets p1World[3] = p2World[3] = 1.0 itself
+    // (Picker.js:263-264). pick3DInternal then runs
+    // vec4.transformMat4(...) followed by vec3.scale(p, p, 1 / p[3])
+    // (Picker.js:103-106), so a 3-element array leaves w undefined and turns
+    // every transformed coordinate into NaN. No cell can then be intersected,
+    // getCellId() stays at its -1 default, and raycastVR returns null on every
+    // call — which is exactly how VR annotate/measure/probe silently did
+    // nothing on both Quest and Vision Pro.
+    const [dataX, dataY, dataZ] = mapXRPointToData(
+      origin,
+      vrContext.vrScale,
+      vrContext.vrOrigin
+    );
+    const p1 = [dataX, dataY, dataZ, 1.0];
+
+    // The direction needs NO scaling: the XR->data map is a uniform scale plus
+    // a translation, so a direction maps to d/vrScale — the same unit vector.
+    // It is normalized only because rayLength below is a data-space length and
+    // a non-unit direction would silently scale it (the matrix branch above
+    // already yields a unit vector; a caller-supplied {origin, direction} may
+    // not).
+    const dirLen = Math.hypot(dir.x, dir.y, dir.z) || 1;
+    const direction = [dir.x / dirLen, dir.y / dirLen, dir.z / dirLen];
+
+    // Ray length is derived from the dataset, not a fixed magic number — see
+    // _vrPickRayLength for why a mismatched ray length silently returns the
+    // WRONG cell instead of no cell. Already a data-space quantity (it comes
+    // from dataBounds), which is why p1 above has to be data-space as well.
+    const rayLength = this._vrPickRayLength(vrContext);
     const p2 = [
-      p1[0] + direction[0] * 1000,
-      p1[1] + direction[1] * 1000,
-      p1[2] + direction[2] * 1000,
+      p1[0] + direction[0] * rayLength,
+      p1[1] + direction[1] * rayLength,
+      p1[2] + direction[2] * rayLength,
+      1.0, // homogeneous w — see the note on p1 above
     ];
 
-    const hit = picker.pick(p1, p2, renderer);
+    // pick3DPoint is the WORLD-space counterpart of pick() (which takes a
+    // 3-component DISPLAY/pixel coordinate — passing a world point there, as
+    // the old code did, corrupts renderer.getActiveCamera() downstream).
+    // Neither pick() nor pick3DPoint() returns a value; the hit test is done
+    // by reading back picker.getCellId() afterward, mirroring the proven
+    // desktop convention in vtkRaycaster.js (picker.pick + getCellId() < 0).
+    //
+    // No manual un-yaw needed here (unlike probeDataVR below): pick3DInternal
+    // intersects against prop.getMatrix(), which already includes the
+    // UserMatrix written by _applyVRDataRotation (:5222-ish), so the picker
+    // sees the actor exactly as rendered, twist and all.
+    // Reset pick state EXPLICITLY. pick3DPoint calls the module-local
+    // initialize() (Picker.js:272), not publicAPI.initialize — and
+    // vtkCellPicker only overrides the latter (CellPicker.js:113-116 ->
+    // resetPickInfo -> model.cellId = -1). publicAPI.pick calls it for us
+    // (CellPicker.js:137); pick3DPoint does not. Without this, a miss reports
+    // the PREVIOUS pick's cellId/position and markers stick to a stale point.
+    picker.initialize();
+    picker.pick3DPoint(p1, p2, renderer);
 
-    if (hit) {
-      const position = picker.getPickPosition();
-      const normal = picker.getPickNormal() || [0, 1, 0];
+    const cellId = picker.getCellId();
 
-      return {
-        hit: true,
-        position: { x: position[0], y: position[1], z: position[2] },
-        normal: { x: normal[0], y: normal[1], z: normal[2] },
-        distance: Math.sqrt(
-          Math.pow(position[0] - p1[0], 2) +
-            Math.pow(position[1] - p1[1], 2) +
-            Math.pow(position[2] - p1[2], 2)
-        ),
-      };
+    // Diagnostic for on-headset debugging (remote console via chrome://inspect).
+    // Logged only when the hit/miss state FLIPS, never per frame — raycastVR
+    // runs at headset frame rate. Distinguishes the three ways VR picking can
+    // fail: no pick targets at all, a ray placed wrong, or a genuine miss.
+    const nowHit = cellId >= 0;
+    if (vrContext._lastPickWasHit !== nowHit) {
+      vrContext._lastPickWasHit = nowHit;
+      log.debug(
+        `VR pick ${nowHit ? "HIT" : "MISS"} — cellId=${cellId}, ` +
+          `targets=${pickTargets.length}, ` +
+          `rayOrigin(data)=[${p1[0].toFixed(3)}, ${p1[1].toFixed(3)}, ${p1[2].toFixed(3)}], ` +
+          `vrScale=${vrContext.vrScale}, rayLength=${rayLength.toFixed(3)}`
+      );
     }
 
-    return null;
+    if (cellId < 0) return null;
+
+    const position = picker.getPickPosition();
+    const normal = picker.getPickNormal() || [0, 1, 0];
+    // vtkCellPicker exposes the hit actor only via the plural getActors()
+    // list (no singular getActor()) — mirror vtkRaycaster.js's fallback.
+    let actor = null;
+    if (typeof picker.getActor === "function") {
+      actor = picker.getActor();
+    } else if (typeof picker.getActors === "function") {
+      const actors = picker.getActors();
+      actor = Array.isArray(actors) ? actors[0] : null;
+    }
+
+    return {
+      hit: true,
+      position: { x: position[0], y: position[1], z: position[2] },
+      normal: { x: normal[0], y: normal[1], z: normal[2] },
+      distance: Math.sqrt(
+        Math.pow(position[0] - p1[0], 2) +
+          Math.pow(position[1] - p1[1], 2) +
+          Math.pow(position[2] - p1[2], 2)
+      ),
+      cellId,
+      actor,
+    };
   }
 
   /**
-   * Get data value at position
+   * Cached vtkCellPicker for VR raycasts. Creating a picker is real garbage
+   * (internal locator/tree state) and raycastVR runs once or more per XR
+   * frame (~90 Hz) — recreating it every call would be a steady allocation
+   * churn. Cached on vrContext (one per VR session) and disposed in
+   * exitVRExploration.
+   * @private
+   */
+  _getVRPicker(vrContext) {
+    if (!vrContext._vrPicker) {
+      vrContext._vrPicker = vtkCellPicker.newInstance();
+    }
+    return vrContext._vrPicker;
+  }
+
+  /**
+   * Actors the VR picker is allowed to hit. Filters the SHARED renderer's
+   * actor list (VR uses the same vtkRenderer as desktop — see the
+   * non-negotiable constraint documented near VR context creation above) down
+   * to actors that are pickable, visible, and actually have a mapper.
+   *
+   * Deliberately NOT hardcoded to [sceneObjects.actor]: VTKThresholdFeature
+   * and VTKIsosurfaceFeature HIDE the primary actor and add their own derived
+   * actor when active, so a hardcoded target would make every VR tool go
+   * blind the moment Threshold or Isosurface is toggled on. Falls back to
+   * sceneObjects.actor only if the filter comes up empty (e.g. before any
+   * actor has been marked pickable).
+   * @private
+   */
+  _getVRPickTargets(vrContext) {
+    const { renderer, actor } = vrContext?.sceneObjects || {};
+    const all =
+      typeof renderer?.getActors === "function" ? renderer.getActors() : [];
+    const targets = all.filter(
+      (a) =>
+        typeof a?.getPickable === "function" &&
+        a.getPickable() &&
+        typeof a.getVisibility === "function" &&
+        a.getVisibility() &&
+        typeof a.getMapper === "function" &&
+        !!a.getMapper()
+    );
+    if (targets.length > 0) return targets;
+    return actor ? [actor] : [];
+  }
+
+  /**
+   * World-space ray length for VR picking, derived from the dataset's own
+   * bounding-box diagonal rather than a fixed magic number (the old code
+   * used 1000). CellPicker.intersectActorWithLine compares candidate cells
+   * with `t <= tMin + tolerance`, where t is parametric along p1->p2 — a
+   * 1000-unit ray cast over a dataset that might be 0.01 units across
+   * collapses the real hit spread down near t=0 and picks the wrong cell.
+   * 4x the diagonal comfortably overshoots the data from any controller
+   * position inside the VR scale; clamped to a 1-unit minimum so degenerate
+   * (point-like) bounds still produce a usable ray.
+   * @private
+   */
+  _vrPickRayLength(vrContext) {
+    const b = vrContext?.dataBounds;
+    if (!Array.isArray(b) || b.length !== 6) return 1;
+    const dx = b[1] - b[0];
+    const dy = b[3] - b[2];
+    const dz = b[5] - b[4];
+    const diagonal = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    return Math.max(1, diagonal * 4);
+  }
+
+  /**
+   * Get data value(s) at a data-space position by nearest-point lookup.
+   *
+   * Called by VRProbeTool._probeAtPosition with the same coordinate space that
+   * raycastVR returns (scene/data space). Finds the nearest polydata point via
+   * a linear scan (fine for interactive single-probe use) and returns its
+   * point-data array values.
+   *
+   * @param {Object} vrContext - VR context; polydata is read from
+   *   vrContext.sceneObjects.mapper.getInputData()
+   * @param {{x:number,y:number,z:number}|number[]} position - data-space probe point
+   * @returns {{pointId:number, distance:number, position:number[],
+   *   values:Object<string, number|number[]>}|null} null when there is no
+   *   polydata/points to probe.
    */
   probeDataVR(vrContext, position) {
-    if (!vrContext?.sceneObjects) return null;
+    if (!vrContext?.sceneObjects || !position) return null;
 
-    // For point data, we would find the nearest point and return its data
-    // For volume data, we would sample at the position
-    // This is a placeholder that would need to be implemented based on data type
+    const mapper = vrContext.sceneObjects.mapper;
+    const polyData =
+      typeof mapper?.getInputData === "function" ? mapper.getInputData() : null;
+    if (!polyData) return null;
 
-    return null;
+    const pointsObj =
+      typeof polyData.getPoints === "function" ? polyData.getPoints() : null;
+    const nPoints =
+      typeof pointsObj?.getNumberOfPoints === "function"
+        ? pointsObj.getNumberOfPoints()
+        : 0;
+    if (!nPoints) return null;
+
+    const coords = pointsObj.getData();
+    if (!coords || coords.length < nPoints * 3) return null;
+
+    let px = Array.isArray(position) ? position[0] : position.x;
+    let py = Array.isArray(position) ? position[1] : position.y;
+    let pz = Array.isArray(position) ? position[2] : position.z;
+
+    // The polydata coords are the actor's LOCAL (un-rotated) points, but the
+    // probe position comes from raycastVR in WORLD space on the possibly-yawed
+    // actor. Undo the two-hand twist about the dataset center so the nearest-
+    // point scan compares like with like.
+    const yaw = vrContext.vrRotation || 0;
+    if (yaw) {
+      const center = vrContext.dataCenter || [0, 0, 0];
+      const c = Math.cos(-yaw);
+      const s = Math.sin(-yaw);
+      const rx = px - center[0];
+      const rz = pz - center[2];
+      px = center[0] + (rx * c + rz * s);
+      pz = center[2] + (-rx * s + rz * c);
+    }
+
+    // Linear nearest-point scan (squared distance — no sqrt in the loop).
+    let bestId = -1;
+    let bestDistSq = Infinity;
+    for (let i = 0; i < nPoints; i++) {
+      const dx = coords[i * 3] - px;
+      const dy = coords[i * 3 + 1] - py;
+      const dz = coords[i * 3 + 2] - pz;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 < bestDistSq) {
+        bestDistSq = d2;
+        bestId = i;
+      }
+    }
+    if (bestId < 0) return null;
+
+    // Collect every point-data array's value(s) at the nearest point.
+    const values = {};
+    const pointData =
+      typeof polyData.getPointData === "function" ? polyData.getPointData() : null;
+    const nArrays =
+      typeof pointData?.getNumberOfArrays === "function"
+        ? pointData.getNumberOfArrays()
+        : 0;
+    for (let a = 0; a < nArrays; a++) {
+      const arr = pointData.getArrayByIndex(a);
+      if (!arr) continue;
+      const name =
+        (typeof arr.getName === "function" && arr.getName()) || `array${a}`;
+      const nComp =
+        typeof arr.getNumberOfComponents === "function"
+          ? arr.getNumberOfComponents()
+          : 1;
+      const raw = typeof arr.getData === "function" ? arr.getData() : null;
+      if (!raw) continue;
+      if (nComp === 1) {
+        values[name] = raw[bestId];
+      } else {
+        values[name] = Array.from(raw.slice(bestId * nComp, bestId * nComp + nComp));
+      }
+    }
+
+    return {
+      pointId: bestId,
+      distance: Math.sqrt(bestDistSq),
+      position: [
+        coords[bestId * 3],
+        coords[bestId * 3 + 1],
+        coords[bestId * 3 + 2],
+      ],
+      values,
+    };
   }
 
   // ===========================================================================
@@ -5349,7 +5416,7 @@ console.log('Tools:', tools);
    * @private
    */
   _updateCameraFromVRPose(camera, xrView, vrScale, vrOrigin) {
-    const viewMatrix = xrView.transform.inverse.matrix;
+    const viewMatrix = xrView.transform.matrix;
 
     // Extract position (column-major: indices 12, 13, 14)
     const position = [
@@ -5378,42 +5445,59 @@ console.log('Tools:', tools);
 
     // Set projection matrix from XR
     camera.setProjectionMatrix(xrView.projectionMatrix);
+
+    // View-space here is in DATA units (see the /vrScale mapping above), but the
+    // XR projection matrix's near/far planes are in METRES. vtk.js scales view
+    // coordinates by 1/physicalScale before applying a set projection matrix
+    // (Camera.js:444-453), so this converts data units -> metres and makes
+    // depthNear/depthFar physically correct at every zoom level. Without it the
+    // effective near clip is depthNear * vrScale, so at the menu's "Detail"
+    // preset (vrScale 10) everything within 1 m — including the menu panel —
+    // gets clipped away.
+    //
+    // It also re-asserts every frame, which structurally immunizes VR against
+    // every stray renderer.resetCamera() in the codebase: resetCamera writes
+    // physicalScale = visible-prop bounding radius (Renderer.js:398), which
+    // would otherwise permanently rescale the whole stereo view.
+    camera.setPhysicalScale(1 / (vrScale || 1.0));
   }
 
   /**
-   * Compute plane size from data bounds
+   * Apply the current two-hand twist as a yaw on the data actor, pivoting about
+   * the dataset's WORLD-space center so it spins in place like a turntable.
+   * Leaves the world/camera frame (vrScale, vrOrigin) untouched, so grab,
+   * teleport, scale, the spatial menu, environment and tool raycasts all keep
+   * working unchanged — vtkCellPicker honours the actor's matrix, so
+   * raycastVR stays correct on the rotated surface (probeDataVR undoes the
+   * yaw for its raw-polydata scan).
+   *
+   * Implemented via `actor.setUserMatrix()`, NOT `setOrigin`/`setOrientation`.
+   * vtk.js applies UserMatrix as the OUTERMOST wrap around the actor's
+   * existing Position/Origin/Orientation/Scale (`world = UserMatrix ·
+   * innerWorld` — see Prop3D.js computeMatrix), so this rotates the object
+   * exactly as currently rendered, in world space, regardless of what those
+   * other properties are — and is the identity transform at yaw=0 no matter
+   * what they are. Mutating Origin/Orientation directly was tried first and
+   * caused a regression: Origin is defined in the actor's LOCAL frame, but
+   * the dataset center (from computeVisiblePropBounds) is WORLD-space, and
+   * the desktop Pan/Rotate/Scale tool (and collaborative shared-state sync)
+   * routinely leave the actor's own transform non-identity — writing a
+   * world-space point into a local-space property then introduced a spurious
+   * jump on VR entry (object invisible / sunk below the floor) even at yaw=0.
+   * Restored exactly on exit by exitVRExploration.
    * @private
    */
-  _computePlaneSize(bounds) {
-    const sizeX = bounds[1] - bounds[0];
-    const sizeY = bounds[3] - bounds[2];
-    const sizeZ = bounds[5] - bounds[4];
-    return Math.max(sizeX, sizeY, sizeZ) * 1.5;
-  }
+  _applyVRDataRotation(vrContext) {
+    const actor = vrContext?.sceneObjects?.actor;
+    if (!actor || typeof actor.setUserMatrix !== "function") return;
 
-  /**
-   * Cross product of two vectors
-   * @private
-   */
-  _crossProduct(a, b) {
-    return [
-      a[1] * b[2] - a[2] * b[1],
-      a[2] * b[0] - a[0] * b[2],
-      a[0] * b[1] - a[1] * b[0],
-    ];
-  }
+    const yaw = vrContext.vrRotation || 0;
+    // Dirty-check — actor transform is unchanged most frames.
+    if (vrContext._appliedVRRotation === yaw) return;
+    vrContext._appliedVRRotation = yaw;
 
-  /**
-   * Normalize a vector in place
-   * @private
-   */
-  _normalizeVector(v) {
-    const len = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-    if (len > 0) {
-      v[0] /= len;
-      v[1] /= len;
-      v[2] /= len;
-    }
+    const center = vrContext.dataCenter || [0, 0, 0];
+    actor.setUserMatrix(buildYawPivotMatrix(yaw, center));
   }
 
   // ===========================================================================
@@ -5530,7 +5614,18 @@ console.log('Tools:', tools);
           return;
         }
 
-        if (!this._isApplyingRemoteState && instanceData.viewConfigId) {
+        // While this instance is the one being VR-explored,
+        // _updateCameraFromVRPose mutates this camera twice per XR frame
+        // (once per eye, ~180Hz) — broadcasting each of those to
+        // collaborators would spam the desktop yCameras channel and thrash
+        // per-move server persistence. VR presence already flows through
+        // VRParticipantSync (throttled, ~20fps) instead, so skip the
+        // desktop camera-share path entirely while that's true.
+        const isVRDrivingThisCamera =
+          vrExplorationManager.isExploring() &&
+          vrExplorationManager.getActiveContext()?.instance?.instanceId === instanceData.instanceId;
+
+        if (!isVRDrivingThisCamera && !this._isApplyingRemoteState && instanceData.viewConfigId) {
           const cameraState = {
             position: camera.getPosition(),
             focalPoint: camera.getFocalPoint(),

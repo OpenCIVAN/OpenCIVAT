@@ -1,0 +1,10 @@
+.git
+.env
+node_modules
+server/node_modules
+dist
+coverage
+server/matrix-data
+**/__pycache__
+**/*.pyc
+npm-debug.log*

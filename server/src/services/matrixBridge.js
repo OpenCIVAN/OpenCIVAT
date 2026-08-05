@@ -218,7 +218,6 @@ class MatrixBridgeService {
       await this.client.startClient({ initialSyncLimit: 10 });
 
       this.isInitialized = true;
-      this.isConnected = true;
 
       log.info('Matrix bridge initialized successfully');
       log.info('Bridge user:', this.client.getUserId());
@@ -254,6 +253,8 @@ class MatrixBridgeService {
       if (state === 'PREPARED') {
         this.isConnected = true;
         log.info('Matrix client synced and ready');
+      } else if (state === 'ERROR' || state === 'STOPPED') {
+        this.isConnected = false;
       }
     });
 
@@ -1085,10 +1086,9 @@ class MatrixBridgeService {
     try {
       if (this.client) {
         await this.client.startClient({ initialSyncLimit: 10 });
-        this.isConnected = true;
         this.reconnectAttempts = 0;
         this.circuitBreaker.reset();
-        log.info('Reconnected to Matrix successfully');
+        log.info('Matrix reconnect requested; waiting for sync readiness');
       }
     } catch (error) {
       log.error('Reconnect attempt failed:', error.message);

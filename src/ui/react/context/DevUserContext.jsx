@@ -24,6 +24,10 @@ import {
     storeMockUserId,
 } from "@Config/mockUsers.js";
 import { config } from "@Core/config/clientConfig.js";
+import {
+    getDeviceUser,
+    IDENTITY_CHANGED_EVENT,
+} from "@Core/identity/deviceIdentity.js";
 import { auth as log } from "@Utils/logger.js";
 
 // =============================================================================
@@ -84,9 +88,38 @@ export function DevUserProvider({ children, forceDevMode = false }) {
             }
         }
 
+        // No explicit identity: this browser is its own persistent user.
+        // Falling back to the shared default mock user would make every
+        // device on the LAN the same person (and the same Y.js participant).
+        if (config.identity?.deviceFallback !== false) {
+            const deviceUser = getDeviceUser();
+            log.info(
+                `DevUserContext: Using device identity "${deviceUser.name}" (${deviceUser.id})`
+            );
+            return deviceUser;
+        }
+
         // Default to first mock user
         return getDefaultMockUser();
     });
+
+    // Keep the synthetic device user in step with the display name the user
+    // types into the VR/entry name prompt (setDeviceName dispatches this).
+    useEffect(() => {
+        const handleIdentityChanged = () => {
+            setCurrentUser((prev) => {
+                if (!prev || prev.externalId !== "device") return prev;
+                return getDeviceUser();
+            });
+        };
+
+        window.addEventListener(IDENTITY_CHANGED_EVENT, handleIdentityChanged);
+        return () =>
+            window.removeEventListener(
+                IDENTITY_CHANGED_EVENT,
+                handleIdentityChanged
+            );
+    }, []);
 
     // Switch to a different mock user
     const switchUser = useCallback(

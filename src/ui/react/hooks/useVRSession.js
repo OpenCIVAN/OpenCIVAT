@@ -11,6 +11,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { vrManager } from "@Core/vr/VRManager.js";
+import { vrExplorationManager } from "@Core/vr/VRExplorationManager.js";
+import { apiClient } from "@Services/apiClient.js";
+import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { toast } from "@UI/react/store/toastStore.js";
 
 /**
@@ -30,6 +33,12 @@ export function useVRSession(projectId) {
   const [currentSession, setCurrentSession] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [isInVR, setIsInVR] = useState(false);
+  // Data-manipulation token (VRManipulationLock via VRExplorationManager).
+  // { holderUserId, holderUserName, ... } or null when nobody live holds it.
+  const [manipulationHolder, setManipulationHolder] = useState(null);
+  const [manipulationRequests, setManipulationRequests] = useState([]);
+  // userId → what that user is manipulating right now ('dataset' | 'filter').
+  const [activityByUserId, setActivityByUserId] = useState({});
 
   // Loading states
   const [loadingSessions, setLoadingSessions] = useState(false);
@@ -58,49 +67,114 @@ export function useVRSession(projectId) {
     checkSupport();
   }, []);
 
-  // Listen for VR manager session events
+  // Track the LOCAL VR exploration session (this browser hosting or having
+  // entered VR for a session) via vrExplorationManager — the single
+  // consolidated source of truth for VR session lifecycle. Do NOT read
+  // vrManager's raw "sessionStarted" payload as a session: it carries
+  // { session: XRSession, referenceSpace, sessionType, config }, not a
+  // VRExplorationSession record, so treating it as one produced a session
+  // object with none of the fields this hook's consumers read.
   useEffect(() => {
-    const handleSessionStarted = (session) => {
-      setIsInVR(true);
+    const syncFromManager = () => {
+      const session = vrExplorationManager.getActiveSession();
       setCurrentSession(session);
+      setParticipants(session ? [...session.participants] : []);
+      setIsInVR(vrManager.isInVR());
     };
 
-    const handleSessionEnded = () => {
-      setIsInVR(false);
-      setCurrentSession(null);
-      setParticipants([]);
-    };
+    const offStarted = vrExplorationManager.on("explorationStarted", syncFromManager);
+    const offJoined = vrExplorationManager.on("sessionJoined", syncFromManager);
+    const offLeft = vrExplorationManager.on("sessionLeft", syncFromManager);
 
-    vrManager.on("sessionStarted", handleSessionStarted);
-    vrManager.on("sessionEnded", handleSessionEnded);
+    // Participant list changes arrive via Y.js and mutate the active
+    // session's participants array in place (VRParticipantSync) — resync on
+    // the DOM events it dispatches so React sees a fresh array reference.
+    window.addEventListener("cia:vr-participant-update", syncFromManager);
+    window.addEventListener("cia:vr-participant-left", syncFromManager);
 
-    setIsInVR(vrManager.isInVR());
+    syncFromManager(); // pick up a session already active on mount
 
     return () => {
-      vrManager.off("sessionStarted", handleSessionStarted);
-      vrManager.off("sessionEnded", handleSessionEnded);
+      offStarted?.();
+      offJoined?.();
+      offLeft?.();
+      window.removeEventListener("cia:vr-participant-update", syncFromManager);
+      window.removeEventListener("cia:vr-participant-left", syncFromManager);
     };
   }, []);
 
-  // Fetch active sessions for project
+  // Data-control token. The manager emits 'manipulationControlChanged' with
+  // { holder, requests } on every lock transition (claim, grant, release,
+  // stale-reclaim), so the desktop panel stays in step with the headsets
+  // without polling.
+  useEffect(() => {
+    const sync = (state) => {
+      setManipulationHolder(state?.holder ?? vrExplorationManager.getManipulationHolder());
+      setManipulationRequests(state?.requests ?? vrExplorationManager.getManipulationRequests());
+    };
+
+    const off = vrExplorationManager.on("manipulationControlChanged", sync);
+    sync(null); // pick up a lock already held on mount
+
+    return () => off?.();
+  }, []);
+
+  // Live "who is touching what" map. Rides the EXISTING room-global manipulator
+  // channel (yjsSetup.syncManipulatorToYjs → yjsObservers.onManipulatorChange →
+  // workspaceManager's `cia:manipulator-changed` window event) that desktop
+  // camera drags and VR's _signalManipulation both already write to — no new
+  // Y.js map, no polling.
+  useEffect(() => {
+    const onManipulatorChanged = (e) => {
+      const { userId, manipulator } = e.detail || {};
+      if (!userId) return;
+      setActivityByUserId((prev) => {
+        const target = manipulator?.target || null;
+        if ((prev[userId] || null) === target) return prev; // no re-render
+        const next = { ...prev };
+        if (target) next[userId] = target;
+        else delete next[userId];
+        return next;
+      });
+    };
+
+    window.addEventListener("cia:manipulator-changed", onManipulatorChanged);
+    return () => window.removeEventListener("cia:manipulator-changed", onManipulatorChanged);
+  }, []);
+
+  /**
+   * Hand the data-manipulation token to another participant. Only meaningful
+   * for the current holder or the host — the lock enforces that itself, this
+   * just surfaces it.
+   */
+  const grantControl = useCallback((userId, userName) => {
+    if (!userId) return false;
+    return vrExplorationManager.grantManipulationControlTo(userId, userName);
+  }, []);
+
+  /** Ask the current holder for the data-manipulation token. */
+  const requestControl = useCallback(() => {
+    return vrExplorationManager.requestManipulationControl();
+  }, []);
+
+  /** Give the token back to the session host. */
+  const releaseControl = useCallback(() => {
+    return vrExplorationManager.releaseManipulationControl();
+  }, []);
+
+  // Fetch active sessions for project. These are raw vr_exploration_sessions
+  // rows (snake_case: dataset_id, owner_user_name, participant_count) — a
+  // different shape from currentSession's client-side VRExplorationSession
+  // model (camelCase). See getSessionsForDataset.
   const fetchActiveSessions = useCallback(async () => {
     if (!projectId) return;
 
     setLoadingSessions(true);
     try {
-      const response = await fetch(
-        `/api/vr/sessions?projectId=${projectId}`,
-        {
-          headers: {
-            "x-user-id": localStorage.getItem("userId") || "anonymous",
-          },
-        }
+      const sessions = await apiClient.get(
+        `/vr/sessions?projectId=${encodeURIComponent(projectId)}`
       );
-
-      if (response.ok) {
-        const sessions = await response.json();
-        setActiveSessions(sessions);
-      }
+      setActiveSessions(sessions || []);
     } catch (err) {
       console.error("Failed to fetch VR sessions:", err);
     } finally {
@@ -113,48 +187,33 @@ export function useVRSession(projectId) {
     fetchActiveSessions();
   }, [fetchActiveSessions]);
 
-  // Listen for WebSocket session events (via serverSync custom events)
+  // Listen for WebSocket session/participant events (via serverSync custom
+  // events). Unlike the raw REST responses above, these are already
+  // normalized to camelCase by the server's wsManager broadcast helpers
+  // (server/src/services/websocket.js) — only activeSessions' participant
+  // counts are touched here; the locally-active session's own participants
+  // list is owned by the sync effect above.
   useEffect(() => {
     const handleSessionCreated = (event) => {
       const { session } = event.detail || {};
-      // Refresh sessions list to get full session details
       fetchActiveSessions();
       toast.info(`VR session started by ${session?.ownerUserName || "someone"}`);
     };
 
     const handleSessionUpdated = (event) => {
       const { sessionId, updates } = event.detail || {};
-      // Update session in list
       setActiveSessions((prev) =>
         prev.map((s) => (s.id === sessionId ? { ...s, ...updates } : s))
       );
-      // Update current session if it matches
-      if (currentSession?.id === sessionId) {
-        setCurrentSession((prev) => (prev ? { ...prev, ...updates } : prev));
-      }
     };
 
     const handleSessionEnded = (event) => {
       const { sessionId } = event.detail || {};
       setActiveSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      if (currentSession?.id === sessionId) {
-        setCurrentSession(null);
-        setParticipants([]);
-        toast.info("VR session has ended");
-      }
     };
 
     const handleParticipantJoined = (event) => {
       const { sessionId, participant } = event.detail || {};
-      if (currentSession?.id === sessionId) {
-        setParticipants((prev) => {
-          const exists = prev.some((p) => p.odUserId === participant.odUserId);
-          if (exists) return prev;
-          return [...prev, participant];
-        });
-        toast.info(`${participant?.userName || "Someone"} joined the VR session`);
-      }
-      // Update session participant count in list
       setActiveSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
@@ -162,14 +221,13 @@ export function useVRSession(projectId) {
             : s
         )
       );
+      if (sessionId && sessionId !== currentSession?.id) {
+        toast.info(`${participant?.userName || "Someone"} joined a VR session`);
+      }
     };
 
     const handleParticipantLeft = (event) => {
-      const { sessionId, userId } = event.detail || {};
-      if (currentSession?.id === sessionId) {
-        setParticipants((prev) => prev.filter((p) => p.odUserId !== userId));
-      }
-      // Update session participant count in list
+      const { sessionId } = event.detail || {};
       setActiveSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
@@ -186,7 +244,6 @@ export function useVRSession(projectId) {
       }
     };
 
-    // Subscribe to serverSync custom events (cia: prefix)
     window.addEventListener("cia:vr-session-created", handleSessionCreated);
     window.addEventListener("cia:vr-session-updated", handleSessionUpdated);
     window.addEventListener("cia:vr-session-ended", handleSessionEnded);
@@ -205,44 +262,31 @@ export function useVRSession(projectId) {
   }, [currentSession, fetchActiveSessions]);
 
   /**
-   * Join an existing VR session
+   * Join an existing VR session — routes through vrExplorationManager so VR
+   * entry (if requested) goes through the single consolidated session/
+   * render path instead of duplicating WebXR/session logic here.
    */
   const joinSession = useCallback(
     async (sessionId, mode = "desktop-observer") => {
       setJoiningSession(true);
       try {
-        const response = await fetch(`/api/vr/sessions/${sessionId}/join`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-user-id": localStorage.getItem("userId") || "anonymous",
-            "x-user-name": localStorage.getItem("userName") || "Anonymous",
-          },
-          body: JSON.stringify({ mode }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to join session");
+        // Reuse the row from the already-fetched list when available (avoid
+        // a redundant refetch); vrExplorationManager.joinSession expects the
+        // raw vr_exploration_sessions row shape either way.
+        let record = activeSessions.find((s) => s.id === sessionId);
+        if (!record) {
+          record = await apiClient.get(`/vr/sessions/${sessionId}`);
         }
 
-        const participant = await response.json();
-
-        // Fetch full session details
-        const sessionResponse = await fetch(`/api/vr/sessions/${sessionId}`, {
-          headers: {
-            "x-user-id": localStorage.getItem("userId") || "anonymous",
-          },
-        });
-
-        if (sessionResponse.ok) {
-          const session = await sessionResponse.json();
-          setCurrentSession(session);
-          setParticipants(session.participants || []);
+        const result = await vrExplorationManager.joinSession(record, mode);
+        if (!result.joined) {
+          throw new Error(result.reason || "Failed to join session");
         }
 
-        toast.success("Joined VR session");
-        return participant;
+        toast.success(
+          result.vrEntered ? "Joined VR session" : "Joined VR session as an observer"
+        );
+        return result;
       } catch (err) {
         toast.error(`Failed to join session: ${err.message}`);
         throw err;
@@ -250,60 +294,42 @@ export function useVRSession(projectId) {
         setJoiningSession(false);
       }
     },
-    []
+    [activeSessions]
   );
 
   /**
-   * Leave the current session
+   * Leave the current session — delegates full teardown (tools, spatial UI,
+   * avatars, environment, XR session exit, server notification) to
+   * vrExplorationManager.leaveSession() rather than duplicating it here.
    */
   const leaveSession = useCallback(async () => {
     if (!currentSession) return;
 
     try {
-      await fetch(`/api/vr/sessions/${currentSession.id}/leave`, {
-        method: "POST",
-        headers: {
-          "x-user-id": localStorage.getItem("userId") || "anonymous",
-        },
-      });
-
-      // Exit VR if in VR mode
-      if (isInVR) {
-        await vrManager.exitVR();
-      }
-
-      setCurrentSession(null);
-      setParticipants([]);
+      await vrExplorationManager.leaveSession();
       toast.success("Left VR session");
     } catch (err) {
       toast.error(`Failed to leave session: ${err.message}`);
     }
-  }, [currentSession, isInVR]);
+  }, [currentSession]);
 
   /**
-   * End the current session (owner only)
+   * End the current session for all participants (owner only).
    */
   const endSession = useCallback(async () => {
     if (!currentSession) return;
 
+    const sessionId = currentSession.id;
     try {
-      await fetch(`/api/vr/sessions/${currentSession.id}`, {
-        method: "DELETE",
-        headers: {
-          "x-user-id": localStorage.getItem("userId") || "anonymous",
-        },
-      });
-
-      // Exit VR if in VR mode
       if (isInVR) {
-        await vrManager.exitVR();
+        await vrExplorationManager.leaveSession();
       }
-
-      setCurrentSession(null);
-      setParticipants([]);
-      setActiveSessions((prev) =>
-        prev.filter((s) => s.id !== currentSession.id)
-      );
+      // Locally-generated ids (registration never reached the server) have
+      // nothing to delete server-side.
+      if (sessionId && !String(sessionId).startsWith("vrsession_")) {
+        await apiClient.delete(`/vr/sessions/${sessionId}`);
+      }
+      setActiveSessions((prev) => prev.filter((s) => s.id !== sessionId));
       toast.success("VR session ended");
     } catch (err) {
       toast.error(`Failed to end session: ${err.message}`);
@@ -316,28 +342,15 @@ export function useVRSession(projectId) {
   const createSnapshot = useCallback(
     async (name) => {
       if (!currentSession) return;
+      const sessionId = currentSession.id;
+      if (!sessionId || String(sessionId).startsWith("vrsession_")) {
+        throw new Error("Session is not registered with the server yet");
+      }
 
       try {
-        const response = await fetch(
-          `/api/vr/sessions/${currentSession.id}/snapshots`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-user-id": localStorage.getItem("userId") || "anonymous",
-              "x-user-name": localStorage.getItem("userName") || "Anonymous",
-            },
-            body: JSON.stringify({
-              name: name || `Snapshot ${new Date().toLocaleTimeString()}`,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to create snapshot");
-        }
-
-        const snapshot = await response.json();
+        const snapshot = await apiClient.post(`/vr/sessions/${sessionId}/snapshots`, {
+          name: name || `Snapshot ${new Date().toLocaleTimeString()}`,
+        });
         toast.success("Snapshot created");
         return snapshot;
       } catch (err) {
@@ -351,15 +364,15 @@ export function useVRSession(projectId) {
   // Check if current user is session owner
   const isOwner = useMemo(() => {
     if (!currentSession) return false;
-    const userId = localStorage.getItem("userId") || "anonymous";
-    return currentSession.ownerUserId === userId;
+    return currentSession.ownerUserId === getUserId();
   }, [currentSession]);
 
-  // Get sessions relevant to a specific dataset
+  // Get sessions relevant to a specific dataset. activeSessions rows are raw
+  // vr_exploration_sessions rows (snake_case) — see fetchActiveSessions.
   const getSessionsForDataset = useCallback(
     (datasetId) => {
       return activeSessions.filter(
-        (s) => s.datasetId === datasetId && s.status !== "ended"
+        (s) => s.dataset_id === datasetId && s.status !== "ended"
       );
     },
     [activeSessions]
@@ -378,6 +391,11 @@ export function useVRSession(projectId) {
     isInVR,
     isOwner,
 
+    // Data-control token
+    manipulationHolder,
+    manipulationRequests,
+    activityByUserId,
+
     // Loading states
     loadingSessions,
     joiningSession,
@@ -389,6 +407,9 @@ export function useVRSession(projectId) {
     endSession,
     createSnapshot,
     getSessionsForDataset,
+    grantControl,
+    requestControl,
+    releaseControl,
   };
 }
 

@@ -1096,6 +1096,14 @@ function ViewContent({
                 >
                     <ProgressiveLoader viewId={viewId} isReady={isReady}>
                         <InstanceViewport
+                            // Keying on viewId forces a full unmount/remount when the
+                            // view this cell shows actually changes (e.g. a different
+                            // dataset gets placed here), instead of InstanceViewport's
+                            // own init effect silently no-op'ing on prop changes (its
+                            // initOnce guard only ever runs once per mount) while a
+                            // stale instance id keeps loading new data into an instance
+                            // that's concurrently being torn down.
+                            key={viewId}
                             viewConfigId={viewId}
                             isRemote={false}
                             currentSpan={`${colSpan}x${rowSpan}`}

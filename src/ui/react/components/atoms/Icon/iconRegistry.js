@@ -112,6 +112,7 @@ export const ICON_REGISTRY = {
   spatialAudio: "spatial_audio",
   gesture: "gesture",
   controller: "sports_esports",
+  footprints: "directions_walk", // Walk locomotion mode
 
   // ═══════════════════════════════════════════════════════════════════════════
   // TOOLS & EDITING
@@ -123,6 +124,7 @@ export const ICON_REGISTRY = {
   eraser: "ink_eraser",
   scissors: "content_cut",
   clip: "content_cut",
+  crop: "crop", // Clip-plane tool (was falling back to the default icon)
   ruler: "straighten",
   measure: "square_foot",
   protractor: "architecture", // Angle measurement

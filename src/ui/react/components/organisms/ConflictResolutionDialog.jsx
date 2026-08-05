@@ -197,8 +197,28 @@ export function ConflictResolutionDialog() {
 
   if (!conflict || !strategy) return null;
 
-  const serverDiff = diff(conflict.clientObject || {}, conflict.serverObject || {});
-  const clientDiff = diff(conflict.serverObject || {}, conflict.clientObject || {});
+  // conflict.serverObject is the full raw DB row, while conflict.clientObject
+  // is the narrower PUT-body shape the client actually edits (no id, revision,
+  // timestamps, etc.). Diffing them directly floods every field that's merely
+  // absent from one shape as a false "add"/"remove" on both sides — projecting
+  // the server row down to the client's own key set first keeps the diff to
+  // fields that were genuinely, comparably edited. identityFields (e.g.
+  // dataset_id/project_id) are excluded entirely — they're set once at
+  // creation, never part of the server's updatable-field allowlist, and for
+  // some entities (built-in datasets) are structurally null server-side while
+  // the client always resolves a real value, so they'd otherwise appear as a
+  // permanent, unresolvable "conflict" that was never actually edited by anyone.
+  const clientKeys = Object.keys(conflict.clientObject || {}).filter(
+    (k) => !strategy.identityFields?.has(k)
+  );
+  const clientObjectForDiff = clientKeys.length
+    ? Object.fromEntries(clientKeys.map((k) => [k, conflict.clientObject?.[k]]))
+    : (conflict.clientObject || {});
+  const serverObjectForDiff = clientKeys.length
+    ? Object.fromEntries(clientKeys.map((k) => [k, conflict.serverObject?.[k]]))
+    : (conflict.serverObject || {});
+  const serverDiff = diff(clientObjectForDiff, serverObjectForDiff);
+  const clientDiff = diff(serverObjectForDiff, clientObjectForDiff);
   const mergeEnabled = canAutoMergeSafe(serverDiff, clientDiff, strategy.safeFields);
   const hasSaveAsCopy = strategy.supportsDuplication && resolverRef.current?.saveAsCopy != null;
 

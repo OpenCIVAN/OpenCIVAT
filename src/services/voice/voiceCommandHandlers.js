@@ -6,8 +6,8 @@
 
 import { app as log } from "@Utils/logger.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { vrManager } from "@Core/vr/VRManager.js";
-import { voiceRoomService } from "@Services/voice/voiceRoomService.js";
+import { vrExplorationManager } from "@Core/vr/VRExplorationManager.js";
+import { voiceRoomService, getVoiceRoomName } from "@Services/voice/voiceRoomService.js";
 import { annotationManager } from "@Core/data/managers/AnnotationManager.js";
 import { instanceTools } from "@Core/instances/types/vtk/vtkInstanceTools.js";
 
@@ -388,7 +388,12 @@ function handleToolCommand(name, params) {
 function handleVRCommand(name, params) {
   switch (name) {
     case "enter": {
-      vrManager.enterVR().catch((error) => {
+      const activeInstance = workspaceManager.getActiveInstance();
+      if (!activeInstance?.instanceData?.hasData) {
+        showFeedback("Open a dataset first");
+        break;
+      }
+      vrExplorationManager.startExploration(activeInstance.instanceId, {}).catch((error) => {
         log.error("Failed to enter VR:", error);
         showFeedback("Could not enter VR mode");
       });
@@ -396,25 +401,9 @@ function handleVRCommand(name, params) {
     }
 
     case "exit": {
-      vrManager.exitVR().catch((error) => {
+      vrExplorationManager.leaveSession().catch((error) => {
         log.error("Failed to exit VR:", error);
       });
-      break;
-    }
-
-    case "grab": {
-      // VR grab action - dispatch to VR controller handler
-      window.dispatchEvent(new CustomEvent("cia:vr-grab"));
-      break;
-    }
-
-    case "release": {
-      window.dispatchEvent(new CustomEvent("cia:vr-release"));
-      break;
-    }
-
-    case "teleport": {
-      window.dispatchEvent(new CustomEvent("cia:vr-teleport"));
       break;
     }
 
@@ -445,8 +434,9 @@ async function handleVoiceRoomCommand(name, params) {
     }
 
     case "join": {
-      // Get current room from session or use default
-      const roomName = params.roomName || "main";
+      // Derive from the collaboration session so voice commands join the same
+      // room as the voice bar / Voice tab (params.roomName is an optional channel).
+      const roomName = getVoiceRoomName(params.roomName);
       await voiceRoomService.joinRoom(roomName);
       showFeedback("Joined voice channel");
       break;

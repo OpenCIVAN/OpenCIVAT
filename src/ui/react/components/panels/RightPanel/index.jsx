@@ -13,9 +13,10 @@
  * DO NOT define a local TABS array - that creates sync issues.
  * 
  * This component is the MONOLITHIC version that combines activity bar + content.
- * For the SEPARATED version (used with ThreeEdgeLayout), use:
- * - RightActivityBar
- * - RightPanelContent
+ * For the SEPARATED version (used with ThreeEdgeLayout), use RightActivityBar
+ * together with renderRightPanelTabContent() from RightPanelContext.
+ * (The separated RightPanelContent wrapper was removed as dead code — it was
+ * never mounted anywhere in the app.)
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -115,9 +116,8 @@ function ActivityBar({
  * This is the MONOLITHIC version that includes both the activity bar
  * and the content panel. Use this when you don't need separate layout control.
  * 
- * For ThreeEdgeLayout integration, use the separated components:
- * - RightActivityBar (in activity bar slot)
- * - RightPanelContent (in content slot)
+ * For ThreeEdgeLayout integration, use RightActivityBar (in activity bar slot)
+ * together with renderRightPanelTabContent() (in content slot).
  *
  * Note: This component receives props from ResizablePanel via React.cloneElement:
  * - isCollapsed: boolean - Whether panel is collapsed
@@ -213,4 +213,3 @@ export {
 } from './RightPanelContext';
 
 export { RightActivityBar } from './RightActivityBar';
-export { RightPanelContent } from './RightPanelContent';

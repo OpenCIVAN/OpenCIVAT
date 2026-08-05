@@ -25,6 +25,8 @@ export const EXPLORATION_MODES = Object.freeze({
   TELEPORT: 'teleport', // Point and click locomotion
   WALK: 'walk',         // Room-scale physical movement
   SCALE: 'scale',       // Pinch to resize relative to data
+  GRAB: 'grab',         // Pinch-and-drag to pull the data closer / push it away
+  MOVE_OBJECT: 'move-object', // Pinch-and-drag to move the ACTIVE dataset's transform (shared)
 });
 
 export const PARTICIPATION_MODE = Object.freeze({
@@ -191,7 +193,12 @@ export class VRExplorationSession {
     // =========================================================================
     // EXPLORATION SETTINGS
     // =========================================================================
-    this.defaultExplorationMode = config.defaultExplorationMode || EXPLORATION_MODES.FLY;
+    // Default to GRAB (direct manipulation): the first pinch-drag moves the
+    // dataset, which is what users expect on Apple Vision Pro (gaze + pinch).
+    // FLY reads thumbstick/buttons that gripless transient-pointer input never
+    // emits, so it leaves Vision Pro users unable to move. Teleport/fly remain
+    // selectable from the in-world spatial menu.
+    this.defaultExplorationMode = config.defaultExplorationMode || EXPLORATION_MODES.GRAB;
     this.defaultVRScale = config.defaultVRScale || 1.0;
 
     // =========================================================================
@@ -264,6 +271,44 @@ export class VRExplorationSession {
 
     this.participants.push(participant);
     return participant;
+  }
+
+  /**
+   * Add a participant, or update one already present WITHOUT recreating it.
+   *
+   * Prefer this over addParticipant for anything driven by a repeating network
+   * message (presence pings, pose packets). addParticipant calls
+   * removeParticipant first, so re-calling it mints a new VRParticipant and
+   * resets `joinedAt` — and host promotion resolves ties by lowest `joinedAt`,
+   * so a `joinedAt` that keeps moving makes that ordering meaningless.
+   *
+   * @param {string} odUserId
+   * @param {string} [userName]
+   * @param {string} [userColor]
+   * @param {string} [mode] - only applied when provided; an omitted mode leaves
+   *   the existing one alone rather than silently demoting a VR explorer.
+   * @returns {VRParticipant}
+   */
+  upsertParticipant(odUserId, userName, userColor, mode) {
+    const existing = this.getParticipant(odUserId);
+    if (!existing) {
+      return this.addParticipant(
+        odUserId,
+        userName,
+        userColor,
+        mode || PARTICIPATION_MODE.DESKTOP_OBSERVER
+      );
+    }
+
+    if (userName) existing.userName = userName;
+    if (userColor) existing.userColor = userColor;
+    if (mode && mode !== existing.mode) {
+      existing.mode = mode;
+      existing.permissions = this._getDefaultPermissions(mode);
+    }
+    existing.lastActiveAt = Date.now();
+    // joinedAt deliberately untouched.
+    return existing;
   }
 
   removeParticipant(odUserId) {

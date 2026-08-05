@@ -217,32 +217,47 @@ class FollowService {
     const headPose = detail.data?.headPose;
     if (!headPose?.position || !headPose?.orientation) return;
 
-    const camera = this._cameraFromHeadPose(headPose);
+    // The followed user's head pose is in THEIR OWN physical XR space (each
+    // VR participant has an independent WebXR reference space) — convert
+    // through their vrScale/vrOrigin into data space before treating it as
+    // a VTK camera position, same as RemoteAvatarController._toScenePose.
+    const vrScale = typeof detail.data?.vrScale === "number" ? detail.data.vrScale : 1.0;
+    const vrOrigin = Array.isArray(detail.data?.vrOrigin) ? detail.data.vrOrigin : [0, 0, 0];
+
+    const camera = this._cameraFromHeadPose(headPose, vrScale, vrOrigin);
     if (camera) this._applyCameraToActiveView(camera);
   }
 
   /**
-   * Derive a VTK camera from a serialized VR head pose.
-   * position = headPose.position
-   * focalPoint = position + rotate([0,0,-1], orientation) * distance
-   * viewUp = rotate([0,1,0], orientation)
+   * Derive a VTK camera (data space) from a serialized VR head pose (the
+   * sender's own physical XR space).
+   * position = dataPos = xrPos/vrScale + vrOrigin
+   * focalPoint = position + rotate([0,0,-1], orientation) * (distance/vrScale)
+   * viewUp = rotate([0,1,0], orientation) — rotation-only, no scale/offset
    * @param {{position:{x,y,z}, orientation:{x,y,z,w}}} headPose
+   * @param {number} [vrScale]
+   * @param {number[]} [vrOrigin]
    * @returns {object|null}
    * @private
    */
-  _cameraFromHeadPose(headPose) {
+  _cameraFromHeadPose(headPose, vrScale = 1.0, vrOrigin = [0, 0, 0]) {
     try {
       const p = headPose.position;
       const q = headPose.orientation;
-      const position = [p.x, p.y, p.z];
+      const position = [
+        p.x / vrScale + vrOrigin[0],
+        p.y / vrScale + vrOrigin[1],
+        p.z / vrScale + vrOrigin[2],
+      ];
 
       const forward = rotateVectorByQuaternion([0, 0, -1], q);
       const up = rotateVectorByQuaternion([0, 1, 0], q);
 
+      const focalDistance = VR_FOCAL_DISTANCE / vrScale;
       const focalPoint = [
-        position[0] + forward[0] * VR_FOCAL_DISTANCE,
-        position[1] + forward[1] * VR_FOCAL_DISTANCE,
-        position[2] + forward[2] * VR_FOCAL_DISTANCE,
+        position[0] + forward[0] * focalDistance,
+        position[1] + forward[1] * focalDistance,
+        position[2] + forward[2] * focalDistance,
       ];
 
       return { position, focalPoint, viewUp: up };

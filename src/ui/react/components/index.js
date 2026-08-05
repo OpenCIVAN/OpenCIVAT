@@ -132,7 +132,6 @@ export {
   GroupMembersList,
   OptionList,
   PopoutButtons,
-  VRButton,
   VRExploreButton,
   WorkspaceSelector,
   SectionNavHeader,

@@ -124,6 +124,49 @@
         opacity: 0.55;
     }
 
+    &__section-header--collapsible {
+        width: 100%;
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-align: left;
+        font-family: inherit;
+        border-radius: 6px;
+        transition: opacity 0.15s ease;
+
+        &:hover {
+            opacity: 0.8;
+        }
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--accent-primary-alpha);
+        }
+    }
+
+    &__section-subtitle {
+        flex: 1;
+        min-width: 0;
+        font-size: 10px;
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: normal;
+        opacity: 0.8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__section-toggle {
+        flex-shrink: 0;
+    }
+
+    &__server-section {
+        border-top: 1px solid var(--border-subtle);
+        margin-top: 4px;
+        padding-top: 4px;
+    }
+
     &__loading {
         display: flex;
         align-items: center;

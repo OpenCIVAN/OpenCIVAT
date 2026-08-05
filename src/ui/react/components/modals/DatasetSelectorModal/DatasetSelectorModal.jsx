@@ -2,10 +2,13 @@
  * @file DatasetSelectorModal.jsx
  * @description Modal for selecting a dataset to place in an empty canvas cell.
  *
- * Shows three sections depending on render mode:
- *  1. Server Datasets — from Python VTK render server (when RENDER_MODE != local)
- *  2. Sample Datasets — built-in VTP files from public/vtp_files/ (local mode)
- *  3. My Files       — user-uploaded datasets
+ * Always shows the local sections first (interactive VTKInstanceHandler pipeline):
+ *  1. Sample Datasets — built-in VTP files from public/vtp_files/
+ *  2. My Files       — user-uploaded datasets
+ * Plus, when RENDER_MODE != local, an additional opt-in section, collapsed by
+ * default and listed last (it's a static-image preview, not the interactive path):
+ *  3. Server Datasets — from Python VTK render server (ServerRenderedViewport).
+ *     The dataset list is only fetched once the user expands this section.
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -42,7 +45,10 @@ export function DatasetSelectorModal({
     // Local manifest fallback (when DatasetManager hasn't loaded built-ins yet)
     const [manifestEntries, setManifestEntries] = useState(null);
 
-    // Server dataset state
+    // Server dataset state — section is collapsed by default; list is only
+    // fetched once the user expands it (it's a static-image preview, not the
+    // interactive local path, so it shouldn't be pre-loaded on every open).
+    const [isServerSectionExpanded, setIsServerSectionExpanded] = useState(false);
     const [serverDatasets, setServerDatasets] = useState(null);  // null = not fetched yet
     const [serverLoading, setServerLoading] = useState(false);
     const [serverOffline, setServerOffline] = useState(false);
@@ -60,9 +66,9 @@ export function DatasetSelectorModal({
         [datasets]
     );
 
-    // ── Fetch server datasets when modal opens (server/hybrid mode) ────────────
+    // ── Fetch server datasets only once the section is expanded (server/hybrid mode) ──
     useEffect(() => {
-        if (!isOpen || !isServerMode) return;
+        if (!isOpen || !isServerMode || !isServerSectionExpanded) return;
         if (serverDatasets !== null) return; // Already fetched
 
         setServerLoading(true);
@@ -88,19 +94,20 @@ export function DatasetSelectorModal({
                 setServerLoading(false);
                 setServerOffline(true);
             });
-    }, [isOpen, isServerMode, serverDatasets]);
+    }, [isOpen, isServerMode, isServerSectionExpanded, serverDatasets]);
 
-    // Reset server datasets when modal closes so next open re-fetches
+    // Reset server datasets/expansion when modal closes so next open re-fetches
     useEffect(() => {
         if (!isOpen) {
             setServerDatasets(null);
             setServerOffline(false);
+            setIsServerSectionExpanded(false);
         }
     }, [isOpen]);
 
-    // ── Fetch local manifest fallback (local mode only) ───────────────────────
+    // ── Fetch local manifest fallback (always — samples are always shown) ────
     useEffect(() => {
-        if (!isOpen || isServerMode) return;
+        if (!isOpen) return;
         if (builtInDatasets.length > 0) {
             setManifestEntries(null);
             return;
@@ -109,7 +116,7 @@ export function DatasetSelectorModal({
             .then(r => r.ok ? r.json() : null)
             .then(entries => setManifestEntries(Array.isArray(entries) ? entries : []))
             .catch(() => setManifestEntries([]));
-    }, [isOpen, isServerMode, builtInDatasets.length]);
+    }, [isOpen, builtInDatasets.length]);
 
     // ── Search filtering ───────────────────────────────────────────────────────
     const q = searchQuery.toLowerCase();
@@ -260,13 +267,13 @@ export function DatasetSelectorModal({
         </button>
     );
 
-    // Local display flags
-    const showManifestFallback = !isServerMode &&
+    // Local display flags — Sample Datasets are always shown, regardless of render mode
+    const showManifestFallback =
         builtInDatasets.length === 0 &&
         filteredManifest &&
         filteredManifest.length > 0;
     const sampleItems = showManifestFallback ? null : filteredBuiltIns;
-    const isLoadingSamples = !isServerMode && builtInDatasets.length === 0 && manifestEntries === null;
+    const isLoadingSamples = builtInDatasets.length === 0 && manifestEntries === null;
 
     // ── Render ──────────────────────────────────────────────────────────────────
     return (
@@ -286,96 +293,45 @@ export function DatasetSelectorModal({
                     className="dataset-selector-modal__search"
                 />
 
-                {/* ── Server Datasets (server / hybrid mode) ── */}
-                {isServerMode && (
-                    <>
-                        <div className="dataset-selector-modal__section-header">
-                            <Icon name="server" size={13} />
-                            <span>Server Datasets</span>
+                {/* ── Sample Datasets (always available — local, interactive) ── */}
+                <div className="dataset-selector-modal__section-header">
+                    <Icon name="layers" size={13} />
+                    <span>Sample Datasets</span>
+                </div>
+
+                <div className="dataset-selector-modal__list">
+                    {isLoadingSamples && (
+                        <div className="dataset-selector-modal__loading">
+                            <Icon name="loader" size={16} className="spin" />
+                            <span>Loading samples…</span>
                         </div>
+                    )}
 
-                        <div className="dataset-selector-modal__list">
-                            {serverLoading && (
-                                <div className="dataset-selector-modal__loading">
-                                    <Icon name="loader" size={16} className="spin" />
-                                    <span>Contacting render server…</span>
-                                </div>
-                            )}
+                    {sampleItems && sampleItems.length > 0 && sampleItems.map(d =>
+                        renderDatasetButton(
+                            d.id,
+                            cleanName(d.name),
+                            d.metadata?.sizeHint || d.fileType?.toUpperCase(),
+                            () => handleSelect(d.id, cleanName(d.name))
+                        )
+                    )}
 
-                            {serverOffline && !serverLoading && (
-                                <div className="dataset-selector-modal__offline">
-                                    <Icon name="alertTriangle" size={14} />
-                                    <span>
-                                        Rendering server is not available.
-                                        Start the backend or switch to local mode.
-                                    </span>
-                                    <code>cd server/render_server &amp;&amp; uvicorn app:app --port 7000</code>
-                                </div>
-                            )}
+                    {showManifestFallback && filteredManifest.map(entry =>
+                        renderDatasetButton(
+                            entry.id,
+                            entry.name,
+                            entry.sizeHint || entry.description,
+                            () => handleManifestSelect(entry)
+                        )
+                    )}
 
-                            {!serverLoading && !serverOffline && filteredServer?.map(entry =>
-                                renderDatasetButton(
-                                    entry.id,
-                                    entry.name,
-                                    `${entry.type?.toUpperCase()} · Server · ${entry.sizeMB} MB`,
-                                    () => handleServerSelect(entry)
-                                )
-                            )}
-
-                            {!serverLoading && !serverOffline && filteredServer?.length === 0 && (
-                                <div className="dataset-selector-modal__empty-small">
-                                    No datasets found on server.
-                                    Add files to <code>server/datasets/</code> or{' '}
-                                    <code>public/vtp_files/</code>.
-                                </div>
-                            )}
+                    {!isLoadingSamples && (sampleItems?.length === 0) && !showManifestFallback && (
+                        <div className="dataset-selector-modal__empty-small">
+                            No sample datasets found.
+                            Check <code>public/vtp_files/manifest.json</code>.
                         </div>
-                    </>
-                )}
-
-                {/* ── Sample Datasets (local / hybrid mode) ── */}
-                {!isServerMode && (
-                    <>
-                        <div className="dataset-selector-modal__section-header">
-                            <Icon name="layers" size={13} />
-                            <span>Sample Datasets</span>
-                        </div>
-
-                        <div className="dataset-selector-modal__list">
-                            {isLoadingSamples && (
-                                <div className="dataset-selector-modal__loading">
-                                    <Icon name="loader" size={16} className="spin" />
-                                    <span>Loading samples…</span>
-                                </div>
-                            )}
-
-                            {sampleItems && sampleItems.length > 0 && sampleItems.map(d =>
-                                renderDatasetButton(
-                                    d.id,
-                                    cleanName(d.name),
-                                    d.metadata?.sizeHint || d.fileType?.toUpperCase(),
-                                    () => handleSelect(d.id, cleanName(d.name))
-                                )
-                            )}
-
-                            {showManifestFallback && filteredManifest.map(entry =>
-                                renderDatasetButton(
-                                    entry.id,
-                                    entry.name,
-                                    entry.sizeHint || entry.description,
-                                    () => handleManifestSelect(entry)
-                                )
-                            )}
-
-                            {!isLoadingSamples && (sampleItems?.length === 0) && !showManifestFallback && (
-                                <div className="dataset-selector-modal__empty-small">
-                                    No sample datasets found.
-                                    Check <code>public/vtp_files/manifest.json</code>.
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
+                    )}
+                </div>
 
                 {/* ── Uploaded Files ── */}
                 {filteredUploads.length > 0 && (
@@ -395,6 +351,68 @@ export function DatasetSelectorModal({
                             )}
                         </div>
                     </>
+                )}
+
+                {/* ── Server Datasets (server / hybrid mode) — collapsed by default ── */}
+                {isServerMode && (
+                    <div className="dataset-selector-modal__server-section">
+                        <button
+                            type="button"
+                            className="dataset-selector-modal__section-header dataset-selector-modal__section-header--collapsible"
+                            onClick={() => setIsServerSectionExpanded(v => !v)}
+                            aria-expanded={isServerSectionExpanded}
+                        >
+                            <Icon name="server" size={13} />
+                            <span>Server Datasets</span>
+                            <span className="dataset-selector-modal__section-subtitle">
+                                Server-rendered preview (static image, not interactive)
+                            </span>
+                            <Icon
+                                name={isServerSectionExpanded ? 'chevronDown' : 'chevronRight'}
+                                size={13}
+                                className="dataset-selector-modal__section-toggle"
+                            />
+                        </button>
+
+                        {isServerSectionExpanded && (
+                            <div className="dataset-selector-modal__list">
+                                {serverLoading && (
+                                    <div className="dataset-selector-modal__loading">
+                                        <Icon name="loader" size={16} className="spin" />
+                                        <span>Contacting render server…</span>
+                                    </div>
+                                )}
+
+                                {serverOffline && !serverLoading && (
+                                    <div className="dataset-selector-modal__offline">
+                                        <Icon name="alertTriangle" size={14} />
+                                        <span>
+                                            Rendering server is not available.
+                                            Start the backend or switch to local mode.
+                                        </span>
+                                        <code>cd server/render_server &amp;&amp; uvicorn app:app --port 7000</code>
+                                    </div>
+                                )}
+
+                                {!serverLoading && !serverOffline && filteredServer?.map(entry =>
+                                    renderDatasetButton(
+                                        entry.id,
+                                        entry.name,
+                                        `${entry.type?.toUpperCase()} · Server · ${entry.sizeMB} MB`,
+                                        () => handleServerSelect(entry)
+                                    )
+                                )}
+
+                                {!serverLoading && !serverOffline && filteredServer?.length === 0 && (
+                                    <div className="dataset-selector-modal__empty-small">
+                                        No datasets found on server.
+                                        Add files to <code>server/datasets/</code> or{' '}
+                                        <code>public/vtp_files/</code>.
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
         </Modal>

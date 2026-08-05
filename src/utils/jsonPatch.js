@@ -5,7 +5,36 @@
 // Limitations (intentional):
 //   - Shallow-only by default; nested paths use "/" separator.
 //   - No support for "move", "copy", or "test" operations.
-//   - Array element diffing is not position-aware; arrays are treated as atomic.
+//   - Array element diffing is not position-aware; arrays are treated as atomic
+//     (an actual content difference always produces a single "replace" for the
+//     whole array — but two arrays with equal content are never reported as
+//     changed just because they're different instances; see deepEqual below).
+
+/**
+ * Structural equality for JSON-serializable values (objects/arrays/primitives).
+ * Used to decide whether an array actually changed, since array leaves in
+ * diff() would otherwise always compare unequal by reference.
+ * @param {unknown} a
+ * @param {unknown} b
+ * @returns {boolean}
+ */
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") {
+    return false;
+  }
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) {
+    if (a.length !== b.length) return false;
+    return a.every((v, i) => deepEqual(v, b[i]));
+  }
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every(
+    (k) => Object.prototype.hasOwnProperty.call(b, k) && deepEqual(a[k], b[k])
+  );
+}
 
 /**
  * Compute the patch (list of operations) needed to transform `base` into `next`.
@@ -54,6 +83,12 @@ export function diff(base, next, prefix = "") {
       ) {
         // Recurse into nested objects
         ops.push(...diff(bv, nv, path));
+      } else if (Array.isArray(bv) && Array.isArray(nv)) {
+        // Arrays are atomic (see module doc), but two unequal-by-reference
+        // arrays with identical content (e.g. both []) are not a real change.
+        if (!deepEqual(bv, nv)) {
+          ops.push({ op: "replace", path, value: nv });
+        }
       } else {
         ops.push({ op: "replace", path, value: nv });
       }

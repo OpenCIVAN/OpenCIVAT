@@ -8,6 +8,19 @@
 // - PostgreSQL stores snapshots (fast hydration), updates (recording), chat (audit)
 // - Datasets, views, annotations use REST API (not Y.js)
 
+// MUST precede the auth middleware require below, which computes
+// DEV_BYPASS_AUTH once at import time from NODE_ENV + DEV_BYPASS_AUTH.
+// Started as a bare `node server.js` (package.json "websocket"), nothing else
+// loaded .env for it, so both read as unset and DEV_BYPASS_AUTH was false —
+// meaning authenticateSocket() closed EVERY Y.js connection with 1008
+// "Missing access token". Y.js carries all collaboration state (avatar poses,
+// participant roster, visualization sync), so multi-user collaboration was
+// entirely dead in dev while the app otherwise looked healthy.
+//
+// NOTE the PORT handling further down: .env defines PORT for the API server,
+// so this file deliberately reads YJS_PORT instead of inheriting it.
+require("dotenv").config();
+
 const WebSocket = require("ws");
 const http = require("http");
 const Y = require("yjs");
@@ -321,6 +334,19 @@ class Room {
     // Track which message IDs we've already persisted to avoid duplicates
     this.persistedMessageIds = new Set();
 
+    // Names of the top-level shared types touched by the most recently applied
+    // transaction. Used by detectUpdateOrigin() to classify updates so transient
+    // presence/pose/cursor traffic is not persisted or recorded (see below).
+    this._lastChangedRoots = new Set();
+    this.doc.on("afterTransaction", (tr) => {
+      const roots = new Set();
+      tr.changed.forEach((_keys, type) => {
+        const name = rootNameOf(this.doc, type);
+        if (name) roots.add(name);
+      });
+      this._lastChangedRoots = roots;
+    });
+
     // Track chat messages for persistence
     this.setupChatObserver();
   }
@@ -533,15 +559,26 @@ const rooms = new Map();
  * Get or create a room
  */
 async function getOrCreateRoom(roomName) {
-  if (!rooms.has(roomName)) {
-    const room = new Room(roomName);
+  let room = rooms.get(roomName);
+  if (!room) {
+    room = new Room(roomName);
     rooms.set(roomName, room);
 
     // Load state from database
     await room.loadFromDB();
+
+    // The room is registered BEFORE this await, but has no clients yet — so a
+    // client disconnecting during the load sees clients.size === 0 and deletes
+    // it from `rooms` (see the close handler). Re-registering the instance we
+    // built keeps that from happening behind our back.
+    //
+    // This return used to be `rooms.get(roomName)`, which in exactly that race
+    // returned UNDEFINED and crashed the whole server on the caller's
+    // `room.clients.add(socket)` — taking every other room's session with it.
+    if (rooms.get(roomName) !== room) rooms.set(roomName, room);
   }
 
-  return rooms.get(roomName);
+  return room;
 }
 
 /**
@@ -662,8 +699,10 @@ function handleSyncMessage(socket, room, decoder, rawMessage) {
       decoding.createDecoder(new Uint8Array(rawMessage).slice(2))
     );
 
-    // Try to determine update origin from content
-    const origin = detectUpdateOrigin(room.doc, update);
+    // Classify the update by which shared types it touched (captured by the
+    // room's afterTransaction observer) so transient presence/pose/cursor
+    // traffic is skipped instead of mislabeled as chat and over-persisted.
+    const origin = detectUpdateOrigin(room);
     room.storeUpdate(
       update,
       origin,
@@ -805,27 +844,67 @@ function handleAwarenessMessage(socket, room, decoder, rawMessage) {
 }
 
 /**
- * Detect update origin by examining what changed in the doc
- * This is heuristic - could be improved with client-side tagging
+ * Reverse-lookup the root (top-level) name of a shared type in a Y.Doc.
+ * All of our collaboration maps/arrays are registered at the document root
+ * (doc.getMap(name) / doc.getArray(name)), so doc.share holds name -> type.
+ * @returns {string|null}
  */
-function detectUpdateOrigin(doc, update) {
-  // Check common Y.js shared types
-  // Chat typically uses an array named "chatMessages"
-  // Cursors use awareness or a map named "cursors"
-  // This is a simplified heuristic
-
-  try {
-    // Create temp doc to see what the update affects
-    const tempDoc = new Y.Doc();
-    Y.applyUpdate(tempDoc, Y.encodeStateAsUpdate(doc));
-    Y.applyUpdate(tempDoc, update);
-
-    // Check what changed
-    // (In a real implementation, you'd track this client-side)
-    return "chat"; // Default to chat for now
-  } catch {
-    return null;
+function rootNameOf(doc, type) {
+  for (const [name, t] of doc.share.entries()) {
+    if (t === type) return name;
   }
+  return null;
+}
+
+// Top-level shared types that carry transient presence/pose/cursor state. These
+// are self-cleaning, high-frequency, and must NOT be persisted to yjs_updates or
+// recorded — mapped to the origins that storeUpdate()/recordEvent() skip.
+const TRANSIENT_ROOT_ORIGINS = {
+  cursors: "cursor",
+  vrCursors: "cursor",
+  vrHands: "cursor",
+  avatars: "avatar",
+  manipulatorState: "presence",
+  viewPresence: "presence",
+};
+
+/**
+ * Classify an applied update by which top-level shared types it touched (captured
+ * by the room's afterTransaction observer). Returns one of:
+ *   - "cursor" | "avatar" | "presence": transient — skipped by persistence/recording
+ *   - "chat": chat traffic (persisted + recorded)
+ *   - "document": durable view/camera/dataset state (persisted)
+ *   - null: unknown — persisted (safe default)
+ * If an update touches ANY durable type, it is treated as durable even if it also
+ * touched a transient one.
+ */
+function detectUpdateOrigin(room) {
+  const roots = room?._lastChangedRoots;
+  if (!roots || roots.size === 0) return null;
+
+  let sawDurable = false;
+  let sawChat = false;
+  let transient = null;
+
+  for (const name of roots) {
+    if (name === "chatMessages") {
+      sawChat = true;
+    } else if (name.startsWith("vr-participants-")) {
+      transient = transient || "presence";
+    } else if (Object.prototype.hasOwnProperty.call(TRANSIENT_ROOT_ORIGINS, name)) {
+      const origin = TRANSIENT_ROOT_ORIGINS[name];
+      // Prefer the most specific transient label; any is skippable.
+      transient = transient === "avatar" ? transient : origin;
+    } else {
+      // Any other root (visualizationState, cameras, activeDataset, ...) is
+      // durable document state.
+      sawDurable = true;
+    }
+  }
+
+  if (sawDurable) return "document";
+  if (sawChat) return "chat";
+  return transient;
 }
 
 /**
@@ -1035,13 +1114,20 @@ wss.on("connection", async (socket, req) => {
     wsLog.info("Client disconnected from:", roomName);
     wsLog.debug("Remaining clients:", room.clients.size);
 
-    // Clean up empty rooms
-    if (room.clients.size === 0) {
+    // Clean up empty rooms. Only ever evict the instance we actually hold, and
+    // re-check emptiness AFTER the await — a client can connect and join this
+    // same room while close() is still storing its snapshot, and dropping it
+    // then would strand that client on a room no longer in `rooms`.
+    if (room.clients.size === 0 && rooms.get(roomName) === room) {
       // Store final snapshot
       await room.close();
 
-      rooms.delete(roomName);
-      wsLog.debug("Room closed and saved:", roomName);
+      if (rooms.get(roomName) === room && room.clients.size === 0) {
+        rooms.delete(roomName);
+        wsLog.debug("Room closed and saved:", roomName);
+      } else {
+        wsLog.debug("Room re-joined during close; keeping it:", roomName);
+      }
     }
   });
 
@@ -1054,7 +1140,11 @@ wss.on("connection", async (socket, req) => {
 // Listen for awareness changes to broadcast
 // This is done per-room when clients join
 
-const PORT = process.env.PORT || 9001;
+// Deliberately NOT process.env.PORT. Now that this file loads .env (see the
+// note at the top), the generic PORT there belongs to the API server on 3001 —
+// inheriting it would make the Y.js server fight the API for the same port and
+// fail to bind. Use YJS_PORT to override.
+const PORT = process.env.YJS_PORT || 9001;
 
 // Refresh active recordings cache on startup
 refreshActiveRecordings();

@@ -4,6 +4,7 @@
 import { config } from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { ws as log } from "@Utils/logger.js";
+import { resolveWsUrl } from "@Utils/resolveWsUrl.js";
 import { authService } from "@Services/authService.js";
 import { useComputeJobStore } from "@UI/react/store/computeJobStore.js";
 import { toast } from "@UI/react/store/toastStore.js";
@@ -85,9 +86,15 @@ class ServerSyncService {
   }
 
   connect() {
-    const wsUrl = config.apiBaseUrl
-      .replace(/^http/, "ws")
-      .replace("/api", "/ws");
+    // config.apiBaseUrl is normally a relative "/api" path, in which case the
+    // live broadcast socket rides the same origin via the webpack devServer's
+    // /app-ws proxy (mounted at /app-ws rather than /ws because webpack-dev-
+    // server's own HMR socket already owns /ws — see webpack.config.js).
+    // An absolute apiBaseUrl override (e.g. a non-dev-server deployment) is
+    // assumed to expose the backend's real /ws path directly.
+    const wsUrl = config.apiBaseUrl.startsWith("/")
+      ? resolveWsUrl("/app-ws")
+      : config.apiBaseUrl.replace(/^http/, "ws").replace("/api", "/ws");
     log.info(`Connecting to ${wsUrl}`);
 
     try {

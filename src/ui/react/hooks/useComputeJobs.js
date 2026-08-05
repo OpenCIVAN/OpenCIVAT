@@ -145,8 +145,15 @@ export function useComputeJobs(options = {}) {
   }, []);
 
   const connectWebSocket = useCallback(() => {
-    // Use the Y.js WebSocket URL base, or construct from API URL
-    const wsUrl = config.yjsWebSocketUrl.replace("/yjs", "") + "/compute";
+    // Ride the Y.js WebSocket endpoint's /compute channel. When the config
+    // value is a same-origin path (e.g. "/yjs-ws"), resolve it against the
+    // page origin — the devServer proxy strips the mount, so
+    // /yjs-ws/compute reaches the Y.js server as /compute, same as the
+    // legacy absolute form ws://host:9001/compute.
+    const base = config.yjsWebSocketUrl;
+    const wsUrl = base.startsWith("/")
+      ? `${window.location.protocol === "https:" ? "wss://" : "ws://"}${window.location.host}${base}/compute`
+      : base.replace("/yjs", "") + "/compute";
 
     try {
       // Close existing connection if any

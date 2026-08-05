@@ -67,6 +67,14 @@ class PresenceSystem {
       voiceRoomId: null,
       isMuted: false,
       isSpeaking: false,
+      // VR state. Room-scoped, not session-scoped: a desktop collaborator who
+      // never opens the VR panel still needs to see that someone is in a
+      // headset (useRoomPresence's `inVR` bucket, MemberRow's VR badge).
+      // Written by VRExplorationManager.startExploration/leaveSession via
+      // setVRPresence().
+      inVR: false,
+      vrSessionId: null,
+      vrRole: null,
     };
 
     // Set local presence state in awareness
@@ -283,6 +291,36 @@ class PresenceSystem {
    */
   setSpeaking(isSpeaking) {
     this.setPresence({ isSpeaking });
+  }
+
+  // ==========================================================================
+  // VR STATE METHODS
+  // ==========================================================================
+
+  /**
+   * Publish this user's VR state to the room. Mirrors updateVoiceState: each
+   * field falls back to its current value so a partial update never clobbers
+   * the others.
+   *
+   * @param {{inVR?:boolean, vrSessionId?:string|null, vrRole?:string|null}} vrState
+   *   `vrRole` is 'host' | 'participant' | null.
+   */
+  setVRPresence(vrState = {}) {
+    this.setPresence({
+      inVR: vrState.inVR ?? this.localPresence?.inVR ?? false,
+      vrSessionId: vrState.vrSessionId ?? this.localPresence?.vrSessionId ?? null,
+      vrRole: vrState.vrRole ?? this.localPresence?.vrRole ?? null,
+    });
+  }
+
+  /**
+   * Get users currently in a VR session (optionally one specific session).
+   * @param {string} [vrSessionId]
+   */
+  getUsersInVR(vrSessionId = null) {
+    return this.getOnlineUsers().filter(
+      (user) => user.inVR && (!vrSessionId || user.vrSessionId === vrSessionId)
+    );
   }
 
   /**
